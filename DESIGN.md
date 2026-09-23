@@ -2,6 +2,8 @@
 
 Status: design draft v0.2 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§12).
 
+What runs: `lint` (schema + L01–L14) on a project directory, as a CLI. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
 ## 1. What this is
@@ -106,9 +108,9 @@ id: scr_01J8K3                       # stable; only `diff` reads it
 screen: order-list                   # the name every reference uses
 section: "03. Orders - Order list"
 type: list                           # decides required states
-refs:
-  - prd: notion:2a1f0d…
-  - task: github:acme/task-management#4155
+refs:                                # a map, one typed URI per key
+  prd: notion:2a1f0d…
+  task: github:acme/task-management#4155
 
 elements:                            # the Default state
   - id: header
@@ -167,10 +169,10 @@ states:
 kinds:
   table:       { anchors: [row, header], maps_to: { antd: Table } }
   filter-form: { maps_to: { antd: Form } }
-  page-header: { }                              # renders with the bundled default
+  page-header: { anchors: [action] }            # no maps_to: renders with the bundled default
 layout:
   containers: [stack, grid, columns]
-  spacing_tokens: space.*                       # only these names may appear in layout
+  spacing_tokens: 'space.'                      # prefix; only names starting with it may appear in layout
   size_classes: [sm, md, lg, full]
 refs:
   required: []                                  # example: [prd]
@@ -294,7 +296,7 @@ The engine (§3–§9) is open source and runs locally. The service is the engin
 | Item | Owner | Note |
 |---|---|---|
 | Name | user | `design-core` undersells a product; GitHub redirects after a rename |
-| Core language | user | Node fits MCP and the viewer; Python fits `fig`'s config resolver. One, not both |
+| Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
 | Platform / breakpoint variants | design | `variants:` beside `states:` with the same patch shape, or one file per platform |

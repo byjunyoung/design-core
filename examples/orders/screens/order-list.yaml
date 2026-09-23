@@ -1,0 +1,45 @@
+schema: design-core/0.2
+id: scr_01J8K3
+screen: order-list
+section: "03. Orders - Order list"
+type: list
+refs:
+  prd: notion:2a1f0d
+  task: github:acme/task-management#4155
+
+elements:
+  - id: header
+    kind: page-header
+    title: Orders
+    actions: [{ id: export, kind: button, label: Export, variant: secondary }]
+  - id: filter
+    kind: filter-form
+    fields: [period, branch, status]
+  - id: table
+    kind: table
+    columns: [order_no, branch, amount, status, ordered_at]
+  - id: paging
+    kind: pagination
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+  header: { align: space-between }
+  filter: { kind: grid, columns: 3, gap: space.md }
+  table: { grow: true }
+  paging: { align: end }
+
+states:
+  Empty:
+    - { target: table, replace: { kind: empty-notice, text: "No orders match." } }
+    - { target: paging, hide: true }
+  Loading:
+    - { target: table, replace: { kind: skeleton, rows: 10 } }
+  Error:
+    - { target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm, due: 2026-10-02 } } } }
+
+flows:
+  - { from: table, via: row, to: order-detail }
+  - { from: filter, to: order-list.Empty, when: "0 results", style: conditional }
+
+notes:
+  - The branch column is hidden for single-branch accounts.

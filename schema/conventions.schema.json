@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/byjunyoung/design-core/schema/conventions.schema.json",
+  "title": "conventions.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "naming": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "screen_pattern": { "type": ["string", "null"] },
+        "section_pattern": { "type": ["string", "null"] }
+      }
+    },
+    "states": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "known": { "type": "array", "items": { "type": "string" } },
+        "required": {
+          "type": "object",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "kinds": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "anchors": { "type": "array", "items": { "type": "string" } },
+          "maps_to": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "containers": { "type": "array", "items": { "type": "string" } },
+        "spacing_tokens": { "type": ["string", "null"] },
+        "size_classes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "schemes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "canonical_branch": { "type": "string" },
+        "handoff_requires": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "edit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "auto_apply": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

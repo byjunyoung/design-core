@@ -1,0 +1,28 @@
+schema: design-core/0.2
+id: scr_01J8K4
+screen: order-detail
+section: "04. Orders - Order detail"
+type: detail
+refs:
+  prd: notion:2a1f0d
+
+elements:
+  - id: header
+    kind: page-header
+    title: Order
+    actions: [{ id: back, kind: button, label: Back, variant: secondary }]
+  - id: summary
+    kind: detail-card
+    fields: [order_no, branch, amount, status, ordered_at]
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+
+states:
+  Loading:
+    - { target: summary, replace: { kind: skeleton, rows: 5 } }
+  Error:
+    - { target: summary, replace: { kind: error-notice, text: "Could not load this order." } }
+
+flows:
+  - { from: header, via: action, to: order-list }
