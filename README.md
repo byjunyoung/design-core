@@ -12,6 +12,10 @@ The whole design, with the reason next to each decision, is in [DESIGN.md](DESIG
 
 `lint` — validates every screen file against the schema and runs rules L01–L15 (missing states, dead flows, patches that target nothing, `$tbd` counts, layout outside the token vocabulary, variant shape, canonical-branch cleanliness).
 
+`prep` — stubs every state the screen's type requires and the file lacks, as `$tbd` placeholders on one element. The file is rewritten in place with its comments intact; the next `lint` lists the placeholders as the to-do list.
+
+`diff` — AS-IS / TO-BE between two versions of a screen, as a markdown table or JSON. Elements are compared by id, so a reorder is one row and a changed column list is one row. Works on two files or on a file against a git ref.
+
 ```bash
 npm install
 node src/cli.js lint examples/orders --branch feature/demo
@@ -19,12 +23,17 @@ node src/cli.js lint examples/orders --branch feature/demo
 #   2 screens on feature/demo — 0 blocking, 1 warning
 node src/cli.js lint examples/orders --branch main      # exit 1: a $tbd is not allowed on the canonical branch
 node src/cli.js lint examples/orders --json             # the same, for agents and CI
+node src/cli.js prep design/screens/new-list.yaml --owner design
+#   design/screens/new-list.yaml: added Empty, Loading, Error as placeholders on "table"
+node src/cli.js diff design/screens/order-list.yaml --from main
+#   | Where | AS-IS | TO-BE |
+#   | elements.table.columns | `["order_no","branch",…]` | `["order_no",…]` |
 npm test
 ```
 
 `examples/store-ops` holds six screens transcribed from a real admin (list, modal, inline detail, dashboard, tabbed settings) — what that transcription taught the format is in DESIGN.md §12.
 
-Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: `prep`, `diff`, `render`, `apply`, `import`, and the MCP server.
+Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: `render`, `apply`, `import`, and the MCP server.
 
 ## Where it comes from
 

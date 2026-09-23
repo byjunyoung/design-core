@@ -2,7 +2,7 @@
 
 Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L15) on a project directory, as a CLI, and `mergeState` with variants. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), as a CLI; `mergeState` with variants. Not yet: `render`, `apply`, `import`, MCP. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -279,8 +279,8 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | verb | does | writes |
 |---|---|---|
 | `lint` | findings with file path + YAML path | no |
-| `prep <screen>` | stubs required states as `$tbd` patches | that file |
-| `diff <a> <b>` | AS-IS/TO-BE table, rendered side by side in the viewer | no |
+| `prep <screen>` | stubs required states as `placeholder` patches carrying `$tbd`, on one element (`--target`, default the first); comments and order kept | that file |
+| `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS/TO-BE table; elements by id (a reorder is one row), scalar lists as one value, object lists by index; later rendered side by side in the viewer | no |
 | `render` | the viewer's pages (static build, or served) | `out/` |
 | `apply <patch>` | applies an agent-proposed change after approval; the edit loop's write | that file |
 | `rename <old> <new>` | file and every reference | project |

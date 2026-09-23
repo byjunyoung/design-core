@@ -123,6 +123,7 @@ const rules = {
     if (!kinds || !Object.keys(kinds).length) return [];
     const out = [];
     const check = (s, kind, path) => {
+      if (kind === 'placeholder') return; // what prep leaves behind; counted by L08, not a vocabulary miss
       if (!(kind in kinds)) out.push(finding('L10', 'warning', s, path, `kind "${kind}" is not in conventions.kinds`));
     };
     for (const s of ctx.screens) {
