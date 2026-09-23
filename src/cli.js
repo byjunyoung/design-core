@@ -2,13 +2,18 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases } from './verbs.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { readFileSync } from 'node:fs';
 
 const USAGE = `usage: design-core <verb> …
+
+  init <project-dir> [--base none|antd]
+        start a project: conventions, sections, tokens, screens/. --base none (default) copies the
+        component set into <project-dir>/components so it is yours; a library base maps kinds to it.
+  bases  list the component bases and whether each is ready
 
   lint <project-dir> [--branch <name>] [--today YYYY-MM-DD] [--json]
         validate every screen file against the schema and run rules L01–L15.
@@ -123,7 +128,20 @@ const gated = (fn, key) => async (opts) => {
   return 0;
 };
 
+async function initCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await initProject(dir, { base: opts.base ?? 'none' });
+  process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n`);
+  return 0;
+}
+function basesCommand() {
+  for (const b of componentBases()) process.stdout.write(`${b.id.padEnd(8)} ${b.status.padEnd(8)} ${b.label} — ${b.note}\n`);
+  return 0;
+}
+
 const verbs = {
+  init: initCommand, bases: basesCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

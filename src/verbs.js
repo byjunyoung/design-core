@@ -10,7 +10,8 @@ import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { renderScreen, renderIndex, renderProposal } from './render/index.js';
 import { listProposals } from './proposals.js';
-import { createAdapter } from './render/adapters/index.js';
+import { resolveAdapter } from './render/adapters/index.js';
+import { initProject, componentBases } from './init.js';
 
 // One implementation per verb, returning plain JSON. The CLI prints it, the MCP server
 // returns it, the viewer will read it. Nothing here writes to stdout.
@@ -101,7 +102,7 @@ export async function renderProject(dir, opts = {}) {
   const project = await loadProject(dir);
   const branch = opts.branch ?? currentBranch(dir);
   const out = opts.out ?? join(dir, 'out');
-  const adapter = opts.components ? await createAdapter(opts.components, project) : null;
+  const adapter = await resolveAdapter(project, opts.components ?? null);
   await mkdir(out, { recursive: true });
   const pages = [];
   const pending = await listProposals(dir, { status: 'pending' });
@@ -123,3 +124,5 @@ export async function renderProject(dir, opts = {}) {
   }
   return { out, pages };
 }
+
+export { initProject, componentBases };

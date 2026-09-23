@@ -58,6 +58,19 @@ Three things to notice:
 npm install
 ```
 
+**Start a project, and choose what it draws with.**
+
+```bash
+node src/cli.js bases
+#   none     ready    Self-built (100% yours) — the bundled set is copied into your project and becomes your component library
+#   antd     ready    Ant Design — kinds map to antd components, drawn server-side and themed from tokens.json
+#   mui      planned  …
+node src/cli.js init design --base none
+#   design: base=none — created conventions.yaml, sections.yaml, tokens.json, components/kinds.js
+```
+
+Two roads, and the tool does not care which. **Self-built** copies the component set into `design/components/kinds.js` — from then on it is your file, edit it and the drawings change; the tool never owns a team's components. **A library** (antd today; others are one adapter file each) maps every kind to one of its components and draws with the real thing, themed from your tokens. Either way `render` reads the choice from `conventions.yaml`; `--components antd` on the command line overrides it for one run.
+
 **See what is missing.**
 
 ```bash
@@ -93,8 +106,6 @@ Elements are compared by name, not position — reorder two of them and you get 
 node src/cli.js render examples/store-ops --out out
 #   7 pages → out/
 ```
-
-Add `--components antd` and every kind that `conventions.yaml` maps to an antd component (`table: { maps_to: { antd: Table } }`) is drawn with the real thing, server-side, themed from your `tokens.json`; kinds with no mapping keep the bundled drawing. Other libraries are one adapter file each.
 
 Open `out/index.html`. Each screen page shows every state side by side, and each variant (an edit dialog in Create mode and in Edit mode) in its own row. Click any element and a panel tells you what it is, which design-system component it maps to, its properties, and the exact file and line it came from. Undecided values are yellow chips; placeholders are dashed boxes; modals sit on a dimmed backdrop.
 
