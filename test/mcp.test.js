@@ -25,7 +25,7 @@ const call = async (name, args = {}) => {
 
 test('the server exposes the verbs and the two agent reads', async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_screens', 'prep', 'render'].sort());
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_screens', 'prep', 'render', 'propose', 'list_proposals', 'apply', 'reject', 'undo'].sort());
 });
 
 test('lint returns the same JSON the CLI does', async () => {
@@ -76,4 +76,19 @@ test('render writes the pages and returns their paths', async () => {
   const { json } = await call('render', { out: join(dir, 'out') });
   assert.ok(json.pages.some((p) => p.endsWith('index.html')));
   assert.ok(json.pages.some((p) => p.endsWith('inventory-list.html')));
+});
+
+test('propose → pending → apply with approved_by runs over MCP, and list_proposals sees the queue', async () => {
+  const before = readFileSync(join(dir, 'screens', 'payment-list.yaml'), 'utf8');
+  const after = before.replace('columns: [nickname, order_no, store, method, amount, status, paid_at]', 'columns: [nickname, order_no, amount, status, paid_at]');
+  const p = await call('propose', { screen: 'payment-list', after, summary: 'drop store and method columns' });
+  assert.equal(p.json.status, 'pending');
+  assert.equal(p.json.tier, 'structure');
+  const q = await call('list_proposals');
+  assert.ok(q.json.proposals.some((x) => x.id === p.json.id));
+  const denied = await call('apply', { id: p.json.id });
+  assert.equal(denied.isError, true);
+  const a = await call('apply', { id: p.json.id, approved_by: 'reviewer' });
+  assert.equal(a.json.status, 'applied');
+  assert.match(readFileSync(join(dir, 'screens', 'payment-list.yaml'), 'utf8'), /\[nickname, order_no, amount, status, paid_at\]/);
 });

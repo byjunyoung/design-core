@@ -2,7 +2,7 @@
 
 Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`). Not yet: render with a team's own component library, `apply`, `import`, comments. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: render with a team's own component library, `import`, comments on the page. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -259,6 +259,8 @@ tool      applies to the working branch, re-renders, resolves the comment with a
 
 One tier rule so a typo does not cost a round trip: changes in `edit.auto_apply` (default: `text` — copy, labels, titles) that pass lint apply immediately, with undo. Everything else — elements, layout, states, flows — previews first. The owner chose conversation-only editing on 2026-09-23 knowing the cost; this rule is the floor under it.
 
+Shipped 2026-09-23: `propose(screen, after)` takes the whole new YAML text — not a patch language, because an agent already writes whole files well and a patch language is one more thing to get wrong. The proposal stores the base file's hash; `apply` refuses if the file moved since. The tier is read off the diff: every changed path ending in a text prop (`text`, `label`, `title`, `placeholder`, `caption`, `hint`, `note`, `when`) or under `notes` is `text`; anything else is `structure`. `edit.auto_apply` names the tiers that skip the person; a tier still waits if lint after would block. Proposals are files under `.proposals/`, so the CLI, the MCP server and a future viewer share one queue. The MCP `apply` tool needs `approved_by` and its description tells the agent not to call it on its own — that is a convention, not a lock; the lock is that a person can always `undo`, and that the viewer (when it exists) is where approval is meant to happen.
+
 The agent behind the loop is not part of this project. The tool exposes MCP verbs (§9) and a comment feed; Claude Code, Codex or a hosted agent drives them. This keeps the tool small and lets a team bring the agent it already pays for.
 
 ## 8. Lifecycle
@@ -284,7 +286,7 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `prep <screen>` | stubs required states as `placeholder` patches carrying `$tbd`, on one element (`--target`, default the first); comments and order kept | that file |
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS/TO-BE table; elements by id (a reorder is one row), scalar lists as one value, object lists by index; later rendered side by side in the viewer | no |
 | `render` | the viewer's pages (static build, or served) | `out/` |
-| `apply <patch>` | applies an agent-proposed change after approval; the edit loop's write | that file |
+| `propose <screen> <after>` · `apply <id> --by` · `reject <id>` · `undo <id>` · `proposals` | the edit loop (§7): diff + lint delta + tier; text-only auto-applies; structure waits for a person | that file, and `.proposals/` |
 | `rename <old> <new>` | file and every reference | project |
 | `import html <dir>` | Claude Design / Open Design / any HTML export → screen files: `kind` by reverse `maps_to` on component markup, `layout` from flex/grid structure, unresolved → `$tbd` | new files |
 | `import figma <file>` | on-ramp for a team already drawing: `{screen}-{state}` frames → files; `kind` by reverse `maps_to` on master name; `type` by reverse match on states present; unresolved → `$tbd` | new files |

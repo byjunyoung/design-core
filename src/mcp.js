@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { resolve } from 'node:path';
 import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject } from './verbs.js';
+import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
 // for most: the merged view of one screen, and only the findings that mean "missing".
@@ -104,6 +105,49 @@ server.registerTool(
     inputSchema: { out: z.string().optional().describe('output directory; default <project>/out') },
   },
   guard((input) => renderProject(dir, { ...common, out: input.out })),
+);
+
+server.registerTool(
+  'propose',
+  {
+    description:
+      'Propose a new version of one screen file (the whole YAML text). Returns the diff, lint before/after and a tier. ' +
+      'A text-only change that keeps lint clean is applied at once (status "applied", undo available); anything else stays "pending" until a person applies or rejects it. ' +
+      'Show the person the markdown and wait for their answer; do not call apply on your own.',
+    inputSchema: {
+      screen: z.string(),
+      after: z.string().describe('the complete proposed YAML text of the screen file'),
+      summary: z.string().default('').describe('one line: what changes and why, in the person\'s words'),
+    },
+  },
+  guard((input) => propose(dir, input, common)),
+);
+
+server.registerTool(
+  'list_proposals',
+  { description: 'Proposals waiting for a person, oldest first (or all with status "all").', inputSchema: { status: z.string().default('pending') } },
+  guard(async (input) => ({ proposals: await listProposals(dir, input) })),
+);
+
+server.registerTool(
+  'apply',
+  {
+    description: 'Write a pending proposal to the file. Only after the person said yes in the conversation; approved_by is their name, and the call is refused without it or if the file changed since.',
+    inputSchema: { id: z.string(), approved_by: z.string().optional() },
+  },
+  guard((input) => applyProposal(dir, input)),
+);
+
+server.registerTool(
+  'reject',
+  { description: 'Drop a pending proposal, with the reason the person gave.', inputSchema: { id: z.string(), reason: z.string().default('') } },
+  guard((input) => rejectProposal(dir, input)),
+);
+
+server.registerTool(
+  'undo',
+  { description: 'Put back the previous text of a screen an applied proposal changed, if nothing else touched it since.', inputSchema: { id: z.string() } },
+  guard((input) => undoProposal(dir, input)),
 );
 
 await server.connect(new StdioServerTransport());

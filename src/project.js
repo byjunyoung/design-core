@@ -4,7 +4,7 @@ import { parseDocument, LineCounter, isNode } from 'yaml';
 
 // A screen file, parsed twice over: `doc` is the plain object every verb works on,
 // `lineOf(path)` maps a YAML path back to a 1-based line so findings can point at it.
-function parseWithLines(text, file) {
+export function parseScreenText(text, file) {
   const lineCounter = new LineCounter();
   const document = parseDocument(text, { lineCounter, keepSourceTokens: true });
   const doc = document.toJS();
@@ -17,11 +17,11 @@ function parseWithLines(text, file) {
 }
 
 async function readYaml(path) {
-  return parseWithLines(await readFile(path, 'utf8'), path).doc;
+  return parseScreenText(await readFile(path, 'utf8'), path).doc;
 }
 
 export async function loadScreen(path) {
-  return parseWithLines(await readFile(path, 'utf8'), path);
+  return parseScreenText(await readFile(path, 'utf8'), path);
 }
 
 export async function loadProject(dir) {

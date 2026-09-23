@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { lintProject, renderProject } from './verbs.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
+import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
+import { readFileSync } from 'node:fs';
 
 const USAGE = `usage: design-core <verb> …
 
@@ -21,7 +23,11 @@ const USAGE = `usage: design-core <verb> …
         draw every screen with the bundled component set: out/index.html + one page per screen,
         every state side by side, variants in their own rows, an inspector on click. file:// safe.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
-        start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.`;
+        start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
+  propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--json]
+        queue a new version of a screen: diff, lint before/after, tier. text-only + clean lint applies at once.
+  proposals <project-dir> [--status pending|applied|all]
+  apply <project-dir> <id> --by <name>      reject <project-dir> <id> [--reason "…"]      undo <project-dir> <id>`;
 
 function parseArgs(argv) {
   const [verb, ...rest] = argv;
@@ -90,7 +96,34 @@ function mcpCommand(opts) {
   return new Promise((res) => spawn(process.execPath, args, { stdio: 'inherit' }).on('exit', (code) => res(code ?? 0)));
 }
 
-const verbs = { lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand };
+async function proposeCommand(opts) {
+  const [dir, screen] = opts._;
+  if (!dir || !screen || !opts.with) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const p = await propose(dir, { screen, after: readFileSync(opts.with, 'utf8'), summary: opts.summary ?? '' }, { branch: opts.branch, today: opts.today });
+  if (opts.json) process.stdout.write(JSON.stringify(p, null, 2) + '\n');
+  else process.stdout.write(`${p.id}  ${p.status}  tier=${p.tier}  lint ${p.lint.before.blocking}→${p.lint.after.blocking} blocking\n${p.markdown}`);
+  return 0;
+}
+async function proposalsCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const list = await listProposals(dir, { status: opts.status ?? 'pending' });
+  for (const p of list) process.stdout.write(`${p.id}  ${p.status}  ${p.screen}  tier=${p.tier}  ${p.summary}\n`);
+  if (!list.length) process.stdout.write('no proposals\n');
+  return 0;
+}
+const gated = (fn, key) => async (opts) => {
+  const [dir, id] = opts._;
+  if (!dir || !id) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const p = await fn(dir, { id, approved_by: opts.by, reason: opts.reason });
+  process.stdout.write(`${p.id}  ${p.status}  ${p.screen}\n`);
+  return 0;
+};
+
+const verbs = {
+  lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
+  propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
+};
 const { verb, opts } = parseArgs(process.argv.slice(2));
 try {
   if (!verbs[verb]) throw Object.assign(new Error(USAGE), { exit: 2 });

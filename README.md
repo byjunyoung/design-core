@@ -22,6 +22,8 @@ The whole design, with the reason next to each decision, is in [DESIGN.md](DESIG
 { "mcpServers": { "design-core": { "command": "node", "args": ["/path/to/design-core/src/mcp.js", "design"] } } }
 ```
 
+`propose` / `apply` / `reject` / `undo` — the edit loop. An agent (or you) proposes a whole new version of one screen file; the proposal carries the AS-IS/TO-BE diff, lint before and after, and a tier. A text-only change that keeps lint clean is applied at once, with `undo`. Anything structural waits in `.proposals/` until a person runs `apply --by <name>` or `reject`. `apply` refuses if the file changed since the proposal was made. Over MCP the same five tools exist, and `apply` needs `approved_by` — the agent shows the diff and waits for the person.
+
 `render` — draws every screen with the bundled component set into static HTML: an index with lint counts per screen, and one page per screen with every state side by side, each variant axis in its own row, flows as links, and an inspector — click any element for its kind, the design-system component it maps to, its props, and the file, YAML path and line it came from. A `$tbd` shows as a chip where the value would be; a placeholder `prep` left shows as an undesigned box; `show_when` / `disabled_when` show as condition badges. Modals sit on a backdrop. No dependencies, no build; opens from a folder.
 
 ```bash
@@ -42,7 +44,7 @@ npm test
 
 `examples/store-ops` holds six screens transcribed from a real admin (list, modal, inline detail, dashboard, tabbed settings) — what that transcription taught the format is in DESIGN.md §12.
 
-Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: rendering with the team's own component library (antd, MUI) instead of the bundled set, `apply` (the approve-then-write half of the edit loop), `import`, and comments.
+Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: rendering with the team's own component library (antd, MUI) instead of the bundled set, `import`, and comments on the rendered page (today a comment is whatever the person says to the agent).
 
 ## Where it comes from
 
