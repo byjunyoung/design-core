@@ -4,6 +4,9 @@ import { relative } from 'node:path';
 import { loadProject, validateScreen, validateConventions, lint, summarize } from './index.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
+import { renderScreen, renderIndex } from './render/index.js';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 const USAGE = `usage: design-core <verb> …
 
@@ -15,7 +18,10 @@ const USAGE = `usage: design-core <verb> …
         stub every state the screen's type requires and the file lacks, as $tbd placeholders.
         the file is rewritten in place; comments and order are kept.
   diff <a.yaml> <b.yaml> [--json]        or        diff <screen-file> --from <git-ref> [--to <git-ref>] [--json]
-        AS-IS / TO-BE between two versions of a screen. elements are compared by id.`;
+        AS-IS / TO-BE between two versions of a screen. elements are compared by id.
+  render <project-dir> [--out <dir>] [--branch <name>] [--today YYYY-MM-DD]
+        draw every screen with the bundled component set: out/index.html + one page per screen,
+        every state side by side, variants in their own rows, an inspector on click. file:// safe.`;
 
 function parseArgs(argv) {
   const [verb, ...rest] = argv;
@@ -90,7 +96,21 @@ async function diffCommand(opts) {
   return 0;
 }
 
-const verbs = { lint: lintCommand, prep: prepCommand, diff: diffCommand };
+async function renderCommand(opts) {
+  const dir = opts._[0];
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const project = await loadProject(dir);
+  const branch = opts.branch ?? currentBranch(dir);
+  const today = opts.today ?? new Date().toISOString().slice(0, 10);
+  const out = opts.out ?? join(dir, 'out');
+  await mkdir(out, { recursive: true });
+  await writeFile(join(out, 'index.html'), renderIndex(project, { branch, today }));
+  for (const s of project.screens) await writeFile(join(out, `${s.doc.screen}.html`), renderScreen(project, s, { branch }));
+  process.stdout.write(`${project.screens.length + 1} pages → ${relative(process.cwd(), out) || out}/\n`);
+  return 0;
+}
+
+const verbs = { lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand };
 const { verb, opts } = parseArgs(process.argv.slice(2));
 try {
   if (!verbs[verb]) throw Object.assign(new Error(USAGE), { exit: 2 });

@@ -30,5 +30,11 @@ export async function loadProject(dir) {
   const screensDir = join(dir, 'screens');
   const names = (await readdir(screensDir)).filter((n) => /\.ya?ml$/.test(n)).sort();
   const screens = await Promise.all(names.map((n) => loadScreen(join(screensDir, n))));
-  return { dir, conventions, sections, screens, screenName: (s) => basename(s.file) };
+  let tokens = null;
+  try {
+    tokens = JSON.parse(await readFile(join(dir, 'tokens.json'), 'utf8'));
+  } catch {
+    tokens = null; // optional: render falls back to the bundled token set
+  }
+  return { dir, conventions, sections, screens, tokens, screenName: (s) => basename(s.file) };
 }

@@ -2,7 +2,7 @@
 
 Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), as a CLI; `mergeState` with variants. Not yet: `render`, `apply`, `import`, MCP. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI; `mergeState` with variants. Not yet: render with a team's own component library, `apply`, `import`, comments, MCP. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -240,6 +240,8 @@ Project
 ```
 
 Each `kind` resolves to a component: through `maps_to` when the team names a design system with a web build (antd, MUI, the team's own), otherwise the bundled default set — one tokenised HTML component per shipped `kind`. `layout` becomes CSS from tokens. Because the page is built from the production library, a developer inspecting it sees the real `Table` with its real props. That is the handoff: no redlines, no measurement, no picture.
+
+Shipped 2026-09-23 (v0.2.1): the page is finite by rule — the **states row** renders every state with no variant chosen, in `states.known` order; each **variants row** renders every option of one axis in Default; no cross product. The inspector is one fixed panel filled by one delegated click handler: id, kind, `maps_to` name (or "bundled default"), props, file, YAML path, line, and a copy button for `file:line`. A `developer` toggle prints every element's path on the page. A `$tbd` renders as a dashed chip in place of the value; a `placeholder` as a dashed "undesigned" box carrying its owner and note; `show_when` / `disabled_when` as muted condition badges — printed, never evaluated. A `type: modal` screen sits centred on a dimmed backdrop. Every gap and padding is a token variable; the CSS carries no spacing number. Verified in a browser: click the table on `inventory-list` → `elements.1.children.1`, line 28, which is `- id: table` in the file.
 
 What render will not offer, on purpose: drag, resize, nudge. The moment a hand can move a box, the file and the picture can disagree, the diff stops being readable, and the product becomes one more canvas competing with three funded ones. The cost is real and named: a spacing change that would take one drag takes one sentence (§7).
 

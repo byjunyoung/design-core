@@ -1,0 +1,170 @@
+// The bundled component set: one function per kind, each returning the INSIDE of the
+// element's wrapper. `h` escapes; `v` renders any prop value (a $tbd becomes a chip).
+// A kind with no entry falls back to `generic`, which shows the kind and its props —
+// the renderer never refuses a kind, the same way lint only warns on one (L10).
+
+export const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+export const isTbd = (x) => x && typeof x === 'object' && !Array.isArray(x) && '$tbd' in x;
+
+export function v(value) {
+  if (value === undefined || value === null) return '';
+  if (isTbd(value)) {
+    const m = value.$tbd ?? {};
+    const who = [m.owner, m.due].filter(Boolean).join(' · ');
+    return `<span class="tbd" title="${h(m.note ?? '')}">TBD${who ? ' ' + h(who) : ''}</span>`;
+  }
+  if (Array.isArray(value)) return value.map(v).join(', ');
+  if (typeof value === 'object') return h(JSON.stringify(value));
+  return h(value);
+}
+
+const label = (c) => (typeof c === 'object' && c && !isTbd(c) ? c.label ?? c.key ?? c.id ?? JSON.stringify(c) : c);
+
+const RESERVED = new Set(['id', 'kind', 'children', 'show_when', 'disabled_when', 'reveals']);
+const props = (el) => Object.entries(el).filter(([k]) => !RESERVED.has(k));
+
+const list = (items) => (Array.isArray(items) ? items : items === undefined ? [] : [items]);
+
+export const kinds = {
+  generic(el, r) {
+    const rows = props(el).map(([k, val]) => `<div class="prop"><span class="k">${h(k)}</span><span class="v">${v(val)}</span></div>`).join('');
+    return `<div class="generic-head">${h(el.kind)}</div>${rows}${r.children(el)}`;
+  },
+  'page-header'(el, r) {
+    const actions = list(el.actions).map((a) => (typeof a === 'object' && a.kind ? r.element(a) : `<button class="btn">${v(a)}</button>`)).join('');
+    const tabs = list(el.tabs).map((t, i) => `<span class="tab${i === 0 ? ' active' : ''}">${v(t)}</span>`).join('');
+    return `<div class="ph-left"><h2>${v(el.title)}</h2>${tabs ? `<div class="tabs">${tabs}</div>` : ''}</div><div class="ph-actions">${actions}${r.children(el)}</div>`;
+  },
+  card(el, r) {
+    return `${el.title ? `<div class="card-title">${v(el.title)}${el.hint ? ` <span class="hint">${v(el.hint)}</span>` : ''}</div>` : ''}${r.children(el)}`;
+  },
+  section(el, r) {
+    return `${el.title ? `<div class="section-title">${v(el.title)}</div>` : ''}${r.children(el)}`;
+  },
+  fieldset(el, r) {
+    return `${r.children(el)}${el.hint ? `<div class="hint">${v(el.hint)}</div>` : ''}`;
+  },
+  group(el, r) {
+    return r.children(el);
+  },
+  'filter-bar'(el, r) {
+    return r.children(el);
+  },
+  'filter-form'(el) {
+    return list(el.fields).map((f) => `<label class="fld"><span>${v(label(f))}</span><input readonly placeholder="${h(label(f))}"></label>`).join('');
+  },
+  segmented(el) {
+    return `<div class="seg">${list(el.options).map((o, i) => `<span class="${i === 0 ? 'on' : ''}">${v(o)}</span>`).join('')}</div>`;
+  },
+  'button-group'(el) {
+    return `<div class="seg">${list(el.options).map((o, i) => `<span class="${i === 0 ? 'on' : ''}">${v(o)}</span>`).join('')}</div>`;
+  },
+  button(el) {
+    const variant = el.variant ?? 'default';
+    return `<button class="btn btn-${h(variant)}"${el.disabled ? ' disabled' : ''}>${v(el.label ?? el.title ?? el.id)}</button>`;
+  },
+  caption(el) {
+    return `<span class="caption">${v(el.text)}</span>`;
+  },
+  hint(el) {
+    return `<span class="hint">${el.icon ? `<span class="ico">${h(el.icon)}</span> ` : ''}${v(el.text)}</span>`;
+  },
+  divider() {
+    return `<hr>`;
+  },
+  table(el) {
+    const cols = list(el.columns);
+    const head = cols.map((c) => `<th>${v(label(c))}${typeof c === 'object' && c?.sortable ? ' ↕' : ''}</th>`).join('');
+    const cell = (c) => {
+      if (typeof c === 'object' && c?.kind === 'progress') return `<td><div class="bar"><span style="width:62%"></span></div></td>`;
+      if (typeof c === 'object' && c?.sub) return `<td>—<div class="sub">${v(c.sub)}</div></td>`;
+      return `<td>—</td>`;
+    };
+    const rows = Array.from({ length: 3 }, () => `<tr>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map(cell).join('')}</tr>`).join('');
+    return `<table><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>${el.row_action ? `<div class="hint">row → ${v(el.row_action)}</div>` : ''}`;
+  },
+  pagination(el) {
+    return `<div class="pager">‹ <span class="on">1</span> 2 3 ›${el.page_size ? ` <span class="hint">${h(el.page_size)}/page</span>` : ''}</div>`;
+  },
+  'empty-notice'(el) {
+    return `<div class="notice"><div class="notice-icon">○</div><div class="notice-title">${v(el.title ?? 'Nothing here')}</div><div class="notice-text">${v(el.text)}</div></div>`;
+  },
+  'error-notice'(el) {
+    return `<div class="notice error"><div class="notice-icon">!</div><div class="notice-title">${v(el.title ?? 'Something went wrong')}</div><div class="notice-text">${v(el.text)}</div></div>`;
+  },
+  skeleton(el) {
+    return Array.from({ length: Math.min(Number(el.rows) || 3, 6) }, () => `<div class="skel"></div>`).join('');
+  },
+  overlay(el) {
+    return `<div class="overlay-box">${v(el.text ?? 'Loading…')}</div>`;
+  },
+  toast(el) {
+    return `<div class="toast ${h(el.level ?? 'info')}">${v(el.text)}</div>`;
+  },
+  placeholder(el) {
+    return `<div class="ph-label">undesigned</div><div class="ph-text">${v(el.text)}</div>`;
+  },
+  modal(el, r) {
+    return `<div class="modal-title">${v(el.title)}</div><div class="modal-body">${r.children(el)}</div>${el.notice ? `<div class="notice-inline">${v(el.notice.title ?? el.notice)}</div>` : ''}`;
+  },
+  confirm(el) {
+    return `<div class="confirm"><div class="modal-title">${v(el.title)}</div><div>${v(el.text)}</div><div class="row end">${list(el.buttons).map((b) => `<button class="btn">${v(b)}</button>`).join('')}</div></div>`;
+  },
+  field(el, r) {
+    const c = el.control;
+    const control = c && typeof c === 'object' && !isTbd(c) ? r.element({ id: `${el.id}-control`, ...c }) : `<input readonly>`;
+    return `<div class="fld-label">${v(el.label)}${el.caption ? `<div class="hint">${v(el.caption)}</div>` : ''}</div><div class="fld-control">${control}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${el.reveals ? `<div class="hint">reveals: ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
+  },
+  input(el) {
+    return `<input readonly${el.readonly ? ' class="ro"' : ''} value="${h(el.text ?? el.value ?? '')}" placeholder="${h(el.placeholder ?? '')}">`;
+  },
+  number(el) {
+    return `<input readonly type="number" value="${h(el.value ?? '')}">`;
+  },
+  textarea(el) {
+    return `<textarea readonly rows="2" placeholder="${h(el.placeholder ?? '')}"></textarea>${el.counter ? `<div class="hint">${v(el.counter)}</div>` : ''}`;
+  },
+  select(el) {
+    return `<div class="select">${v(Array.isArray(el.options) ? el.options[0] : el.options ?? 'Select')} ▾</div>`;
+  },
+  radio(el) {
+    return `<div class="radio">${list(el.options).map((o, i) => `<label><span class="dot${i === 0 ? ' on' : ''}"></span>${v(o)}</label>`).join('')}</div>`;
+  },
+  date(el) {
+    return `<div class="select">${h(el.format ?? 'YYYY.MM.DD')} ▾</div>`;
+  },
+  'date-range'(el) {
+    return `<div class="row"><div class="select">${h(el.format ?? 'YYYY.MM.DD')}</div> ~ <div class="select">${h(el.format ?? 'YYYY.MM.DD')}</div></div>`;
+  },
+  upload(el) {
+    return `<button class="btn">${v(el.label ?? 'Choose file')}</button>`;
+  },
+  image(el) {
+    return `<div class="img size-${h(el.size ?? 'md')}">image</div>`;
+  },
+  'kv-table'(el) {
+    const rows = Array.isArray(el.rows) ? el.rows : [];
+    const body = rows.map((r) => `<tr>${list(r).map((k) => `<th>${v(k)}</th><td>—</td>`).join('')}</tr>`).join('');
+    return `${el.title ? `<div class="section-title">${v(el.title)}</div>` : ''}<table class="kv">${body || `<tr><td class="hint">${v(el.rows)}</td></tr>`}</table>`;
+  },
+  'detail-card'(el) {
+    return `<table class="kv">${list(el.fields).map((f) => `<tr><th>${v(f)}</th><td>—</td></tr>`).join('')}</table>`;
+  },
+  'stat-strip'(el) {
+    return `<div class="stats">${list(el.stats).map((s) => `<div class="stat"><div class="stat-v">—</div><div class="stat-l">${v(s)}</div></div>`).join('')}</div>`;
+  },
+  'tile-grid'(el) {
+    const n = Math.min(Number(el.per_page) || 25, 100);
+    return `<div class="tiles" style="--cols:${Number(el.columns) || 10}">${Array.from({ length: n }, (_, i) => `<span class="tile t${i % 5}"></span>`).join('')}</div>`;
+  },
+  tooltip(el) {
+    return `<div class="hint">ⓘ ${v(el.trigger ?? 'tooltip')}: ${v(el.items)}</div>`;
+  },
+  'sortable-list'(el) {
+    return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">⋮⋮ ${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;
+  },
+  progress() {
+    return `<div class="bar"><span style="width:62%"></span></div>`;
+  },
+};
