@@ -2,7 +2,7 @@
 
 Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI; `mergeState` with variants. Not yet: render with a team's own component library, `apply`, `import`, comments, MCP. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`). Not yet: render with a team's own component library, `apply`, `import`, comments. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -290,7 +290,7 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `import figma <file>` | on-ramp for a team already drawing: `{screen}-{state}` frames → files; `kind` by reverse `maps_to` on master name; `type` by reverse match on states present; unresolved → `$tbd` | new files |
 | `export <adapter>` | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
 
-MCP adds `get_screen(id, state)` (merged view) and `list_missing()` (L03/L08 only), because agents ask those most.
+MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view) and `list_missing()` (L03/L08 only), because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
 
 ## 10. The service
 

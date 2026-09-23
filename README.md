@@ -16,6 +16,12 @@ The whole design, with the reason next to each decision, is in [DESIGN.md](DESIG
 
 `diff` — AS-IS / TO-BE between two versions of a screen, as a markdown table or JSON. Elements are compared by id, so a reorder is one row and a changed column list is one row. Works on two files or on a file against a git ref.
 
+`mcp` — the same verbs over MCP on stdio, for the agent that holds the pen: `list_screens`, `get_screen` (the merged view for a state and a variant choice), `lint`, `list_missing` (only what is missing: required states and `$tbd`), `prep`, `diff`, `render`. Same JSON as the CLI.
+
+```json
+{ "mcpServers": { "design-core": { "command": "node", "args": ["/path/to/design-core/src/mcp.js", "design"] } } }
+```
+
 `render` — draws every screen with the bundled component set into static HTML: an index with lint counts per screen, and one page per screen with every state side by side, each variant axis in its own row, flows as links, and an inspector — click any element for its kind, the design-system component it maps to, its props, and the file, YAML path and line it came from. A `$tbd` shows as a chip where the value would be; a placeholder `prep` left shows as an undesigned box; `show_when` / `disabled_when` show as condition badges. Modals sit on a backdrop. No dependencies, no build; opens from a folder.
 
 ```bash
@@ -36,7 +42,7 @@ npm test
 
 `examples/store-ops` holds six screens transcribed from a real admin (list, modal, inline detail, dashboard, tabbed settings) — what that transcription taught the format is in DESIGN.md §12.
 
-Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: rendering with the team's own component library (antd, MUI) instead of the bundled set, `apply`, `import`, comments, and the MCP server.
+Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: rendering with the team's own component library (antd, MUI) instead of the bundled set, `apply` (the approve-then-write half of the edit loop), `import`, and comments.
 
 ## Where it comes from
 

@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process';
 import { relative } from 'node:path';
-import { loadProject, validateScreen, validateConventions, lint, summarize } from './index.js';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { lintProject, renderProject } from './verbs.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex } from './render/index.js';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 
 const USAGE = `usage: design-core <verb> …
 
@@ -21,7 +19,9 @@ const USAGE = `usage: design-core <verb> …
         AS-IS / TO-BE between two versions of a screen. elements are compared by id.
   render <project-dir> [--out <dir>] [--branch <name>] [--today YYYY-MM-DD]
         draw every screen with the bundled component set: out/index.html + one page per screen,
-        every state side by side, variants in their own rows, an inspector on click. file:// safe.`;
+        every state side by side, variants in their own rows, an inspector on click. file:// safe.
+  mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
+        start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.`;
 
 function parseArgs(argv) {
   const [verb, ...rest] = argv;
@@ -35,33 +35,10 @@ function parseArgs(argv) {
   return { verb, opts };
 }
 
-function currentBranch(dir) {
-  try {
-    return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: dir, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-  } catch {
-    return null;
-  }
-}
-
 async function lintCommand(opts) {
   const dir = opts._[0];
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const project = await loadProject(dir);
-  const branch = opts.branch ?? currentBranch(dir);
-  const today = opts.today ?? new Date().toISOString().slice(0, 10);
-
-  // Schema errors come first and stop the run: a rule cannot read a file the schema rejects.
-  const schemaFindings = [];
-  const conv = validateConventions(project.conventions);
-  for (const e of conv.errors) schemaFindings.push({ id: 'SCHEMA', severity: 'blocking', file: 'conventions.yaml', path: e.path, line: null, message: e.message });
-  for (const s of project.screens) {
-    const r = validateScreen(s.doc);
-    for (const e of r.errors) schemaFindings.push({ id: 'SCHEMA', severity: 'blocking', screen: s.doc.screen, file: s.file, path: e.path, line: null, message: e.message });
-  }
-  const findings = schemaFindings.length ? schemaFindings : lint(project, { branch, today });
-  for (const f of findings) f.file = relative(process.cwd(), f.file) || f.file;
-  const summary = { ...summarize(findings), branch, screens: project.screens.length };
-
+  const { summary, findings } = await lintProject(dir, { branch: opts.branch, today: opts.today });
   if (opts.json) {
     process.stdout.write(JSON.stringify({ summary, findings }, null, 2) + '\n');
   } else {
@@ -70,7 +47,7 @@ async function lintCommand(opts) {
       const path = Array.isArray(f.path) ? f.path.join('.') : f.path;
       process.stdout.write(`${f.severity === 'blocking' ? 'BLOCK' : 'warn '}  ${f.id}  ${where}  ${path}  ${f.message}\n`);
     }
-    process.stdout.write(`${summary.screens} screens on ${branch ?? '(no branch)'} — ${summary.blocking} blocking, ${summary.warning} warning\n`);
+    process.stdout.write(`${summary.screens} screens on ${summary.branch ?? '(no branch)'} — ${summary.blocking} blocking, ${summary.warning} warning\n`);
   }
   return summary.blocking ? 1 : 0;
 }
@@ -99,18 +76,21 @@ async function diffCommand(opts) {
 async function renderCommand(opts) {
   const dir = opts._[0];
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const project = await loadProject(dir);
-  const branch = opts.branch ?? currentBranch(dir);
-  const today = opts.today ?? new Date().toISOString().slice(0, 10);
-  const out = opts.out ?? join(dir, 'out');
-  await mkdir(out, { recursive: true });
-  await writeFile(join(out, 'index.html'), renderIndex(project, { branch, today }));
-  for (const s of project.screens) await writeFile(join(out, `${s.doc.screen}.html`), renderScreen(project, s, { branch }));
-  process.stdout.write(`${project.screens.length + 1} pages → ${relative(process.cwd(), out) || out}/\n`);
+  const { out, pages } = await renderProject(dir, { branch: opts.branch, today: opts.today, out: opts.out });
+  process.stdout.write(`${pages.length} pages → ${relative(process.cwd(), out) || out}/\n`);
   return 0;
 }
 
-const verbs = { lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand };
+function mcpCommand(opts) {
+  const dir = opts._[0];
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const server = fileURLToPath(new URL('./mcp.js', import.meta.url));
+  const args = [server, dir];
+  for (const k of ['branch', 'today']) if (opts[k]) args.push(`--${k}`, opts[k]);
+  return new Promise((res) => spawn(process.execPath, args, { stdio: 'inherit' }).on('exit', (code) => res(code ?? 0)));
+}
+
+const verbs = { lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand };
 const { verb, opts } = parseArgs(process.argv.slice(2));
 try {
   if (!verbs[verb]) throw Object.assign(new Error(USAGE), { exit: 2 });

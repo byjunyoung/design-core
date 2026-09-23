@@ -4,15 +4,23 @@
   "description": "A design tool for product screens where the agent holds the pen. Engine: screen files, lint, states, flows.",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=20" },
-  "bin": { "design-core": "./src/cli.js" },
-  "exports": { ".": "./src/index.js" },
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "design-core": "./src/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
     "lint:examples": "node src/cli.js lint examples/orders --branch feature/demo"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "ajv": "^8.17.1",
-    "yaml": "^2.6.0"
+    "yaml": "^2.6.0",
+    "zod": "^4.6.5"
   }
 }
