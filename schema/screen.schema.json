@@ -3,104 +3,255 @@
   "$id": "https://github.com/byjunyoung/design-core/schema/screen.schema.json",
   "title": "Screen file",
   "type": "object",
-  "required": ["schema", "id", "screen", "section", "type", "elements"],
+  "required": [
+    "schema",
+    "id",
+    "screen",
+    "section",
+    "type",
+    "elements"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema": { "const": "design-core/0.2" },
-    "id": { "type": "string", "pattern": "^scr_[A-Za-z0-9]+$" },
-    "screen": { "type": "string", "minLength": 1 },
-    "section": { "type": "string", "minLength": 1 },
-    "type": { "type": "string", "minLength": 1 },
+    "schema": {
+      "const": "design-core/0.2"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^scr_[A-Za-z0-9]+$"
+    },
+    "screen": {
+      "type": "string",
+      "minLength": 1
+    },
+    "section": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
     "refs": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/uri" }
+      "additionalProperties": {
+        "$ref": "#/$defs/uri"
+      }
     },
-    "elements": { "type": "array", "items": { "$ref": "#/$defs/element" } },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/element"
+      }
+    },
     "layout": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/layoutRule" }
+      "additionalProperties": {
+        "$ref": "#/$defs/layoutRule"
+      }
     },
     "states": {
       "type": "object",
-      "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/patch" } }
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/patch"
+        }
+      }
     },
-    "flows": { "type": "array", "items": { "$ref": "#/$defs/flow" } },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "variants": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/patch"
+          }
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/flow"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   },
   "$defs": {
-    "uri": { "type": "string", "pattern": "^[a-z][a-z0-9+.-]*:.+" },
+    "uri": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9+.-]*:.+"
+    },
     "tbd": {
       "type": "object",
-      "required": ["$tbd"],
+      "required": [
+        "$tbd"
+      ],
       "additionalProperties": false,
       "properties": {
         "$tbd": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "owner": { "type": "string" },
-            "due": { "type": "string", "format": "date" },
-            "note": { "type": "string" }
+            "owner": {
+              "type": "string"
+            },
+            "due": {
+              "type": "string",
+              "format": "date"
+            },
+            "note": {
+              "type": "string"
+            }
           }
         }
       }
     },
     "element": {
       "type": "object",
-      "required": ["id", "kind"],
+      "required": [
+        "id",
+        "kind"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
-        "kind": { "type": "string", "minLength": 1 },
-        "children": { "type": "array", "items": { "$ref": "#/$defs/element" } }
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/element"
+          }
+        }
       },
       "additionalProperties": true
     },
     "layoutRule": {
       "type": "object",
       "properties": {
-        "kind": { "type": "string" },
-        "direction": { "enum": ["row", "column"] },
-        "columns": { "type": "integer", "minimum": 1 },
-        "gap": { "type": "string" },
-        "padding": { "type": "string" },
-        "align": { "type": "string" },
-        "grow": { "type": "boolean" },
-        "size": { "type": "string" }
+        "kind": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "row",
+            "column"
+          ]
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gap": {
+          "type": "string"
+        },
+        "padding": {
+          "type": "string"
+        },
+        "align": {
+          "type": "string"
+        },
+        "grow": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
     "patch": {
       "type": "object",
-      "required": ["target"],
+      "required": [
+        "target"
+      ],
       "properties": {
-        "target": { "type": "string" },
+        "target": {
+          "type": "string"
+        },
         "replace": {
           "type": "object",
-          "required": ["kind"],
-          "properties": { "kind": { "type": "string" } },
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string"
+            }
+          },
           "additionalProperties": true
         },
-        "hide": { "const": true },
-        "set": { "type": "object" },
-        "layout": { "$ref": "#/$defs/layoutRule" }
+        "hide": {
+          "const": true
+        },
+        "set": {
+          "type": "object"
+        },
+        "layout": {
+          "$ref": "#/$defs/layoutRule"
+        }
       },
       "additionalProperties": false,
       "anyOf": [
-        { "required": ["replace"] },
-        { "required": ["hide"] },
-        { "required": ["set"] },
-        { "required": ["layout"] }
+        {
+          "required": [
+            "replace"
+          ]
+        },
+        {
+          "required": [
+            "hide"
+          ]
+        },
+        {
+          "required": [
+            "set"
+          ]
+        },
+        {
+          "required": [
+            "layout"
+          ]
+        }
       ]
     },
     "flow": {
       "type": "object",
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "properties": {
-        "from": { "type": "string" },
-        "via": { "type": "string" },
-        "to": { "type": "string" },
-        "when": { "type": "string" },
-        "style": { "enum": ["default", "conditional"] }
+        "from": {
+          "type": "string"
+        },
+        "via": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "when": {
+          "type": "string"
+        },
+        "style": {
+          "enum": [
+            "default",
+            "conditional"
+          ]
+        }
       },
       "additionalProperties": false
     }

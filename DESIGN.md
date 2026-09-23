@@ -1,8 +1,8 @@
 # Design core — a design tool where the agent holds the pen
 
-Status: design draft v0.2 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
+Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L14) on a project directory, as a CLI. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15) on a project directory, as a CLI, and `mergeState` with variants. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -67,7 +67,8 @@ Project
      └─ Screen         order-list · type: list   (status derived from git, §8)
          ├─ Element    id · kind · props · children       (the Default state)
          ├─ Layout     structure of the Default state, token-based, never px   (new in v0.2)
-         ├─ State      Empty · Loading · Error … a patch on elements and layout
+         ├─ Variant    what the screen *is* for this record or mode — axes, one option each, patches   (new in v0.2.1)
+         ├─ State      what it is *doing* — Empty · Loading · Error … a patch on elements and layout
          ├─ Flow       from element[.anchor] → to screen[.state] · when
          ├─ Ref        prd: · task: · design: · file:     (typed URIs)
          └─ Decision   every value is set | $tbd{owner, due}
@@ -78,6 +79,7 @@ Project
 | Depth of an element | Shallow: `kind` + props, no geometry | Agents write and diff it reliably; the component library decides how a table looks. |
 | **Presentation** | A `layout:` block — stack / grid / columns, alignment, size classes, spacing by **token name**, never raw px | Now that no canvas holds the arrangement, the agent's visual decisions must persist or every re-render loses them. Structure and tokens survive a design-system change and read in a diff; `px: 372` does neither. |
 | How a state is stored | A patch on Default (`replace` / `hide` / `set`), for elements and layout alike | The reviewer's question is "what changes here", and a patch is that answer. |
+| **Variants vs states** | `variants:` — named axes (`item_type`, `mode`), each with two or more options, each option a patch list; a view is Default → one option per axis, in declared order → the state | The field test (§12) found three screens whose "states" were really what the screen *is* for the record (a counted item, Edit mode), not what it is *doing*. Mixing them made `required` states meaningless and `known` a dumping ground. Same patch shape, so nothing new to learn. |
 | Vocabulary of `kind` | Own small list, each with `maps_to` per design system | Screen files must survive a Bootstrap → antd move (happened 2026-09). |
 | Identity | References use the `screen` name; a stable `id` exists only for `diff` pairing across renames; `rename` rewrites references | Humans and agents read `to: order-detail` without a lookup; lint L05 names any reference `rename` missed. |
 | Undecided values | `{ $tbd: { owner, due } }`, a plain mapping under a reserved key | Visibly different from empty; survives every parser and JSON Schema; a YAML tag fails all four. |
@@ -152,7 +154,24 @@ notes:
 
 `layout` vocabulary (`stack`, `grid`, `columns`, `align`, `grow`, size classes `sm|md|lg|full`) and the token names it may use are declared in `conventions.yaml`; lint L13 rejects anything else, and in particular any bare number with a unit.
 
-### 4.2 conventions.yaml
+### 4.2 Variants
+
+```yaml
+variants:                  # applied before any state, in the order the axes are declared
+  item_type:
+    Other: []              # an option may be empty; it still names the case
+    Counted:
+      - { target: level, replace: { kind: input, readonly: true } }
+    CupLid:
+      - { target: refill, hide: true }
+  mode:
+    Create: [{ target: delete, hide: true }]
+    Edit:   [{ target: dialog, set: { title: Edit notice } }]
+```
+
+An axis needs two or more options (L15); one option is a state or a note. Option names must not shadow a state name (L15). Flows target `screen.State`, never a variant — a variant is chosen by the data, not reached by an action. `mergeState(screen, state, { item_type: 'CupLid', mode: 'Edit' })` gives the view.
+
+### 4.3 conventions.yaml
 
 The semantic half of `fig`'s `figma-conventions.yaml`, plus the layout vocabulary. Pixel values from `fig` (section gaps, arrow strokes) do not come along; they belong to the Figma export adapter if anyone builds one.
 
@@ -196,7 +215,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L04 unknown-state | warning | a state not in `states.known` | naming |
 | L05 flow-target | blocking | `flows.to` resolves to a screen or screen.state | arrow coverage |
 | L06 flow-source | warning | `flows.from` is an element; `via` is an anchor its kind declares | arrow entry |
-| L07 patch-target | blocking | a state patch targets an element or layout key that exists | — |
+| L07 patch-target | blocking | a state or variant patch targets an element or layout key that exists | — |
 | L08 tbd-count | warning · blocking when overdue | every `$tbd`, grouped by owner | placeholder text |
 | L09 refs-required | warning | the refs `refs.required` names are present | task_tracker link |
 | L10 kind-known | warning | every `kind` is in conventions | component residue (loosely) |
@@ -204,6 +223,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L12 duplicate-id | blocking | ids unique across the project | — |
 | L13 layout-vocabulary | blocking | `layout` uses only declared containers, size classes and token names; no bare units | — (new) |
 | L14 layout-orphan | warning | a `layout` key names an element that does not exist in that state | — (new) |
+| L15 variant-shape | warning | a variant axis has ≥ 2 options; no option shares a name with a state | — (new) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property, colour token binding. All are canvas geometry; none exists here.
 
@@ -301,7 +321,7 @@ What it found, in the order it hurt:
 |---|---|---|---|
 | 1 | The engine only saw top-level elements. Every real screen nests (card → filter → button; header → actions), so patches, flows and layout keys all missed — 20 blocking, 27 warnings on the first run | engine bug | fixed: an element is any `{id, kind}` object wherever it sits; merge, L06, L07, L10, L14 walk the tree |
 | 2 | Prose values with commas in flow-style YAML (`{ when: Cancel, X or backdrop }`) parse as stray keys and fail the schema with a baffling message | authoring trap | schema errors now hint "quote the whole value"; the examples use block style for prose |
-| 3 | Three of six screens have **variants** that are not lifecycle states: an edit modal that behaves as counted / cup-lid / other; a dialog that is Create or Edit; a period filter that is Custom. Written as states, they pass, but they are the wrong object | format gap | `variants:` beside `states:` with the same patch shape — promoted from TBD to next |
+| 3 | Three of six screens have **variants** that are not lifecycle states: an edit modal that behaves as counted / cup-lid / other; a dialog that is Create or Edit; a home whose button reads Register or Edit by data | format gap | done: `variants:` (§4.2), L15; the three screens rewritten. Custom period stayed a state — it is reached by an action |
 | 4 | Conditional visibility recurs on four of six screens: `show_when`, `disabled_when`, and a radio option that *reveals* its own control | format gap | accepted as element props for now (`show_when`, `disabled_when`, `reveals`); render and lint do nothing with them yet |
 | 5 | Derived values (quantity = max × level, auto-filled max until edited), timed transitions (a 7-second overlay before reload), and role checks on button press rather than by hiding | not expressible | `notes:` — deliberately. These are behaviour, not screen structure; the format records that they exist, and the spec owns them |
 | 6 | Responsive changes (3 columns → 2 on small; a stat strip that scrolls sideways) | format gap | still TBD (§12); two of six screens needed it |
@@ -320,8 +340,7 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
-| Variants (by data, by mode) | next | `variants:` beside `states:` with the same patch shape. Three of six field-test screens needed it (§13) |
-| Platform / breakpoint variants | design | the same `variants:` block keyed by breakpoint, or one file per platform. Two of six field-test screens needed it |
+| Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
 | Comment storage | design | in the hosted service, or as a file in the repo so the local viewer has it too |
 | Agent runtime for the hosted loop | later | bring-your-own (Claude Code, Codex via MCP) first; a hosted agent is a pricing decision, not a design one |

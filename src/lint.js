@@ -86,14 +86,18 @@ const rules = {
   },
   L07(ctx) {
     const out = [];
-    for (const s of ctx.screens)
-      for (const state of Object.keys(s.doc.states ?? {})) {
-        const { missingTargets } = mergeState(s.doc, state);
-        for (const target of missingTargets) {
-          const i = s.doc.states[state].findIndex((p) => p.target === target);
-          out.push(finding('L07', 'blocking', s, ['states', state, i, 'target'], `patch target "${target}" exists in neither elements nor layout`));
-        }
+    const report = (s, patches, base) => {
+      const { missingTargets } = mergeState({ ...s.doc, states: { _: patches }, variants: {} }, '_');
+      for (const target of missingTargets) {
+        const i = patches.findIndex((p) => p.target === target);
+        out.push(finding('L07', 'blocking', s, [...base, i, 'target'], `patch target "${target}" exists in neither elements nor layout`));
       }
+    };
+    for (const s of ctx.screens) {
+      for (const [state, patches] of Object.entries(s.doc.states ?? {})) report(s, patches, ['states', state]);
+      for (const [axis, options] of Object.entries(s.doc.variants ?? {}))
+        for (const [option, patches] of Object.entries(options ?? {})) report(s, patches, ['variants', axis, option]);
+    }
     return out;
   },
   L08(ctx) {
@@ -181,6 +185,20 @@ const rules = {
       const ids = elementIds(s.doc.elements ?? []);
       for (const key of Object.keys(s.doc.layout ?? {}))
         if (key !== 'root' && !ids.has(key)) out.push(finding('L14', 'warning', s, ['layout', key], `layout key "${key}" names no element`));
+    }
+    return out;
+  },
+  L15(ctx) {
+    const out = [];
+    for (const s of ctx.screens) {
+      const stateNames = new Set(Object.keys(s.doc.states ?? {}));
+      for (const [axis, options] of Object.entries(s.doc.variants ?? {})) {
+        const names = Object.keys(options ?? {});
+        if (names.length < 2)
+          out.push(finding('L15', 'warning', s, ['variants', axis], `variant axis "${axis}" has ${names.length} option(s); one option is a state or a note, not a variant`));
+        for (const name of names)
+          if (stateNames.has(name)) out.push(finding('L15', 'warning', s, ['variants', axis, name], `variant option "${name}" has the same name as a state`));
+      }
     }
     return out;
   },

@@ -31,11 +31,14 @@ layout:
   root: { kind: stack, direction: column, gap: space.md }
   footer: { kind: row, align: space-between }
 
+variants:
+  mode:
+    Create:
+      - { target: delete, hide: true }
+    Edit:
+      - { target: dialog, set: { title: Edit notice } }
+
 states:
-  Create:
-    - { target: delete, hide: true }
-  Edit:
-    - { target: dialog, set: { title: Edit notice } }
   Validation:
     - { target: period, set: { error: the end date must not be before the start date or before today } }
     - { target: confirm, set: { disabled: true } }
@@ -50,7 +53,7 @@ flows:
   - { from: footer, to: notice-edit.Default, when: "Delete → this dialog closes, delete-confirm opens; Cancel there reopens this dialog with focus on Delete" }
 
 notes:
-  - Create vs Edit is one modal with a different title and footer. Written as two states.
+  - Create vs Edit is one modal with a different title and footer — the `mode` axis.
   - Date pickers grey out days before the start date and before today.
   - Typing stops at the max length; the counter shows it.
   - On a 404 the notice is re-fetched.

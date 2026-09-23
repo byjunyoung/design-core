@@ -4,7 +4,7 @@ naming:
   screen_pattern: '^[a-z0-9-]+$'
   section_pattern: '^\d{2}\. .+$'
 states:
-  known: [Default, Empty, NoMatch, Loading, Error, Validation, Selected, Submitting, Viewer, Create, Edit, Custom, Counted, CupLid]   # Counted·CupLid·Create·Edit·Custom are variants, not states — see DESIGN.md §12
+  known: [Default, Empty, NoMatch, Loading, Error, Validation, Selected, Submitting, Viewer, Custom]   # Create/Edit and item types are variants, not states
   required:
     list:   [Default, Empty, Loading, Error]
     form:   [Default, Validation]

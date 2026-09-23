@@ -43,15 +43,19 @@ layout:
   root: { kind: stack, direction: column, gap: space.lg }
   footer: { align: end, gap: space.sm }
 
+variants:                    # what this modal *is* for the record: one option per axis, applied before any state
+  item_type:
+    Other: []
+    Counted:
+      - { target: level, replace: { kind: input, readonly: true, text: "{n}%" } }
+      - { target: quantity, set: { control: { kind: number } } }
+      - { target: max, set: { control: { kind: number } } }
+    CupLid:
+      - { target: level, replace: { kind: input, readonly: true, text: "{n}%" } }
+      - { target: refill, hide: true }
+      - { target: details, set: { hint: { kind: hint, icon: caution, text: This stock value is calculated automatically by the system. } } }
+
 states:
-  Counted:                     # a variant by item type, not a state in the lifecycle sense
-    - { target: level, replace: { kind: input, readonly: true, text: "{n}%" } }
-    - { target: quantity, set: { control: { kind: number } } }
-    - { target: max, set: { control: { kind: number } } }
-  CupLid:
-    - { target: level, replace: { kind: input, readonly: true, text: "{n}%" } }
-    - { target: refill, hide: true }
-    - { target: details, set: { hint: { kind: hint, icon: caution, text: This stock value is calculated automatically by the system. } } }
   Validation:
     - { target: quantity, set: { error: enter a number } }
     - { target: max, set: { error: quantity is above the maximum } }
@@ -67,7 +71,7 @@ flows:
   - { from: footer, to: inventory-edit.Viewer, when: Save pressed by a viewer role, style: conditional }
 
 notes:
-  - Three variants by item type (counted / cup-lid / other) share one modal. Written as states; they are not lifecycle states.
+  - Three variants by item type (counted / cup-lid / other) share one modal — the `item_type` axis. Validation applies only to Counted (the only editable variant).
   - quantity = max × level, live. Choosing a dispenser type auto-fills max until the user edits max. (derived values — notes only)
   - Viewer gating happens on Save press, not by hiding or disabling the button.
   - Save → toast → close → overlay → full page reload after 7 seconds.

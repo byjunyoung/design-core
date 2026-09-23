@@ -175,3 +175,28 @@ test('an unquoted comma in a flow-style value surfaces as a schema finding with 
   assert.equal(r.ok, false);
   assert.ok(r.errors.some((e) => /X or backdrop/.test(e.message) && /quote/i.test(e.message)));
 });
+
+test('L07 fires on a patch inside a variant that targets nothing', () => {
+  const p = project({ screens: [screen({ variants: { mode: { Create: [], Edit: [{ target: 'ghost', hide: true }] } } }), detail()] });
+  const f = only(lint(p, { branch: 'x' }), 'L07');
+  assert.equal(f.length, 1);
+  assert.deepEqual(f[0].path, ['variants', 'mode', 'Edit', 0, 'target']);
+});
+
+test('L15 warns on a variant axis with one option and on an option that shadows a state', () => {
+  const p = project({ screens: [screen({ variants: { mode: { Edit: [] }, kind: { Empty: [], Full: [] } } }), detail()] });
+  const f = only(lint(p, { branch: 'x' }), 'L15');
+  assert.equal(f.length, 2);
+  assert.ok(f.every((x) => x.severity === 'warning'));
+});
+
+test('variants are not judged by states.known', () => {
+  const p = project({ screens: [screen({ variants: { item_type: { Counted: [], CupLid: [] } } }), detail()] });
+  assert.equal(only(lint(p, { branch: 'x' }), 'L04').length, 0);
+});
+
+test('the field-test example lints clean on a feature branch', async () => {
+  const dir = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
+  const findings = lint(await loadProject(dir), { branch: 'feature/x', today: '2026-09-23' });
+  assert.deepEqual(findings.filter((f) => f.id !== 'L08'), []);
+});

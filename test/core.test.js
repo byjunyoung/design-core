@@ -75,3 +75,28 @@ test('mergeState finds a patch target nested in children and in an element-value
   assert.equal(card.children[0].kind, 'empty-notice');
   assert.equal(view.elements[0].actions[0].disabled, true);
 });
+
+test('mergeState applies chosen variants before the state, axis by axis', () => {
+  const s = {
+    elements: [{ id: 'level', kind: 'select' }, { id: 'refill', kind: 'button' }, { id: 'save', kind: 'button' }],
+    variants: {
+      item_type: {
+        Counted: [{ target: 'level', replace: { kind: 'input', readonly: true } }],
+        CupLid: [{ target: 'level', replace: { kind: 'input', readonly: true } }, { target: 'refill', hide: true }],
+      },
+      mode: { Create: [], Edit: [{ target: 'save', set: { label: 'Update' } }] },
+    },
+    states: { Validation: [{ target: 'save', set: { disabled: true } }] },
+  };
+  const view = mergeState(s, 'Validation', { item_type: 'CupLid', mode: 'Edit' });
+  assert.deepEqual(view.elements.map((e) => e.id), ['level', 'save']);
+  assert.equal(view.elements[0].kind, 'input');
+  assert.deepEqual(view.elements[1], { id: 'save', kind: 'button', label: 'Update', disabled: true });
+  assert.deepEqual(view.missingTargets, []);
+  assert.deepEqual(view.variants, { item_type: 'CupLid', mode: 'Edit' });
+});
+
+test('mergeState reports a missing target inside a variant', () => {
+  const s = { elements: [{ id: 'a', kind: 'x' }], variants: { mode: { Edit: [{ target: 'ghost', hide: true }] } } };
+  assert.deepEqual(mergeState(s, 'Default', { mode: 'Edit' }).missingTargets, ['ghost']);
+});

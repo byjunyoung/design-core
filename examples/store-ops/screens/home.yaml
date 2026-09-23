@@ -64,8 +64,12 @@ states:
     - { target: table, replace: { kind: empty-notice, title: No data } }
   Custom:
     - { target: range, set: { show_when: null } }
-  Edit:
-    - { target: notice, set: { label: Edit notice } }
+
+variants:
+  notice_exists:
+    "No": []
+    "Yes":
+      - { target: notice, set: { label: Edit notice } }
 
 flows:
   - { from: tiles, via: tile, to: home, when: switches the app to that store (app shell event) }

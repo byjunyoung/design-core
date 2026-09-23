@@ -10,7 +10,7 @@ The whole design, with the reason next to each decision, is in [DESIGN.md](DESIG
 
 ## What runs today
 
-`lint` — validates every screen file against the schema and runs rules L01–L14 (missing states, dead flows, patches that target nothing, `$tbd` counts, layout outside the token vocabulary, canonical-branch cleanliness).
+`lint` — validates every screen file against the schema and runs rules L01–L15 (missing states, dead flows, patches that target nothing, `$tbd` counts, layout outside the token vocabulary, variant shape, canonical-branch cleanliness).
 
 ```bash
 npm install
