@@ -83,3 +83,16 @@ test('apply refuses when the file changed since the proposal was made', async ()
   writeFileSync(join(dir, 'screens', 'order-list.yaml'), base.replace('title: Orders', 'title: All orders'));
   await assert.rejects(applyProposal(dir, { id: p.id, approved_by: 'x' }), /changed since/);
 });
+
+test('a proposal keeps the decisions agreed before it, and a decision without a why is still a decision', async () => {
+  const dir = sandbox();
+  const after = read(dir).replace('columns: [order_no, branch, amount, status, ordered_at]', 'columns: [order_no, amount, status, ordered_at]');
+  const decisions = [
+    { item: 'branch column', decision: 'drop it', why: 'single-store accounts never see a second branch' },
+    { item: 'column order', decision: 'unchanged' },
+  ];
+  const p = await propose(dir, { screen: 'order-list', after, decisions }, opts);
+  assert.deepEqual(p.decisions, decisions);
+  const [listed] = await listProposals(dir);
+  assert.equal(listed.decisions.length, 2);
+});

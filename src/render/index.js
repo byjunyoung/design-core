@@ -5,6 +5,7 @@ import { resolveFlowTarget } from '../flows.js';
 import { kinds, h, v, isTbd } from './kinds.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
 import { CSS, INSPECTOR_JS } from './page.js';
+import { parseScreenText } from '../project.js';
 
 // render draws a screen file with the bundled component set (or, later, the team's own),
 // every state side by side, every variant axis in its own row. It is the product surface
@@ -133,7 +134,7 @@ ${variants}
 </body></html>`;
 }
 
-export function renderIndex(project, { branch = null, today } = {}) {
+export function renderIndex(project, { branch = null, today, proposals = [] } = {}) {
   const findings = lint(project, { branch, today });
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const rows = project.screens
@@ -149,5 +150,53 @@ export function renderIndex(project, { branch = null, today } = {}) {
 <html lang="en"><head><meta charset="utf-8"><title>screens</title><style>${tokensToCss(tokens)}\n${CSS}</style></head>
 <body><header class="top"><h1>Screens</h1><span class="meta">${project.screens.length} screens${branch ? ` on ${h(branch)}` : ''} — ${total.blocking} blocking, ${total.warning} warning</span></header>
 <table class="index"><thead><tr><th>screen</th><th>section</th><th>type</th><th>states</th><th>blocking</th><th>warning</th><th>$tbd</th></tr></thead><tbody>${rows}</tbody></table>
+${proposals.length ? `<h2 class="row-title">Waiting for a person</h2><table class="index"><thead><tr><th>proposal</th><th>screen</th><th>tier</th><th>summary</th><th>lint after</th></tr></thead><tbody>${proposals
+  .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html">${h(p.id)}</a></td><td>${h(p.screen)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} blocking, ${p.lint?.after?.warning ?? 0} warning</td></tr>`)
+  .join('')}</tbody></table>` : ''}
+</body></html>`;
+}
+
+// A pending proposal drawn as a decision page: what was agreed, what changes, and every
+// state AS-IS beside TO-BE. This is the sketch step of DESIGN.md §7 — nothing is written
+// until a person has seen the screen it would produce.
+export function renderProposal(project, proposal, { branch = null } = {}) {
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const maps = mapsFor(project);
+  const before = parseScreenText(proposal.before, proposal.file);
+  const after = parseScreenText(proposal.after, proposal.file);
+  const known = project.conventions.states?.known ?? [];
+  const present = [...new Set([...Object.keys(before.doc.states ?? {}), ...Object.keys(after.doc.states ?? {})])];
+  const states = ['Default', ...known.filter((k) => k !== 'Default' && present.includes(k)), ...present.filter((k) => !known.includes(k))];
+
+  const pair = (state) => {
+    const a = before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps) : '<div class="hint">not in AS-IS</div>';
+    const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps) : '<div class="hint">removed in TO-BE</div>';
+    return `<h2 class="row-title">${h(state)}</h2><div class="states"><section class="state" id="asis-${h(state)}"><h3>AS-IS</h3>${a}</section><section class="state" id="tobe-${h(state)}"><h3>TO-BE</h3>${b}</section></div>`;
+  };
+
+  const decisions = (proposal.decisions ?? []).length
+    ? `<table class="index"><thead><tr><th>item</th><th>decision</th><th>why</th></tr></thead><tbody>${proposal.decisions.map((d) => `<tr><td>${h(d.item)}</td><td>${h(d.decision)}</td><td>${h(d.why ?? '')}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="hint" style="margin:0 var(--space-lg)">no decisions recorded — the agent proposed without the interview</div>';
+  const cell = (x) => (x === undefined ? '' : `<code>${h(JSON.stringify(x))}</code>`);
+  const rows = [
+    ...proposal.diff.changed.map((e) => [e.path.join('.'), e.before, e.after]),
+    ...proposal.diff.added.map((e) => [e.path.join('.'), undefined, e.after]),
+    ...proposal.diff.removed.map((e) => [e.path.join('.'), e.before, undefined]),
+  ];
+  const diff = `<table class="index"><thead><tr><th>where</th><th>AS-IS</th><th>TO-BE</th></tr></thead><tbody>${rows.map(([w, a, b]) => `<tr><td>${h(w)}</td><td>${cell(a)}</td><td>${cell(b)}</td></tr>`).join('')}</tbody></table>`;
+  const lintLine = `lint ${proposal.lint.before.blocking}→${proposal.lint.after.blocking} blocking, ${proposal.lint.before.warning}→${proposal.lint.after.warning} warning`;
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>proposal ${h(proposal.id)}</title>
+<style>${tokensToCss(tokens)}\n${CSS}</style></head>
+<body data-file="${h(proposal.file)}">
+<header class="top"><a href="index.html">← screens</a><h1>${h(proposal.screen)} · proposal</h1><span class="meta">${h(proposal.status)} · tier ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><label class="dev-toggle"><input type="checkbox" id="dev"> developer</label></header>
+<p style="margin:var(--space-md) var(--space-lg);font-size:15px">${h(proposal.summary || '(no summary)')}</p>
+<h2 class="row-title">Decided before this version</h2>${decisions}
+<h2 class="row-title">What changes</h2>${diff}
+<p class="hint" style="margin:0 var(--space-lg)">to accept: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · to decline: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>
+${states.map(pair).join('')}
+<aside id="inspector" class="inspector"><div class="hint">Click an element to inspect it.</div></aside>
+<script>${INSPECTOR_JS}</script>
 </body></html>`;
 }

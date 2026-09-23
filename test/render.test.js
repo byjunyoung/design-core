@@ -76,3 +76,43 @@ test('the index lists every screen with its blocking and $tbd counts', async () 
   for (const s of project.screens) assert.match(html, new RegExp(`href="${s.doc.screen}\\.html"`));
   assert.match(html, /\$tbd/);
 });
+
+test('a pending proposal renders AS-IS and TO-BE per state, with its decisions and diff on top', async () => {
+  const { mkdtempSync, cpSync, readFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { propose } = await import('../src/proposals.js');
+  const { renderProposal } = await import('../src/render/index.js');
+  const dir = mkdtempSync(join(tmpdir(), 'dc-rp-'));
+  cpSync(orders, dir, { recursive: true });
+  const before = readFileSync(join(dir, 'screens', 'order-list.yaml'), 'utf8');
+  const after = before.replace('columns: [order_no, branch, amount, status, ordered_at]', 'columns: [order_no, amount, status, ordered_at]');
+  const p = await propose(dir, { screen: 'order-list', after, summary: 'drop the branch column', decisions: [{ item: 'branch column', decision: 'drop it', why: 'never shown to single-store accounts' }] }, { branch: 'x', today: '2026-09-23' });
+  const project = await loadProject(dir);
+  const html = renderProposal(project, p);
+  assert.match(html, /drop the branch column/);
+  assert.match(html, /never shown to single-store accounts/);
+  assert.match(html, /elements\.table\.columns/);
+  for (const state of ['Default', 'Empty', 'Loading', 'Error']) {
+    assert.match(html, new RegExp(`id="asis-${state}"`));
+    assert.match(html, new RegExp(`id="tobe-${state}"`));
+  }
+  const tobe = html.slice(html.indexOf('id="tobe-Default"'), html.indexOf('id="asis-Empty"'));
+  assert.doesNotMatch(tobe, /<th>branch</);
+  const asis = html.slice(html.indexOf('id="asis-Default"'), html.indexOf('id="tobe-Default"'));
+  assert.match(asis, /<th>branch</);
+});
+
+test('the index lists pending proposals with a link to their page', async () => {
+  const { mkdtempSync, cpSync, readFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { propose, listProposals } = await import('../src/proposals.js');
+  const dir = mkdtempSync(join(tmpdir(), 'dc-ri-'));
+  cpSync(orders, dir, { recursive: true });
+  const before = readFileSync(join(dir, 'screens', 'order-list.yaml'), 'utf8');
+  const p = await propose(dir, { screen: 'order-list', after: before.replace('kind: pagination', 'kind: pager') }, { branch: 'x', today: '2026-09-23' });
+  const project = await loadProject(dir);
+  const html = renderIndex(project, { branch: 'x', today: '2026-09-23', proposals: await listProposals(dir) });
+  assert.match(html, new RegExp(`href="proposal-${p.id}\\.html"`));
+});

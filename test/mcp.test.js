@@ -92,3 +92,20 @@ test('propose → pending → apply with approved_by runs over MCP, and list_pro
   assert.equal(a.json.status, 'applied');
   assert.match(readFileSync(join(dir, 'screens', 'payment-list.yaml'), 'utf8'), /\[nickname, order_no, amount, status, paid_at\]/);
 });
+
+test('the server offers a "draw" prompt that walks the agent through decisions before propose', async () => {
+  const { prompts } = await client.listPrompts();
+  assert.ok(prompts.some((p) => p.name === 'draw'));
+  const got = await client.getPrompt({ name: 'draw', arguments: { screen: 'order-list' } });
+  const text = got.messages.map((m) => m.content.text).join('\n');
+  assert.match(text, /order-list/);
+  assert.match(text, /one at a time/i);
+  assert.match(text, /propose/);
+});
+
+test('render can draw a pending proposal and returns its page', async () => {
+  const before = readFileSync(join(dir, 'screens', 'inventory-list.yaml'), 'utf8');
+  const p = await call('propose', { screen: 'inventory-list', after: before.replace('page_size: 10', 'page_size: 20'), summary: 'twenty per page' });
+  const r = await call('render', { out: join(dir, 'out2'), proposal: p.json.id });
+  assert.ok(r.json.pages.some((x) => x.endsWith(`proposal-${p.json.id}.html`)));
+});

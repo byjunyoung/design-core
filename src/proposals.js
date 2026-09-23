@@ -51,7 +51,7 @@ async function write(dir, proposal, text) {
   await writeFile(join(dir, relative(dir, proposal.file)), text);
 }
 
-export async function propose(dir, { screen, after, summary = '' }, opts = {}) {
+export async function propose(dir, { screen, after, summary = '', decisions = [] }, opts = {}) {
   const project = await loadProject(dir);
   const found = project.screens.find((s) => s.doc.screen === screen);
   if (!found) throw new Error(`no screen named "${screen}" in ${dir}`);
@@ -73,6 +73,7 @@ export async function propose(dir, { screen, after, summary = '' }, opts = {}) {
     screen,
     file: found.file,
     summary,
+    decisions, // what was agreed before this version was written: [{ item, decision, why? }]
     created: new Date().toISOString(),
     tier,
     status: tier === 'none' ? 'empty' : auto ? 'applied' : 'pending',

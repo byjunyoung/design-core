@@ -113,6 +113,8 @@ The agent does not edit your files behind your back. It calls `propose` with a n
 
 `apply` refuses if the file changed since the proposal was made, so two people never overwrite each other silently.
 
+**Sketch before you write.** A new screen is not a diff you can judge — you need to see it. So a proposal can carry the decisions agreed before it was written (`item · decision · why`), and `render` draws every pending proposal as its own page: the decisions on top, what changes, then every state **AS-IS beside TO-BE**. The MCP server ships a `draw` prompt that walks the agent through it: anchor to the nearest screen, list what has to be decided, ask one question at a time with a recommendation, table the answers, propose with the decisions attached, render, wait.
+
 ```bash
 node src/cli.js propose design order-list --with /tmp/order-list.new.yaml --summary "drop the branch column"
 node src/cli.js proposals design

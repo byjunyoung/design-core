@@ -102,9 +102,12 @@ server.registerTool(
   'render',
   {
     description: 'Draw every screen into static HTML (index + one page per screen, states side by side, inspector). Returns the file paths.',
-    inputSchema: { out: z.string().optional().describe('output directory; default <project>/out') },
+    inputSchema: {
+      out: z.string().optional().describe('output directory; default <project>/out'),
+      proposal: z.string().optional().describe('a proposal id: also draw that proposal AS-IS beside TO-BE, every state'),
+    },
   },
-  guard((input) => renderProject(dir, { ...common, out: input.out })),
+  guard((input) => renderProject(dir, { ...common, out: input.out, proposal: input.proposal })),
 );
 
 server.registerTool(
@@ -118,6 +121,10 @@ server.registerTool(
       screen: z.string(),
       after: z.string().describe('the complete proposed YAML text of the screen file'),
       summary: z.string().default('').describe('one line: what changes and why, in the person\'s words'),
+      decisions: z
+        .array(z.object({ item: z.string(), decision: z.string(), why: z.string().optional() }))
+        .default([])
+        .describe('what was agreed with the person before this version was written; see the "draw" prompt'),
     },
   },
   guard((input) => propose(dir, input, common)),
@@ -148,6 +155,42 @@ server.registerTool(
   'undo',
   { description: 'Put back the previous text of a screen an applied proposal changed, if nothing else touched it since.', inputSchema: { id: z.string() } },
   guard((input) => undoProposal(dir, input)),
+);
+
+// The discipline behind a new or changed screen. fig:draw carried this as a skill document;
+// here the server hands it to whichever agent connects, so every agent draws the same way.
+server.registerPrompt(
+  'draw',
+  {
+    title: 'Draw or change a screen',
+    description: 'How to go from a request to a proposal the person can judge: anchor, list the decisions, ask one at a time, then propose with the decisions attached and render it.',
+    argsSchema: { screen: z.string().describe('the screen to draw or change'), request: z.string().optional().describe('what the person asked for, in their words') },
+  },
+  ({ screen, request }) => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
+
+1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Read conventions: the required states for its type, the known kinds, the layout vocabulary. New work inherits the shell every screen in the section shares.
+
+2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
+
+3. Ask one at a time. Each question gets two or three lines of context and a recommended option, based on the file's own precedent (how the sibling screens do it) rather than taste. Wait for the answer before the next question. If an answer opens a question the list did not have, ask that one next.
+
+4. When everything is settled, show a table — item | decision | why — and the list of states the screen will have, one line each on what changes from Default.
+
+5. Write the whole screen file and call propose with the complete YAML, a one-line summary in the person's words, and the decisions table from step 4 as the decisions argument. Then call render with that proposal id and give the person the page path: it shows the agreed decisions, what changes, and every state AS-IS beside TO-BE.
+
+6. Wait. The person applies or rejects; you do not call apply yourself. If they ask for changes, propose again — the earlier proposal stays pending until it is rejected.
+
+Copy comes from the spec the screen references, from sibling screens, or from the person; where none of those gives a value, write { $tbd: { owner: ... } } instead of something plausible. A value nobody decided is not a design decision.`,
+        },
+      },
+    ],
+  }),
 );
 
 await server.connect(new StdioServerTransport());

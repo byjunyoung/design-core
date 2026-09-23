@@ -19,12 +19,13 @@ const USAGE = `usage: design-core <verb> …
         the file is rewritten in place; comments and order are kept.
   diff <a.yaml> <b.yaml> [--json]        or        diff <screen-file> --from <git-ref> [--to <git-ref>] [--json]
         AS-IS / TO-BE between two versions of a screen. elements are compared by id.
-  render <project-dir> [--out <dir>] [--branch <name>] [--today YYYY-MM-DD]
+  render <project-dir> [--out <dir>] [--branch <name>] [--today YYYY-MM-DD] [--proposal <id>]
         draw every screen with the bundled component set: out/index.html + one page per screen,
         every state side by side, variants in their own rows, an inspector on click. file:// safe.
+        pending proposals get a page each (AS-IS beside TO-BE); --proposal draws one of any status.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
-  propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--json]
+  propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--json]
         queue a new version of a screen: diff, lint before/after, tier. text-only + clean lint applies at once.
   proposals <project-dir> [--status pending|applied|all]
   apply <project-dir> <id> --by <name>      reject <project-dir> <id> [--reason "…"]      undo <project-dir> <id>`;
@@ -82,7 +83,7 @@ async function diffCommand(opts) {
 async function renderCommand(opts) {
   const dir = opts._[0];
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const { out, pages } = await renderProject(dir, { branch: opts.branch, today: opts.today, out: opts.out });
+  const { out, pages } = await renderProject(dir, { branch: opts.branch, today: opts.today, out: opts.out, proposal: opts.proposal });
   process.stdout.write(`${pages.length} pages → ${relative(process.cwd(), out) || out}/\n`);
   return 0;
 }
@@ -99,7 +100,8 @@ function mcpCommand(opts) {
 async function proposeCommand(opts) {
   const [dir, screen] = opts._;
   if (!dir || !screen || !opts.with) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const p = await propose(dir, { screen, after: readFileSync(opts.with, 'utf8'), summary: opts.summary ?? '' }, { branch: opts.branch, today: opts.today });
+  const decisions = opts.decisions ? JSON.parse(readFileSync(opts.decisions, 'utf8')) : [];
+  const p = await propose(dir, { screen, after: readFileSync(opts.with, 'utf8'), summary: opts.summary ?? '', decisions }, { branch: opts.branch, today: opts.today });
   if (opts.json) process.stdout.write(JSON.stringify(p, null, 2) + '\n');
   else process.stdout.write(`${p.id}  ${p.status}  tier=${p.tier}  lint ${p.lint.before.blocking}→${p.lint.after.blocking} blocking\n${p.markdown}`);
   return 0;

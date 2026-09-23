@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { parse } from 'yaml';
 import { loadProject } from './project.js';
@@ -8,7 +8,8 @@ import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal } from './render/index.js';
+import { listProposals } from './proposals.js';
 
 // One implementation per verb, returning plain JSON. The CLI prints it, the MCP server
 // returns it, the viewer will read it. Nothing here writes to stdout.
@@ -101,11 +102,21 @@ export async function renderProject(dir, opts = {}) {
   const out = opts.out ?? join(dir, 'out');
   await mkdir(out, { recursive: true });
   const pages = [];
-  await writeFile(join(out, 'index.html'), renderIndex(project, { branch, today: today(opts.today) }));
+  const pending = await listProposals(dir, { status: 'pending' });
+  await writeFile(join(out, 'index.html'), renderIndex(project, { branch, today: today(opts.today), proposals: pending }));
   pages.push(join(out, 'index.html'));
   for (const s of project.screens) {
     const file = join(out, `${s.doc.screen}.html`);
     await writeFile(file, renderScreen(project, s, { branch }));
+    pages.push(file);
+  }
+  // Every pending proposal gets its page; `proposal` narrows to one (any status).
+  const wanted = opts.proposal ? (await listProposals(dir, { status: 'all' })).filter((p) => p.id === opts.proposal) : pending;
+  if (opts.proposal && !wanted.length) throw new Error(`no proposal "${opts.proposal}"`);
+  for (const meta of wanted) {
+    const full = JSON.parse(await readFile(join(dir, '.proposals', `${meta.id}.json`), 'utf8'));
+    const file = join(out, `proposal-${meta.id}.html`);
+    await writeFile(file, renderProposal(project, full, { branch }));
     pages.push(file);
   }
   return { out, pages };
