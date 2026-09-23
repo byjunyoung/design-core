@@ -152,3 +152,26 @@ test('every finding carries file, path and line', () => {
   assert.equal(f.file, 'screens/Order List.yaml');
   assert.equal(typeof f.line, 'number');
 });
+
+test('L06, L07 and L14 see elements nested in children and element-valued props', () => {
+  const nested = screen({
+    elements: [
+      { id: 'header', kind: 'page-header', actions: [{ id: 'export', kind: 'button', label: 'Export' }] },
+      { id: 'card', kind: 'card', children: [{ id: 'table', kind: 'table' }, { id: 'paging', kind: 'pagination' }] },
+    ],
+    layout: { root: { kind: 'stack' }, table: { grow: true }, export: { align: 'end' } },
+    states: { ...screen().states, Empty: [{ target: 'table', replace: { kind: 'empty-notice' } }, { target: 'export', hide: true }] },
+    flows: [{ from: 'table', via: 'row', to: 'order-detail' }, { from: 'export', to: 'order-detail' }],
+  });
+  const f = lint(project({ screens: [nested, detail()] }), { branch: 'x' });
+  assert.deepEqual(ids(f).filter((id) => ['L06', 'L07', 'L14'].includes(id)), []);
+});
+
+test('an unquoted comma in a flow-style value surfaces as a schema finding with a hint', async () => {
+  const { validateScreen } = await import('../src/index.js');
+  const { parse } = await import('yaml');
+  const doc = parse('flows:\n  - { from: a, to: b, when: Cancel, X or backdrop }\n');
+  const r = validateScreen({ ...screen(), flows: doc.flows });
+  assert.equal(r.ok, false);
+  assert.ok(r.errors.some((e) => /X or backdrop/.test(e.message) && /quote/i.test(e.message)));
+});

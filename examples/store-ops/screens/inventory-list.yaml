@@ -1,0 +1,68 @@
+schema: design-core/0.2
+id: scr_INV01
+screen: inventory-list
+section: "02. Inventory"
+type: list
+
+elements:
+  - id: header
+    kind: page-header
+    title: Inventory management
+  - id: card
+    kind: card
+    children:
+      - id: filter
+        kind: filter-bar
+        children:
+          - id: type
+            kind: segmented
+            options: [All, "…one per dispenser type, from the server"]
+          - id: selected-count
+            kind: caption
+            text: "Selected: {n}"
+          - id: refill-all
+            kind: button
+            label: Change stock to 100%
+            variant: primary
+            disabled_when: "n == 0 or loading"
+      - id: table
+        kind: table
+        selectable: checkbox
+        columns:
+          - { key: name, label: Name, sub: number }
+          - { key: line, label: Line }
+          - { key: description, label: Description }
+          - { key: level, label: Stock level, kind: progress, unit: "%", thresholds: { ok: 51, warn: 31 } }
+          - { key: refilled_at, label: Last refill date, empty: "-" }
+      - id: paging
+        kind: pagination
+        page_size: 10
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+  filter: { kind: row, align: space-between }
+  paging: { align: end }
+
+states:
+  Empty:
+    - { target: table, replace: { kind: empty-notice, title: No data yet, text: Add the first item. } }
+  NoMatch:
+    - { target: table, replace: { kind: empty-notice, title: No matching results, text: Change the filter. } }
+  Loading:
+    - { target: card, set: { overlay: { kind: overlay, text: Updating stock… } } }
+  Error:
+    - { target: card, set: { toast: { kind: toast, level: error, text: Could not update stock. } } }
+  Selected:
+    - { target: selected-count, set: { text: "Selected: 3" } }
+    - { target: refill-all, set: { disabled_when: null } }
+
+flows:
+  - { from: table, via: row, to: inventory-edit }
+  - { from: filter, to: inventory-list.NoMatch, when: a type is selected and nothing matches, style: conditional }
+  - { from: refill-all, to: inventory-list.Loading, when: pressed, style: conditional }
+
+notes:
+  - Fetching the list shows no loading state; Loading is only the bulk update.
+  - After the bulk update succeeds the overlay stays for 7 seconds, then a toast and a reload. (timed — not expressible as a state)
+  - One item type shows "N pcs" instead of "%"; the bar still parses it as a percentage. (existing behaviour, flagged)
+  - Checkbox click and row click are different actions on the same row.

@@ -53,3 +53,25 @@ test('resolveFlowTarget splits screen and state on the last dot', () => {
   assert.equal(resolveFlowTarget('order-list.Ghost', screens), null);
   assert.equal(resolveFlowTarget('nowhere', screens), null);
 });
+
+test('mergeState finds a patch target nested in children and in an element-valued prop', () => {
+  const s = {
+    elements: [
+      { id: 'header', kind: 'page-header', actions: [{ id: 'export', kind: 'button', label: 'Export' }] },
+      { id: 'card', kind: 'card', children: [{ id: 'table', kind: 'table' }, { id: 'paging', kind: 'pagination' }] },
+    ],
+    states: {
+      Empty: [
+        { target: 'table', replace: { kind: 'empty-notice' } },
+        { target: 'paging', hide: true },
+        { target: 'export', set: { disabled: true } },
+      ],
+    },
+  };
+  const view = mergeState(s, 'Empty');
+  assert.deepEqual(view.missingTargets, []);
+  const card = view.elements.find((e) => e.id === 'card');
+  assert.deepEqual(card.children.map((e) => e.id), ['table']);
+  assert.equal(card.children[0].kind, 'empty-notice');
+  assert.equal(view.elements[0].actions[0].disabled, true);
+});

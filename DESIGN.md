@@ -1,6 +1,6 @@
 # Design core — a design tool where the agent holds the pen
 
-Status: design draft v0.2 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§12).
+Status: design draft v0.2 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
 What runs: `lint` (schema + L01–L14) on a project directory, as a CLI. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
@@ -291,7 +291,28 @@ The engine (§3–§9) is open source and runs locally. The service is the engin
 - `pm:prd` writes what `refs.prd` points at; `pm:task-publish` opens what `refs.task` points at. Links are URIs; neither needs to know this exists.
 - `fig:deck`, `fig:proto`, `fig:code`: `proto` becomes redundant (the render is clickable); `code` reads the screen file instead of Figma; `deck` stays on Figma Slides.
 
-## 12. TBD
+## 12. Field test — six real screens (2026-09-23)
+
+Six screens of a working store-operations admin were transcribed into the format under generic names (`examples/store-ops`): an inventory list, its edit modal, a payment list with an inline detail, a notice create/edit modal with a delete confirm, a fleet dashboard, and a tabbed settings page. The structure came from the code, not from a mockup, so every conditional, timed and role-gated behaviour the code has was written down or noted as missing.
+
+What it found, in the order it hurt:
+
+| # | Finding | Kind | Resolution |
+|---|---|---|---|
+| 1 | The engine only saw top-level elements. Every real screen nests (card → filter → button; header → actions), so patches, flows and layout keys all missed — 20 blocking, 27 warnings on the first run | engine bug | fixed: an element is any `{id, kind}` object wherever it sits; merge, L06, L07, L10, L14 walk the tree |
+| 2 | Prose values with commas in flow-style YAML (`{ when: Cancel, X or backdrop }`) parse as stray keys and fail the schema with a baffling message | authoring trap | schema errors now hint "quote the whole value"; the examples use block style for prose |
+| 3 | Three of six screens have **variants** that are not lifecycle states: an edit modal that behaves as counted / cup-lid / other; a dialog that is Create or Edit; a period filter that is Custom. Written as states, they pass, but they are the wrong object | format gap | `variants:` beside `states:` with the same patch shape — promoted from TBD to next |
+| 4 | Conditional visibility recurs on four of six screens: `show_when`, `disabled_when`, and a radio option that *reveals* its own control | format gap | accepted as element props for now (`show_when`, `disabled_when`, `reveals`); render and lint do nothing with them yet |
+| 5 | Derived values (quantity = max × level, auto-filled max until edited), timed transitions (a 7-second overlay before reload), and role checks on button press rather than by hiding | not expressible | `notes:` — deliberately. These are behaviour, not screen structure; the format records that they exist, and the spec owns them |
+| 6 | Responsive changes (3 columns → 2 on small; a stat strip that scrolls sideways) | format gap | still TBD (§12); two of six screens needed it |
+| 7 | A detail shown under the list on the same page | awkward but works | a hidden element revealed by a `Selected` state |
+| 8 | Modals as their own screen files (`type: modal`, `refs.parent`) with flows from the parent | works | keep |
+| 9 | Two empty-state variants — "no data" vs "no match when filtered" — on every list | works | a team adds `NoMatch` to `states.known`; shows the extension point does its job |
+| 10 | Button rows needed a bare container; `row` was a layout container, not an element kind | vocabulary | `group` kind added to the shipped set |
+
+After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (an error state the build does not have; a help caption nobody captured).
+
+## 13. TBD
 
 | Item | Owner | Note |
 |---|---|---|
@@ -299,7 +320,8 @@ The engine (§3–§9) is open source and runs locally. The service is the engin
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
-| Platform / breakpoint variants | design | `variants:` beside `states:` with the same patch shape, or one file per platform |
+| Variants (by data, by mode) | next | `variants:` beside `states:` with the same patch shape. Three of six field-test screens needed it (§13) |
+| Platform / breakpoint variants | design | the same `variants:` block keyed by breakpoint, or one file per platform. Two of six field-test screens needed it |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
 | Comment storage | design | in the hosted service, or as a file in the repo so the local viewer has it too |
 | Agent runtime for the hosted loop | later | bring-your-own (Claude Code, Codex via MCP) first; a hosted agent is a pricing decision, not a design one |

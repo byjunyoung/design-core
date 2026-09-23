@@ -22,6 +22,8 @@ node src/cli.js lint examples/orders --json             # the same, for agents a
 npm test
 ```
 
+`examples/store-ops` holds six screens transcribed from a real admin (list, modal, inline detail, dashboard, tabbed settings) — what that transcription taught the format is in DESIGN.md §12.
+
 Every finding carries the file, the YAML path and the line, so an agent can edit the exact spot. Not built yet: `prep`, `diff`, `render`, `apply`, `import`, and the MCP server.
 
 ## Where it comes from

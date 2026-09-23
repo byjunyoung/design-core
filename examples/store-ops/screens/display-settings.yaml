@@ -1,0 +1,72 @@
+schema: design-core/0.2
+id: scr_DID01
+screen: display-settings
+section: "04. In-store display"
+type: settings
+
+elements:
+  - id: header
+    kind: page-header
+    tabs: [Manager screen, Content screen]
+    actions: [{ id: apply, kind: button, label: Apply, variant: primary, note: saves whichever tab is active }]
+  - id: manager
+    kind: card
+    show_when: tab Manager screen
+    children:
+      - id: basic
+        kind: section
+        title: Basic info
+        children:
+          - { id: background, kind: field, label: Background image, tooltip: size, format and filename rules, control: { kind: radio, options: [Default image, Upload] }, reveals: { Upload: { kind: upload, label: Choose file } }, preview: { kind: image, size: md } }
+          - { id: message, kind: field, label: Manager message, control: { kind: select, options: preset messages + Enter manually }, reveals: { Enter manually: { kind: input, max: 30 } } }
+          - { id: care-date, kind: field, label: Care service date, control: { kind: radio, options: [Auto update (daily at midnight), Pick date] }, reveals: { Pick date: { kind: date } } }
+          - { id: notice, kind: field, label: Notice, control: { kind: input, placeholder: up to 40 characters } }
+          - { id: weather, kind: field, label: Menu by weather, control: { kind: grid, columns: 3, items: 7 selects (sunny, cloudy, overcast, showers, rain, snow, rain/snow), each listing items } }
+      - id: materials
+        kind: section
+        title: Material info
+        children:
+          - id: material-table
+            kind: table
+            columns: [Order, Name, Date type, Date, action]
+            row_action: "'+ Add material' when the row is empty, otherwise 'Edit'"
+          - id: material-editor
+            kind: fieldset
+            show_when: a material row is selected
+            children:
+              - { id: m-name, kind: field, label: "Material {k}", control: { kind: input } }
+              - { id: m-delete, kind: button, label: Delete material, variant: danger }
+              - { id: m-icon, kind: radio, options: 4 icons }
+              - { id: m-date-type, kind: select, options: [refill date, roast date, use-by date] }
+              - { id: m-date, kind: input }
+  - id: content
+    kind: card
+    show_when: tab Content screen
+    children:
+      - { id: media, kind: sortable-list, item: media card, reorder: drag }
+      - { id: add-file, kind: button, label: Add file }
+      - { id: help, kind: caption, text: { $tbd: { owner: pm, note: copy not captured } } }
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+  header: { align: space-between }
+  weather: { kind: grid, columns: 3, gap: space.md }
+  material-editor: { kind: columns, columns: 2, gap: space.md }
+
+states:
+  Loading:
+    - { target: manager, hide: true }
+    - { target: content, hide: true }
+  Selected:
+    - { target: material-editor, set: { show_when: null } }
+
+flows:
+  - { from: header, via: tab, to: display-settings, when: switching tabs fetches that tab's data }
+  - { from: material-table, via: row, to: display-settings.Selected, style: conditional }
+
+notes:
+  - The whole form stays hidden until data loads; there is no skeleton. Written as Loading hiding both cards.
+  - Each radio option reveals its own extra control. Written as `reveals:` on the field — a prop the format did not have.
+  - Table rows that are empty act as "add" slots. The button label depends on the row.
+  - Weather selects are 3 per row on large and medium, 2 on small; the material editor stacks on small. (responsive — no place for it yet)
+  - Drag-to-reorder on the content tab.

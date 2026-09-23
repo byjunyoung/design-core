@@ -15,6 +15,7 @@ states:
 
 kinds:                                 # a kind not listed here still renders with the bundled default
   page-header:  { anchors: [action] }
+  group:        { }                    # a bare container, e.g. a button row; layout decides how it sits
   button:       { maps_to: { antd: Button } }
   filter-form:  { maps_to: { antd: Form } }
   table:        { anchors: [row, header], maps_to: { antd: Table } }

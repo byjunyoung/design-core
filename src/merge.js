@@ -1,3 +1,5 @@
+import { findElement } from './elements.js';
+
 // Default is the elements as written. Any other state is Default with its patches applied,
 // in order. The merged view is computed here and never stored (DESIGN.md §3).
 export function mergeState(screen, state) {
@@ -7,19 +9,23 @@ export function mergeState(screen, state) {
   if (state === 'Default') return { state, elements, layout, missingTargets };
 
   for (const patch of screen.states?.[state] ?? []) {
-    const index = elements.findIndex((e) => e.id === patch.target);
+    const hit = findElement(elements, patch.target);
     const hasLayoutKey = patch.target in layout;
-    if (index === -1 && !hasLayoutKey) {
+    if (!hit && !hasLayoutKey) {
       missingTargets.push(patch.target);
       continue;
     }
     if (patch.hide) {
-      if (index !== -1) elements.splice(index, 1);
+      if (hit) {
+        const { container, key } = hit.parent;
+        if (Array.isArray(container)) container.splice(key, 1);
+        else delete container[key];
+      }
       delete layout[patch.target];
       continue;
     }
-    if (patch.replace && index !== -1) elements[index] = { id: patch.target, ...patch.replace };
-    if (patch.set && index !== -1) Object.assign(elements[index], patch.set);
+    if (hit && patch.replace) hit.parent.container[hit.parent.key] = { id: patch.target, ...patch.replace };
+    if (hit && patch.set) Object.assign(hit.el, patch.set);
     if (patch.layout) layout[patch.target] = { ...(layout[patch.target] ?? {}), ...patch.layout };
   }
   return { state, elements, layout, missingTargets };

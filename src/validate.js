@@ -11,10 +11,16 @@ function run(validator, doc) {
   const ok = validator(doc);
   const errors = ok
     ? []
-    : validator.errors.map((e) => ({
-        path: e.instancePath || '/',
-        message: `${e.instancePath || '/'} ${e.message}${e.params?.additionalProperty ? ` (${e.params.additionalProperty})` : ''}`,
-      }));
+    : validator.errors.map((e) => {
+        const extra = e.params?.additionalProperty;
+        // A key with a space in it almost always means prose with an unquoted comma
+        // inside a flow-style mapping: `{ when: Cancel, X or backdrop }`.
+        const hint = extra && /\s/.test(extra) ? ' — an unquoted comma in a flow-style value? quote the whole value' : '';
+        return {
+          path: e.instancePath || '/',
+          message: `${e.instancePath || '/'} ${e.message}${extra ? ` (${extra})` : ''}${hint}`,
+        };
+      });
   return { ok, errors };
 }
 

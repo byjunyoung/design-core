@@ -1,0 +1,56 @@
+schema: design-core/0.2
+id: scr_HOME02
+screen: notice-edit
+section: "01. Home"
+type: modal
+refs:
+  parent: file:screens/home.yaml
+
+elements:
+  - id: dialog
+    kind: modal
+    title: Register notice
+    children:
+      - { id: title, kind: field, label: "Title *", control: { kind: textarea, max: 30, counter: "{n} / 30" } }
+      - { id: content, kind: field, label: "Content *", control: { kind: textarea, max: 100, counter: "{n} / 100" } }
+      - { id: period, kind: field, label: "Posting period *", control: { kind: date-range, format: YYYY.MM.DD, clearable: false, typing: false } }
+      - id: footer
+        kind: group
+        children:
+          - { id: delete, kind: button, label: Delete, variant: danger, show_when: edit mode }
+          - { id: cancel, kind: button, label: Cancel, variant: default }
+          - { id: confirm, kind: button, label: Confirm, variant: primary, disabled_when: any field is empty }
+  - id: delete-confirm
+    kind: confirm
+    title: Delete the notice?
+    text: Deletes the currently posted notice.
+    buttons: [Cancel, Delete]
+    show_when: Delete pressed
+
+layout:
+  root: { kind: stack, direction: column, gap: space.md }
+  footer: { kind: row, align: space-between }
+
+states:
+  Create:
+    - { target: delete, hide: true }
+  Edit:
+    - { target: dialog, set: { title: Edit notice } }
+  Validation:
+    - { target: period, set: { error: the end date must not be before the start date or before today } }
+    - { target: confirm, set: { disabled: true } }
+  Submitting:
+    - { target: footer, set: { disabled: true } }
+  Error:
+    - { target: dialog, set: { toast: { kind: toast, level: error, text: Could not save the notice. } } }
+
+flows:
+  - { from: footer, to: home, when: Cancel or X }
+  - { from: footer, to: home, when: Confirm → saved → toast "Registration complete" }
+  - { from: footer, to: notice-edit.Default, when: "Delete → this dialog closes, delete-confirm opens; Cancel there reopens this dialog with focus on Delete" }
+
+notes:
+  - Create vs Edit is one modal with a different title and footer. Written as two states.
+  - Date pickers grey out days before the start date and before today.
+  - Typing stops at the max length; the counter shows it.
+  - On a 404 the notice is re-fetched.

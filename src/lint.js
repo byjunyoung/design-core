@@ -1,5 +1,6 @@
 import { mergeState } from './merge.js';
 import { resolveFlowTarget } from './flows.js';
+import { walkElements, findElement, elementIds } from './elements.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
 // can edit the exact line. Severity: blocking stops handoff; warning is counted.
@@ -73,7 +74,7 @@ const rules = {
     const out = [];
     for (const s of ctx.screens)
       (s.doc.flows ?? []).forEach((flow, i) => {
-        const el = (s.doc.elements ?? []).find((e) => e.id === flow.from);
+        const el = findElement(s.doc.elements ?? [], flow.from)?.el;
         if (!el) {
           out.push(finding('L06', 'warning', s, ['flows', i, 'from'], `flow source "${flow.from}" is not an element`));
           return;
@@ -121,12 +122,7 @@ const rules = {
       if (!(kind in kinds)) out.push(finding('L10', 'warning', s, path, `kind "${kind}" is not in conventions.kinds`));
     };
     for (const s of ctx.screens) {
-      const walk = (els, base) =>
-        els.forEach((e, i) => {
-          check(s, e.kind, [...base, i, 'kind']);
-          if (e.children) walk(e.children, [...base, i, 'children']);
-        });
-      walk(s.doc.elements ?? [], ['elements']);
+      for (const { el, path } of walkElements(s.doc.elements ?? [], ['elements'])) check(s, el.kind, [...path, 'kind']);
       for (const [state, patches] of Object.entries(s.doc.states ?? {}))
         patches.forEach((p, i) => p.replace && check(s, p.replace.kind, ['states', state, i, 'replace', 'kind']));
     }
@@ -182,7 +178,7 @@ const rules = {
   L14(ctx) {
     const out = [];
     for (const s of ctx.screens) {
-      const ids = new Set((s.doc.elements ?? []).map((e) => e.id));
+      const ids = elementIds(s.doc.elements ?? []);
       for (const key of Object.keys(s.doc.layout ?? {}))
         if (key !== 'root' && !ids.has(key)) out.push(finding('L14', 'warning', s, ['layout', key], `layout key "${key}" names no element`));
     }

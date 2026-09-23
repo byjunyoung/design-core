@@ -1,0 +1,63 @@
+schema: design-core/0.2
+id: scr_PAY01
+screen: payment-list
+section: "03. Payments"
+type: list
+
+elements:
+  - id: header
+    kind: page-header
+    title: Payment management
+    actions: [{ id: excel, kind: button, label: Excel download, variant: primary }]
+  - id: filter
+    kind: filter-bar
+    fields: [period, store, payment_method, order_status, keyword]
+  - id: table
+    kind: table
+    columns: [nickname, order_no, store, method, amount, status, paid_at]
+  - id: paging
+    kind: pagination
+    page_size: 10
+  - id: detail
+    kind: card
+    show_when: a row is selected
+    children:
+      - { id: payment, kind: kv-table, title: Payment info, columns: 2, rows: [[nickname, order_no], [store, payment_method], [amount, order_status], [paid_at, scanned_at]] }
+      - { id: coupon, kind: kv-table, title: Coupon info, columns: 2, rows: [[coupon_used, benefit]] }
+      - { id: items, kind: kv-table, title: Purchased items, columns: 2, rows: "one row per item: [item {k} name, item {k} amount]" }
+      - { id: total, kind: kv-table, title: Total, columns: 2, rows: [[discount, total_paid]] }
+      - { id: refund, kind: button, label: Refund, variant: danger }
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+  header: { align: space-between }
+  filter: { kind: grid, columns: 3, gap: space.md }
+  paging: { align: end }
+  detail: { kind: stack, direction: column, gap: space.md }
+
+states:
+  Empty:
+    - { target: table, replace: { kind: empty-notice, title: No data yet } }
+    - { target: detail, hide: true }
+  NoMatch:
+    - { target: table, replace: { kind: empty-notice, title: No matching results, text: Change the filter. } }
+    - { target: detail, hide: true }
+  Loading:
+    - { target: table, replace: { kind: skeleton, rows: 10 } }
+    - { target: detail, hide: true }
+  Error:
+    - { target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm, note: no error state exists in the current build } } } }
+  Selected:
+    - { target: table, set: { selected_row: 1 } }
+  Viewer:
+    - { target: detail, set: { notice: { kind: confirm, title: Viewer accounts cannot edit, buttons: [OK] } } }
+
+flows:
+  - { from: table, via: row, to: payment-list.Selected, style: conditional }
+  - { from: header, via: action, to: payment-list.Default, when: Excel download → confirm "Download?" (Cancel / Download) }
+  - { from: detail, to: payment-list.Viewer, when: Refund pressed by a viewer role, style: conditional }
+
+notes:
+  - The detail is shown under the list on the same page, not on its own route. Written as a hidden element, which makes Selected the state that reveals it.
+  - Refund goes straight to the API with no confirmation. (flagged; a destructive action without confirm)
+  - Refund success → toast → page reload.

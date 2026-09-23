@@ -1,0 +1,73 @@
+schema: design-core/0.2
+id: scr_INV02
+screen: inventory-edit
+section: "02. Inventory"
+type: modal
+refs:
+  parent: file:screens/inventory-list.yaml
+
+elements:
+  - id: modal
+    kind: modal
+    title: "{name} {line} / {number} / {description}"
+    size: md
+    children:
+      - id: status
+        kind: section
+        title: Stock status
+        children:
+          - id: level
+            kind: select
+            options: "0–100% in steps of 10; the current value is inserted as '98% (current)' if not a multiple of 10"
+          - id: refill
+            kind: button
+            label: Change to 100%
+            variant: secondary
+      - id: details
+        kind: fieldset
+        children:
+          - { id: quantity, kind: field, label: Current stock quantity, control: { kind: input, readonly: true, text: "{max × level} {unit}" } }
+          - { id: max, kind: field, label: Max stock, caption: the value that counts as 100%, control: { kind: input, readonly: true } }
+          - { id: dispenser, kind: field, label: Dispenser type, caption: changes the max, control: { kind: radio, options: [Standard, Extended] }, show_when: the server sends a dispenser type }
+      - id: refilled
+        kind: field
+        label: Last refill date
+        control: { kind: input, readonly: true }
+      - id: footer
+        kind: group
+        children:
+          - { id: cancel, kind: button, label: Cancel, variant: default }
+          - { id: save, kind: button, label: Save, variant: primary }
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg }
+  footer: { align: end, gap: space.sm }
+
+states:
+  Counted:                     # a variant by item type, not a state in the lifecycle sense
+    - { target: level, replace: { kind: input, readonly: true, text: "{n}%" } }
+    - { target: quantity, set: { control: { kind: number } } }
+    - { target: max, set: { control: { kind: number } } }
+  CupLid:
+    - { target: level, replace: { kind: input, readonly: true, text: "{n}%" } }
+    - { target: refill, hide: true }
+    - { target: details, set: { hint: { kind: hint, icon: caution, text: This stock value is calculated automatically by the system. } } }
+  Validation:
+    - { target: quantity, set: { error: enter a number } }
+    - { target: max, set: { error: quantity is above the maximum } }
+    - { target: save, set: { disabled: true } }
+  Viewer:
+    - { target: modal, set: { notice: { kind: confirm, title: Viewer accounts cannot edit, buttons: [OK] } } }
+  Submitting:
+    - { target: modal, set: { overlay: { kind: overlay } } }
+
+flows:
+  - { from: footer, to: inventory-list, when: "Cancel, X or backdrop" }
+  - { from: footer, to: inventory-edit.Submitting, when: Save pressed and valid, style: conditional }
+  - { from: footer, to: inventory-edit.Viewer, when: Save pressed by a viewer role, style: conditional }
+
+notes:
+  - Three variants by item type (counted / cup-lid / other) share one modal. Written as states; they are not lifecycle states.
+  - quantity = max × level, live. Choosing a dispenser type auto-fills max until the user edits max. (derived values — notes only)
+  - Viewer gating happens on Save press, not by hiding or disabling the button.
+  - Save → toast → close → overlay → full page reload after 7 seconds.

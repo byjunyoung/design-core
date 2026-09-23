@@ -1,0 +1,81 @@
+schema: design-core/0.2
+id: scr_HOME01
+screen: home
+section: "01. Home"
+type: dashboard
+
+elements:
+  - id: header
+    kind: page-header
+    title: All units
+    actions:
+      - { id: notice, kind: button, label: Register notice, variant: soft-primary, disabled_when: the notice has not loaded }
+      - { id: multiview, kind: button, label: Multi-view, variant: primary }
+  - id: overview
+    kind: card
+    children:
+      - { id: summary, kind: stat-strip, stats: ["Total {n} units", "Uptime {n}%"] }
+      - id: legend
+        kind: tooltip
+        trigger: help icon
+        items: [off, ready, operating, operating with an issue, stopped or emergency, "Click to go to that store"]
+      - id: tiles
+        kind: tile-grid
+        columns: 25
+        per_page: 100
+        tile: { color: status, badge: warning icon when the unit has an issue, tooltip: [store, status, error, version, total %, visitors, temperature, humidity] }
+      - { id: tiles-paging, kind: pagination, compact: true }
+  - id: ranking
+    kind: card
+    title: Sales ranking by period
+    hint: updates on refresh
+    children:
+      - { id: period, kind: button-group, options: [Today, 1 month, 3 months, 6 months, 1 year, Custom] }
+      - { id: range, kind: date-range, show_when: Custom is selected }
+      - id: stats
+        kind: stat-strip
+        stats: [total sales + per-store average, total orders + average, average order value, average fulfilment time, total visitors + average]
+      - id: table
+        kind: table
+        columns:
+          - { key: rank, label: Rank, sortable: true }
+          - { key: store, label: Store, icon: crown for ranks 1–3 }
+          - { key: sales, label: Total sales, sortable: true, sub: daily average }
+          - { key: orders, label: Orders, sortable: true, sub: daily average }
+          - { key: aov, label: Average order value, sortable: true }
+          - { key: fulfil, label: Average fulfilment time, sortable: true }
+          - { key: visitors, label: Visitors, sortable: true, sub: daily average }
+          - { key: version, label: Version, icon: latest or outdated }
+      - { id: paging, kind: pagination, page_size: 10 }
+
+layout:
+  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+  header: { align: space-between }
+  overview: { kind: stack, direction: column, gap: space.md }
+  tiles: { kind: grid, columns: 25, gap: space.xs }
+  ranking: { kind: stack, direction: column, gap: space.md }
+  stats: { kind: row, gap: space.lg, size: full }
+  paging: { align: end }
+
+states:
+  Loading:
+    - { target: table, replace: { kind: skeleton, rows: 10 } }
+  Empty:
+    - { target: table, replace: { kind: empty-notice, title: No data } }
+  Custom:
+    - { target: range, set: { show_when: null } }
+  Edit:
+    - { target: notice, set: { label: Edit notice } }
+
+flows:
+  - { from: tiles, via: tile, to: home, when: switches the app to that store (app shell event) }
+  - { from: header, via: action, to: notice-edit, when: Register / Edit notice }
+  - { from: header, via: action, to: home, when: Multi-view opens a new browser tab }
+  - { from: period, via: option, to: home.Custom, when: Custom, style: conditional }
+
+notes:
+  - The tile grid is always 100 tiles per page, padded with "no data" tiles that have no tooltip and cannot be clicked.
+  - The legend maps many server states onto 5 colours.
+  - The stat strip has a minimum width and scrolls sideways; the table scrolls sideways too. (responsive — no place for it yet)
+  - Sorting a column toggles asc/desc and resets to page 1; changing the period also resets to page 1.
+  - Custom range with a missing date sends no request.
