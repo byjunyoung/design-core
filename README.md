@@ -1,14 +1,16 @@
 # design-core
 
-A management layer for the screens that agents draw. Not a canvas.
+A design tool for product screens where the agent holds the pen. Humans review, comment and ask; nobody drags.
 
-One YAML file per screen — its type, elements, states, flows and the spec it answers to — and a set of verbs that keep those files honest: `lint`, `prep`, `diff`, `render`. Canvases (Figma, `.pen`, `.op`, Penpot) plug in underneath as importers and exporters; `render` draws the file with real components so a designer can review every state on one page.
+A screen is a YAML file the agent writes — elements, layout by tokens, every state, flows, the spec it answers to. The tool renders it with the team's real components, shows the states side by side, checks what is missing, and hands it to engineering as something a developer inspects rather than measures. Editing is a conversation anchored to the element you are looking at. Versions are git.
+
+It replaces Figma for product screens. Decks, diagrams, vectors and marketing stay wherever they are.
 
 The whole design, with the reason next to each decision, is in [DESIGN.md](DESIGN.md). Nothing runs yet — this repository is the design, and the name is provisional.
 
 ## Where it comes from
 
-The rules are lifted from the [`fig` plugin](https://github.com/byjunyoung/claude-product-skills), which has been run on one company's Figma files across several products since mid-2026. What migrates is the rule set; what stays behind is the Figma-only code.
+The rules are lifted from the [`fig` plugin](https://github.com/byjunyoung/claude-product-skills), run on one company's Figma files across several products since mid-2026. What migrates is the rule set; what stays behind is the Figma-only code.
 
 ## License
 
