@@ -116,3 +116,33 @@ test('the index lists pending proposals with a link to their page', async () => 
   const html = renderIndex(project, { branch: 'x', today: '2026-09-23', proposals: await listProposals(dir) });
   assert.match(html, new RegExp(`href="proposal-${p.id}\\.html"`));
 });
+
+test('with the antd adapter, mapped kinds render as real antd components and unmapped kinds fall back', async () => {
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const project = await loadProject(ops);
+  const adapter = await createAdapter('antd', project);
+  const screen = project.screens.find((s) => s.doc.screen === 'inventory-list');
+  const html = renderScreen(project, screen, { adapter });
+  assert.match(html, /ant-table/);
+  assert.match(html, /ant-btn/);
+  assert.match(html, /ant-segmented/);
+  assert.match(html, /data-path="elements\.1\.children\.1"/, 'the inspector still knows where the table came from');
+  assert.match(html, /ant-table-thead[\s\S]*Stock level/);
+  assert.match(html, /class="el el-filter-bar/, 'a kind with no antd mapping keeps the bundled rendering');
+  assert.match(html, /data-rc-order/, 'antd styles are extracted into the page');
+});
+
+test('the antd adapter takes its theme from the project tokens', async () => {
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const project = await loadProject(ops);
+  project.tokens = { color: { primary: '#ab12cd' } };
+  const adapter = await createAdapter('antd', project);
+  const screen = project.screens.find((s) => s.doc.screen === 'inventory-list');
+  const html = renderScreen(project, screen, { adapter });
+  assert.match(html, /#ab12cd/i);
+});
+
+test('asking for an adapter that does not exist is a readable error', async () => {
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  await assert.rejects(createAdapter('sketch', await loadProject(ops)), /sketch/);
+});

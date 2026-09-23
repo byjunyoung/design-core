@@ -37,13 +37,13 @@ function conditionBadges(el) {
   return out.join('');
 }
 
-function makeRenderer(screen, layout, maps) {
+function makeRenderer(screen, layout, maps, adapter = null) {
   const lines = new Map();
   for (const { el, path } of walkElements(screen.doc.elements ?? [], ['elements'])) lines.set(el.id, { path: path.join('.'), line: screen.lineOf(path) });
 
   const r = {
     element(el, path = null) {
-      const fn = kinds[el.kind] ?? kinds.generic;
+      const fn = adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic;
       const known = lines.get(el.id);
       const style = layoutStyle(layout[el.id]);
       const propsJson = h(JSON.stringify(Object.fromEntries(Object.entries(el).filter(([k]) => !['children'].includes(k)))));
@@ -57,8 +57,8 @@ function makeRenderer(screen, layout, maps) {
   return r;
 }
 
-function renderView(project, screen, view, maps) {
-  const r = makeRenderer(screen, view.layout, maps);
+function renderView(project, screen, view, maps, adapter = null) {
+  const r = makeRenderer(screen, view.layout, maps, adapter);
   const body = view.elements.map((el) => r.element(el)).join('');
   const root = layoutStyle(view.layout.root);
   const inner = `<div class="view-root" style="${root}">${body}</div>`;
@@ -88,7 +88,7 @@ function flowLink(project, screen, flow) {
   return `<a href="${h(href)}">${h(flow.to)}</a>`;
 }
 
-export function renderScreen(project, screen, { branch = null } = {}) {
+export function renderScreen(project, screen, { branch = null, adapter = null } = {}) {
   const doc = screen.doc;
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
@@ -96,7 +96,7 @@ export function renderScreen(project, screen, { branch = null } = {}) {
   const states = stateOrder(project, screen)
     .map((state) => {
       const view = mergeState(doc, state);
-      return `<section class="state" id="state-${h(state)}"><h3>${h(state)}</h3>${renderView(project, screen, view, maps)}</section>`;
+      return `<section class="state" id="state-${h(state)}"><h3>${h(state)}</h3>${renderView(project, screen, view, maps, adapter)}</section>`;
     })
     .join('');
 
@@ -105,7 +105,7 @@ export function renderScreen(project, screen, { branch = null } = {}) {
       const cols = Object.keys(options ?? {})
         .map((opt) => {
           const view = mergeState(doc, 'Default', { [axis]: opt });
-          return `<section class="state" id="variant-${h(axis)}-${h(opt)}"><h3>${h(opt)}</h3>${renderView(project, screen, view, maps)}</section>`;
+          return `<section class="state" id="variant-${h(axis)}-${h(opt)}"><h3>${h(opt)}</h3>${renderView(project, screen, view, maps, adapter)}</section>`;
         })
         .join('');
       return `<h2 class="row-title">Variant · ${h(axis)} <span class="hint">each option in Default</span></h2><div class="states">${cols}</div>`;
@@ -118,11 +118,12 @@ export function renderScreen(project, screen, { branch = null } = {}) {
   const notes = (doc.notes ?? []).map((n) => `<li>${v(n)}</li>`).join('');
   const refs = Object.entries(doc.refs ?? {}).map(([k, u]) => `<span class="ref"><b>${h(k)}</b> ${h(u)}</span>`).join(' ');
 
+  const extra = adapter?.styles ? adapter.styles() : '';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${h(doc.screen)}</title>
-<style>${tokensToCss(tokens)}\n${CSS}</style></head>
+<style>${tokensToCss(tokens)}\n${CSS}</style>${extra}</head>
 <body data-file="${h(screen.file)}">
-<header class="top"><a href="index.html">← screens</a><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)}${branch ? ` · ${h(branch)}` : ''}</span><label class="dev-toggle"><input type="checkbox" id="dev"> developer</label></header>
+<header class="top"><a href="index.html">← screens</a><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)}${adapter ? ` · ${h(adapter.name)} components` : ''}${branch ? ` · ${h(branch)}` : ''}</span><label class="dev-toggle"><input type="checkbox" id="dev"> developer</label></header>
 <div class="refs">${refs}</div>
 <h2 class="row-title">States <span class="hint">no variant chosen</span></h2>
 <div class="states">${states}</div>
@@ -159,7 +160,7 @@ ${proposals.length ? `<h2 class="row-title">Waiting for a person</h2><table clas
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
 // state AS-IS beside TO-BE. This is the sketch step of DESIGN.md §7 — nothing is written
 // until a person has seen the screen it would produce.
-export function renderProposal(project, proposal, { branch = null } = {}) {
+export function renderProposal(project, proposal, { branch = null, adapter = null } = {}) {
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
   const before = parseScreenText(proposal.before, proposal.file);
@@ -169,8 +170,8 @@ export function renderProposal(project, proposal, { branch = null } = {}) {
   const states = ['Default', ...known.filter((k) => k !== 'Default' && present.includes(k)), ...present.filter((k) => !known.includes(k))];
 
   const pair = (state) => {
-    const a = before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps) : '<div class="hint">not in AS-IS</div>';
-    const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps) : '<div class="hint">removed in TO-BE</div>';
+    const a = before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter) : '<div class="hint">not in AS-IS</div>';
+    const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps, adapter) : '<div class="hint">removed in TO-BE</div>';
     return `<h2 class="row-title">${h(state)}</h2><div class="states"><section class="state" id="asis-${h(state)}"><h3>AS-IS</h3>${a}</section><section class="state" id="tobe-${h(state)}"><h3>TO-BE</h3>${b}</section></div>`;
   };
 
@@ -186,16 +187,18 @@ export function renderProposal(project, proposal, { branch = null } = {}) {
   const diff = `<table class="index"><thead><tr><th>where</th><th>AS-IS</th><th>TO-BE</th></tr></thead><tbody>${rows.map(([w, a, b]) => `<tr><td>${h(w)}</td><td>${cell(a)}</td><td>${cell(b)}</td></tr>`).join('')}</tbody></table>`;
   const lintLine = `lint ${proposal.lint.before.blocking}→${proposal.lint.after.blocking} blocking, ${proposal.lint.before.warning}→${proposal.lint.after.warning} warning`;
 
+  const body = states.map(pair).join('');
+  const extra = adapter?.styles ? adapter.styles() : '';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>proposal ${h(proposal.id)}</title>
-<style>${tokensToCss(tokens)}\n${CSS}</style></head>
+<style>${tokensToCss(tokens)}\n${CSS}</style>${extra}</head>
 <body data-file="${h(proposal.file)}">
 <header class="top"><a href="index.html">← screens</a><h1>${h(proposal.screen)} · proposal</h1><span class="meta">${h(proposal.status)} · tier ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><label class="dev-toggle"><input type="checkbox" id="dev"> developer</label></header>
 <p style="margin:var(--space-md) var(--space-lg);font-size:15px">${h(proposal.summary || '(no summary)')}</p>
 <h2 class="row-title">Decided before this version</h2>${decisions}
 <h2 class="row-title">What changes</h2>${diff}
 <p class="hint" style="margin:0 var(--space-lg)">to accept: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · to decline: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>
-${states.map(pair).join('')}
+${body}
 <aside id="inspector" class="inspector"><div class="hint">Click an element to inspect it.</div></aside>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;

@@ -19,10 +19,11 @@ const USAGE = `usage: design-core <verb> …
         the file is rewritten in place; comments and order are kept.
   diff <a.yaml> <b.yaml> [--json]        or        diff <screen-file> --from <git-ref> [--to <git-ref>] [--json]
         AS-IS / TO-BE between two versions of a screen. elements are compared by id.
-  render <project-dir> [--out <dir>] [--branch <name>] [--today YYYY-MM-DD] [--proposal <id>]
+  render <project-dir> [--out <dir>] [--components antd] [--branch <name>] [--today YYYY-MM-DD] [--proposal <id>]
         draw every screen with the bundled component set: out/index.html + one page per screen,
         every state side by side, variants in their own rows, an inspector on click. file:// safe.
         pending proposals get a page each (AS-IS beside TO-BE); --proposal draws one of any status.
+        --components draws mapped kinds with that library (maps_to in conventions); unmapped kinds keep the bundled set.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
   propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--json]
@@ -83,7 +84,7 @@ async function diffCommand(opts) {
 async function renderCommand(opts) {
   const dir = opts._[0];
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const { out, pages } = await renderProject(dir, { branch: opts.branch, today: opts.today, out: opts.out, proposal: opts.proposal });
+  const { out, pages } = await renderProject(dir, { branch: opts.branch, today: opts.today, out: opts.out, proposal: opts.proposal, components: opts.components });
   process.stdout.write(`${pages.length} pages → ${relative(process.cwd(), out) || out}/\n`);
   return 0;
 }

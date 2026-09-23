@@ -105,9 +105,10 @@ server.registerTool(
     inputSchema: {
       out: z.string().optional().describe('output directory; default <project>/out'),
       proposal: z.string().optional().describe('a proposal id: also draw that proposal AS-IS beside TO-BE, every state'),
+      components: z.string().optional().describe('a component library to draw mapped kinds with, e.g. "antd"; default the bundled set'),
     },
   },
-  guard((input) => renderProject(dir, { ...common, out: input.out, proposal: input.proposal })),
+  guard((input) => renderProject(dir, { ...common, out: input.out, proposal: input.proposal, components: input.components })),
 );
 
 server.registerTool(
