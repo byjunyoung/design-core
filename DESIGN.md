@@ -16,6 +16,23 @@ Three products already let an agent draw. What they are, and where this differs:
 
 What none of them hold, and this does: states per screen as required objects, a lint that says what is missing, a canonical/working lifecycle, and a handoff a developer can inspect at the component level. The engine of v0.1 is the differentiation; the viewer is the product.
 
+### 1.1 Will Claude Design simply do this better?
+
+At drawing a screen from a prompt — yes, and it will stay ahead; a generator built by the model's maker is not a fight to pick. So this project does not compete on generation at all. The agent that draws sits outside the tool (§7); Claude Code, Codex or Claude Design's own output can be the pen. What this holds is the layer a generator does not: the screen as a team's file of record, the check for what is missing, the lifecycle, the handoff. An editor, however good, does not make git unnecessary.
+
+| | Claude Design (2026-09) | here |
+|---|---|---|
+| People | single-seat, no realtime | comments and PRs |
+| Versions | none | git |
+| States per screen | none | required per type, linted |
+| Handoff | a bundle to Claude Code; code "not production-ready" | the team's production components, props inspectable |
+| Where the result lives | a project on Anthropic's servers | YAML in the team's repo |
+| Which agent | Claude | any, over MCP |
+
+The risk is plain: the left column can be filled by Anthropic at will, versions and collaboration first. The bet is that "the team's file is in git and the agent is swappable" is a direction a model vendor has little reason to take. Open format, git-native, agent-neutral is the ground this stands on.
+
+Rather than compete, the tool takes Claude Design as input: an `import html` adapter (§9) that reads the HTML it exports and produces screen files — `kind` by reverse `maps_to` on the component markup, layout from the flexbox/grid structure, the rest as `$tbd`. Claude Design becomes one front end among several; the question changes from "which draws better" to "where does the drawing live".
+
 ## 2. What Figma does for a product team, and what replaces it
 
 "Replace Figma" is only honest as a table. This tool replaces Figma **for product screens**. Decks, FigJam diagrams, vector and illustration, marketing assets are out — a team keeps Figma or something else for those, and `fig:deck` in particular still depends on Figma Slides.
@@ -245,6 +262,7 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `render` | the viewer's pages (static build, or served) | `out/` |
 | `apply <patch>` | applies an agent-proposed change after approval; the edit loop's write | that file |
 | `rename <old> <new>` | file and every reference | project |
+| `import html <dir>` | Claude Design / Open Design / any HTML export → screen files: `kind` by reverse `maps_to` on component markup, `layout` from flex/grid structure, unresolved → `$tbd` | new files |
 | `import figma <file>` | on-ramp for a team already drawing: `{screen}-{state}` frames → files; `kind` by reverse `maps_to` on master name; `type` by reverse match on states present; unresolved → `$tbd` | new files |
 | `export <adapter>` | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
 
