@@ -5,11 +5,11 @@ import { resolveFlowTarget } from '../flows.js';
 import { kinds, h, v, isTbd, setLanguage } from './kinds.js';
 import { dictionary, languageOf, pageStrings } from './i18n.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
-import { CSS, INSPECTOR_JS } from './page.js';
+import { CSS, INSPECTOR_JS, PROTO_JS } from './page.js';
 import { parseScreenText } from '../project.js';
 import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
-import { layoutFlows } from '../flowmap.js';
+import { layoutFlows, flowGraph } from '../flowmap.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -154,7 +154,7 @@ function sidebar(project, { current = null, findings = null, comments = [], prop
     })
     .join('');
   const nComponents = Object.keys(project.components ?? {}).length;
-  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a><a class="side-link${current === 'components' ? ' current' : ''}" href="components.html"><span class="name">${D.library}</span><span class="hint">${nComponents}</span></a><a class="side-link${current === 'flows' ? ' current' : ''}" href="flows.html"><span class="name">${D.flowMap}</span></a></div>`;
+  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a><a class="side-link${current === 'components' ? ' current' : ''}" href="components.html"><span class="name">${D.library}</span><span class="hint">${nComponents}</span></a><a class="side-link${current === 'flows' ? ' current' : ''}" href="flows.html"><span class="name">${D.flowMap}</span></a><a class="side-link${current === 'proto' ? ' current' : ''}" href="proto.html"><span class="name">${D.proto}</span></a></div>`;
   return `<nav class="side"><div class="brand">${D.screens} <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
 }
 
@@ -237,7 +237,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
   const body = `<div class="shell">
 ${sidebar(project, { current: doc.screen, findings, comments: api ? comments : [], proposals: [] })}
 <main class="main">
-<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}<label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
+<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}<a class="toggle" href="proto.html#${h(doc.screen)}">▶ ${D.proto}</a><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
 <div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
 <div class="states">${statePanels}${variantPanels}</div>
 <div class="section-title">${D.flows}</div><ul class="list">${flows || `<li class="hint">${D.none}</li>`}</ul>
@@ -359,6 +359,43 @@ ${sections || `<div class="hint">${D.noneOfKind}</div>`}
 }
 const basenameOf = (p) => String(p).split('/').pop();
 
+// The click-through prototype: every screen in every state on one page, one shown at a time;
+// the elements a flow leaves from are hotspots, and pressing one lands on the flow's target
+// screen and state. A `modal` or `sheet` flow lays its target over the current screen;
+// `dismiss` and `back` pop. Nothing is typed, nothing validates — that is `fig:proto`'s job;
+// this is the product's navigation, pressed, from the files alone. Deep link: #screen.State.
+export function renderProto(project, { branch = null, adapter = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const maps = mapsFor(project);
+  const graph = flowGraph(project);
+  const order = [...project.sections, ...project.screens.map((s) => s.doc.section).filter((x) => !project.sections.includes(x))];
+  const screens = [...project.screens].sort((a, b) => order.indexOf(a.doc.section) - order.indexOf(b.doc.section) || a.doc.screen.localeCompare(b.doc.screen));
+  const views = screens
+    .flatMap((s) => stateOrder(project, s).map((state) => `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" hidden>${renderView(project, s, mergeState(s.doc, state), maps, adapter)}</section>`))
+    .join('');
+  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, label: e.label }));
+  const body = `<div class="shell">
+${sidebar(project, { current: 'proto', proposals: [] })}
+<main class="main">
+<header class="top proto-bar"><h1>${D.proto}</h1><span class="meta">${flows.length} ${D.flows.toLowerCase()}${branch ? ` · ${h(branch)}` : ''}</span>
+<label class="toggle">${D.screen} <select id="proto-screen">${screens.map((s) => `<option value="${h(s.doc.screen)}">${h(s.doc.screen)}</option>`).join('')}</select></label>
+<label class="toggle">${D.states} <select id="proto-state"></select></label>
+<button class="toggle" id="proto-back" type="button">‹ ${D.back}</button>
+<label class="toggle"><input type="checkbox" id="proto-hot" checked> ${D.hotspots}</label>
+<span class="spacer"></span>${modeControls(project)}<a class="toggle" href="flows.html">${D.flowMap}</a></header>
+<div class="proto-stage" id="proto-stage">${views || `<div class="hint">${D.none}</div>`}</div>
+<div class="proto-overlay" id="proto-overlay" hidden></div>
+</main>
+<aside id="inspector" class="drawer"></aside>
+</div>
+<script>window.DOAN_FLOWS = ${JSON.stringify(flows)};</script>
+<script>${PROTO_JS}</script>`;
+  return page({ title: D.proto, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+}
+
 // The flow map (src/flowmap.js): sections as boxes, screens as nodes — a scaled Default with a
 // row per state — and flows as right-angle paths that land on the row of the state they name.
 // Nodes are HTML so the thumbnails are the same drawing the screen page shows; edges are one
@@ -387,7 +424,7 @@ ${map.orphans.length ? `<div class="section-title">${D.orphanScreens}</div><ul c
       .map(
         (n) =>
           // a div, not a link: a thumbnail drawn by a library adapter may hold <a> of its own (antd's pagination does), and a link inside a link closes the outer one
-          `<div class="flow-node" style="left:${r1(n.x)}px;top:${r1(n.y)}px;width:${n.w}px;height:${n.h}px"><a class="flow-head" href="${h(n.screen)}.html"><b>${h(n.screen)}</b> <span class="hint">${h(n.type ?? '')} · ${h(n.platform)}</span></a>${thumbOf(n)}${n.rows.map((row) => `<div class="flow-state" style="top:${row.y}px">${h(row.name)}</div>`).join('')}</div>`,
+          `<div class="flow-node" style="left:${r1(n.x)}px;top:${r1(n.y)}px;width:${n.w}px;height:${n.h}px"><a class="flow-head" href="${h(n.screen)}.html"><b>${h(n.screen)}</b> <span class="hint">${h(n.type ?? '')} · ${h(n.platform)}</span></a><a class="flow-go" href="proto.html#${h(n.screen)}" title="${D.proto}">▶</a>${thumbOf(n)}${n.rows.map((row) => `<div class="flow-state" style="top:${row.y}px">${h(row.name)}</div>`).join('')}</div>`,
       )
       .join('');
     const edges = map.edges

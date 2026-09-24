@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadProject } from './project.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderFlows } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderFlows, renderProto } from './render/index.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { lintProject, currentBranch } from './verbs.js';
 import { listProposals, applyProposal, rejectProposal } from './proposals.js';
@@ -51,6 +51,7 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       }
       if (path === '/components.html') return html(res, renderLibrary(project, { branch: opts.branch, adapter, api: true }));
       if (path === '/flows.html') return html(res, await renderFlows(project, { branch: opts.branch, adapter, api: true }));
+      if (path === '/proto.html') return html(res, renderProto(project, { branch: opts.branch, adapter, api: true }));
       let m = path.match(/^\/proposal-(p_[a-z0-9]+)\.html$/);
       if (m) {
         const full = JSON.parse(await readFile(join(dir, '.proposals', `${m[1]}.json`), 'utf8'));

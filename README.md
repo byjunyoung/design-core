@@ -135,7 +135,7 @@ The format is platform-neutral; the picture is not. A screen says `platform: ios
 
 <img src="docs/img/antd-modal.png" alt="The antd adapter: an edit modal in Default, Validation and Submitting, drawn with real antd components" width="100%">
 
-`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated. Every kind is a file under `components/` — its props, slots and the tokens it binds — and the viewer's Components page draws them all from those files. The Flow map page lays every screen out from its flows — a box per section, a thumbnail per screen, an arrow to the state it names — computed by ELK when the page is drawn (`npm install elkjs`; optional).
+`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated. Every kind is a file under `components/` — its props, slots and the tokens it binds — and the viewer's Components page draws them all from those files. The Flow map page lays every screen out from its flows — a box per section, a thumbnail per screen, an arrow to the state it names — computed by ELK when the page is drawn (`npm install elkjs`; optional). The Prototype page is the same screens, pressable: a flow's `from` element is a hotspot and pressing it lands on the target screen and state.
 
 ## Why files and a command line
 
@@ -157,7 +157,7 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 | `lint <dir>` | schema check + rules L01–L20; every finding has file, YAML path and line; exit 1 on blocking |
 | `prep <file>` | stub the states the screen type requires and the file lacks, as `$tbd` placeholders |
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS / TO-BE between two versions; elements compared by id |
-| `render <dir> [--components antd\|mui] [--proposal <id>]` | static HTML: index, components, flow map, one page per screen, one per pending proposal |
+| `render <dir> [--components antd\|mui] [--proposal <id>]` | static HTML: index, components, flow map, prototype, one page per screen, one per pending proposal |
 | `serve <dir> [--port] [--components …]` | the live viewer: comments, Apply / Reject, `/api/lint` |
 | `propose <dir> <screen> --with <new.yaml>` | queue a new version with diff, lint delta and tier |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | the rest of the loop |

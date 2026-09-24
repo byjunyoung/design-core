@@ -328,6 +328,20 @@ Shipped 2026-09-24 (0.5.0). The page Figma's flow page was: every screen of the 
 
 Nodes are HTML (so an adapter's thumbnail is the real thing) and the edges are one SVG on top. A thumbnail may itself contain links (antd's pagination does), so a node is a `div` with a link in its head, not a link. `list_flows` (verb and MCP tool) is the same graph as JSON — edges, dead ends, orphans — for an agent that wants the structure without the picture.
 
+### 6.5 The click-through prototype
+
+Shipped 2026-09-24 (0.6.0). `proto.html` holds every screen in every state and shows one; the elements a flow leaves from are hotspots, and pressing one lands on the flow's target screen and state. That is the whole scope — the owner set it when the stages were planned: the product's navigation, pressed, from the files alone. Typing, validation and branching on input are `fig:proto`'s job, and stay there.
+
+| Decision | Chosen | Why |
+|---|---|---|
+| What is pressable | exactly the `from` elements of the screen's flows, every instance of them (a repeated card is eight hotspots) | the prototype proves the flows, not the widgets |
+| `modal` and `sheet` | the target is laid over the current screen; `dismiss` and `back` pop; `replace` swaps | the same words the flow vocabulary already has, acted out |
+| Several flows from one element | a chooser lists them; a conditional flow is dashed in it | two listeners on one element would fire both. The person picks the branch, which is what a condition means |
+| Where you start | the URL: `proto.html#screen` or `#screen.State`; the flow map's ▶ and the screen page's button link there | a review can be sent as a link that opens on the screen in question |
+| Hotspots visible | on by default, a toggle to hide | shown, it is a map of what the file says is pressable; hidden, it is the picture |
+
+Everything on the page is the same drawing the screen page shows, so a library adapter's components and a compound part look the same here. Nothing is stored and nothing is generated per project: the page is `render` output like the rest.
+
 ## 7. The edit loop — "by conversation only"
 
 A change enters as a comment or a chat message, anchored to what the person is looking at.
@@ -442,7 +456,6 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
 | Adapter reads the contract | design | antd and MUI pieces draw from the props their own code reads; a contract's enum options and bindings do not reach them (§4.5). An adapter could take `sample`, options and bindings from the registry |
 | Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
-| Click-through prototype | next | on top of the flow map (§6.4): press the `from` element on a screen and land on the flow's target state, in one static page |
 | Flow map label placement | design | ELK places a label anywhere along its edge; a long self-loop label can sit far from the node. `elk.edgeLabels.placement` and inline labels are the knobs to try |
 | Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |

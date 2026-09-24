@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-09-24
+
+The click-through prototype: the product's navigation, pressed, from the files alone.
+
+- **`proto.html`** (static and served): every screen in every state, one shown at a time. The elements a flow leaves from are hotspots; pressing one lands on the flow's target screen and state. `modal` and `sheet` lay the target over the current screen, `dismiss` and `back` pop, `replace` swaps. Several flows from one element open a chooser, conditional ones dashed. Start anywhere with `#screen` or `#screen.State`; the flow map's ▶ and the screen page's button link there (DESIGN.md §6.5).
+- Not in scope, on purpose: typing, validation, branching on input — that is `fig:proto`.
+- Fixed: a phone or tablet frame lost its bottom bezel in the viewer — `fit()` sized the stage to the frame and forgot the frame's own margin; a scaled frame also sat off-centre. Both stages now hold the whole frame, centred.
+
 ## 0.5.0 — 2026-09-24
 
 The flow map: the whole product on one page, drawn from the files.

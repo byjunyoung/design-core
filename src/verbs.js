@@ -12,7 +12,7 @@ import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderFlows } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderFlows, renderProto } from './render/index.js';
 import { listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 import { resolveAdapter } from './render/adapters/index.js';
@@ -125,6 +125,8 @@ export async function renderProject(dir, opts = {}) {
   pages.push(join(out, 'components.html'));
   await writeFile(join(out, 'flows.html'), await renderFlows(project, { branch, adapter }));
   pages.push(join(out, 'flows.html'));
+  await writeFile(join(out, 'proto.html'), renderProto(project, { branch, adapter }));
+  pages.push(join(out, 'proto.html'));
   for (const s of project.screens) {
     const file = join(out, `${s.doc.screen}.html`);
     await writeFile(file, renderScreen(project, s, { branch, adapter }));

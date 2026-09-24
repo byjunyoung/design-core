@@ -101,3 +101,30 @@ test('a project with dead ends and orphans lists them under the map; a condition
   assert.match(html, /flow-dead[\s\S]*nowhere/);
   assert.match(html, /flow-orphans[\s\S]*lonely/);
 });
+
+// --- the click-through prototype ---------------------------------------------------------
+
+import { renderProto } from '../src/render/index.js';
+
+test('renderProto holds every screen in every state, hidden, with the flows as data and the script that arms them', async () => {
+  const project = await loadProject(mobile);
+  const html = renderProto(project, { branch: 'x' });
+  const expected = project.screens.reduce((n, s) => n + 1 + Object.keys(s.doc.states ?? {}).length, 0);
+  assert.equal((html.match(/<section class="proto-view"/g) ?? []).length, expected);
+  assert.match(html, /<section class="proto-view" data-screen="feed" data-state="Refreshing" hidden>/);
+  assert.match(html, /window\.DOAN_FLOWS = \[\{"screen":"cart-sheet"/);
+  assert.match(html, /"from":"list","to":"item-detail","state":"Default","nav":"push"/);
+  assert.match(html, /<select id="proto-screen"><option value="feed">feed<\/option>/); // sections order: 01. shop first
+  assert.match(html, /id="proto-hot" checked/);
+  assert.match(html, /querySelectorAll\('\.el\[data-id="' \+ from \+ '"\]'\)/);
+  assert.match(html, /href="proto\.html"><span class="name">Prototype<\/span>/);
+});
+
+test('the flow map and the screen page link into the prototype at that screen', async () => {
+  const project = await loadProject(mobile);
+  const { renderScreen } = await import('../src/render/index.js');
+  const feed = project.screens.find((s) => s.doc.screen === 'feed');
+  assert.match(renderScreen(project, feed), /<a class="toggle" href="proto\.html#feed">/);
+  const flows = await renderFlows(project);
+  assert.match(flows, /<a class="flow-go" href="proto\.html#feed"/);
+});

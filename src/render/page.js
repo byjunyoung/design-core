@@ -107,6 +107,20 @@ table.index th, table.index td { text-align: left; padding: 8px 10px; border-bot
 table.index th { color: var(--color-muted); font-weight: 500; font-size: 12px; }
 .bad { color: var(--color-danger); font-weight: 600; }
 
+/* the click-through prototype */
+.proto-bar .toggle select { max-width: 200px; }
+.proto-stage { position: relative; }
+.proto-view .stage { margin: 0 auto; }
+.proto-overlay { position: fixed; inset: 0; background: rgba(31,35,40,.45); z-index: 20; display: flex; align-items: center; justify-content: center; padding: var(--space-xl); }
+.proto-overlay[hidden] { display: none; }
+.proto-choose { position: fixed; z-index: 30; display: flex; flex-direction: column; gap: var(--space-xs); padding: 6px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.proto-choose .btn { text-align: left; font-size: 12px; } .proto-choose .proto-cond { border-style: dashed; }
+.proto-overlay .proto-view { width: min(92vw, 720px); max-height: 92vh; overflow: auto; }
+.proto-overlay .proto-view .stage { box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+.hotspot { cursor: pointer; }
+body.show-hotspots .hotspot { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+body.show-hotspots .hotspot-cond { outline-style: dashed; }
+.flow-go { position: absolute; top: 8px; right: 8px; color: var(--color-muted); font-size: 11px; padding: 0 4px; text-decoration: none; } .flow-go:hover { color: var(--color-primary); }
 /* the flow map */
 .flow-scroll { overflow: auto; margin-bottom: var(--space-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); }
 .flowmap { position: relative; }
@@ -292,10 +306,20 @@ export const INSPECTOR_JS = `
       var w = stage.clientWidth; var ref = frame.offsetWidth || 1280;
       var s = Math.min(1, w / ref);
       frame.style.transform = 'scale(' + s + ')';
-      stage.style.height = Math.ceil(frame.offsetHeight * s) + 'px';
+      // a device frame sits in a margin the transform does not scale; the stage must hold the
+      // frame *and* that margin or the bottom bezel is cut. Centre it by hand: scale() shrinks
+      // from the top-left, so margin:auto would leave it off-centre.
+      var cs = getComputedStyle(frame);
+      var my = (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+      if (frame.classList.contains('device-phone') || frame.classList.contains('device-tablet')) {
+        var mx = Math.max(0, (w - ref * s) / 2) + 'px';
+        frame.style.marginLeft = mx; frame.style.marginRight = mx;
+      }
+      stage.style.height = Math.ceil(frame.offsetHeight * s + my) + 'px';
     });
   }
   window.addEventListener('resize', fit);
+  window.doanFit = fit; // the prototype page re-fits a view it has just shown
 
   // state tabs and compare toggle
   var states = document.querySelector('.states');
@@ -396,5 +420,109 @@ export const INSPECTOR_JS = `
   if (reject) reject.addEventListener('click', function () { verdict('reject'); });
 
   fit();
+})();
+`;
+
+// The prototype page's own script: a stack of views, hotspots from the flows, hash routing.
+// No template literal inside — this string is embedded into one.
+export const PROTO_JS = `
+(function () {
+  var flows = window.DOAN_FLOWS || [];
+  var views = Array.prototype.slice.call(document.querySelectorAll('.proto-view'));
+  var screenSel = document.getElementById('proto-screen'), stateSel = document.getElementById('proto-state');
+  var back = document.getElementById('proto-back'), hot = document.getElementById('proto-hot'), overlay = document.getElementById('proto-overlay');
+  var stack = [];
+  function statesOf(screen) { return views.filter(function (v) { return v.getAttribute('data-screen') === screen; }).map(function (v) { return v.getAttribute('data-state'); }); }
+  function viewOf(screen, state) {
+    var exact = views.filter(function (v) { return v.getAttribute('data-screen') === screen && v.getAttribute('data-state') === state; })[0];
+    return exact || views.filter(function (v) { return v.getAttribute('data-screen') === screen; })[0] || null;
+  }
+  function top() { return stack[stack.length - 1]; }
+  function lineOf(f) { return f.label + ' \\u2192 ' + f.to + (f.state !== 'Default' ? '.' + f.state : ''); }
+  // one listener per element; an element several flows leave from asks which one
+  function arm(root, screen) {
+    var mine = flows.filter(function (f) { return f.screen === screen; });
+    var byFrom = {};
+    mine.forEach(function (f) { (byFrom[f.from] = byFrom[f.from] || []).push(f); });
+    Object.keys(byFrom).forEach(function (from) {
+      var list = byFrom[from];
+      root.querySelectorAll('.el[data-id="' + from + '"]').forEach(function (el) {
+        el.classList.add('hotspot');
+        if (list.every(function (f) { return f.style === 'conditional'; })) el.classList.add('hotspot-cond');
+        el.setAttribute('title', list.map(lineOf).join('\\n'));
+        el.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (list.length === 1) return go(list[0]);
+          choose(el, list);
+        });
+      });
+    });
+  }
+  var chooser = null;
+  function closeChooser() { if (chooser) { chooser.remove(); chooser = null; } }
+  function choose(el, list) {
+    closeChooser();
+    chooser = document.createElement('div'); chooser.className = 'proto-choose';
+    list.forEach(function (f) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'btn' + (f.style === 'conditional' ? ' proto-cond' : '');
+      b.textContent = lineOf(f);
+      b.addEventListener('click', function (e) { e.stopPropagation(); closeChooser(); go(f); });
+      chooser.appendChild(b);
+    });
+    var r = el.getBoundingClientRect();
+    chooser.style.left = Math.round(r.left) + 'px'; chooser.style.top = Math.round(r.bottom + 4) + 'px';
+    document.body.appendChild(chooser);
+  }
+  document.addEventListener('click', function () { closeChooser(); }, true);
+  function show() {
+    var t = top(); if (!t) return;
+    var bases = stack.filter(function (x) { return !x.overlay; }); var base = bases[bases.length - 1] || t;
+    views.forEach(function (v) { v.hidden = true; });
+    var bv = viewOf(base.screen, base.state); if (bv) bv.hidden = false;
+    overlay.innerHTML = ''; overlay.hidden = true;
+    if (t.overlay) {
+      var ov = viewOf(t.screen, t.state);
+      if (ov) { var c = ov.cloneNode(true); c.hidden = false; overlay.appendChild(c); overlay.hidden = false; arm(c, t.screen); }
+    }
+    screenSel.value = base.screen;
+    stateSel.innerHTML = statesOf(base.screen).map(function (s) { return '<option value="' + s + '"' + (s === base.state ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+    var want = t.screen + (t.state !== 'Default' ? '.' + t.state : '');
+    if (decodeURIComponent(location.hash.slice(1)) !== want) history.replaceState(null, '', '#' + want);
+    if (typeof window.doanFit === 'function') window.doanFit();
+  }
+  function go(f) {
+    // dismiss and back leave the current view and land where the flow says — which may be a
+    // state the screen underneath was not in (add → kiosk-menu.Selected)
+    if (f.nav === 'dismiss' || f.nav === 'back') {
+      if (stack.length > 1) stack.pop();
+      var under = stack[stack.length - 1] || {};
+      stack[Math.max(stack.length - 1, 0)] = { screen: f.to, state: f.state, overlay: !!under.overlay };
+      return show();
+    }
+    var cur = top();
+    var entry = { screen: f.to, state: f.state, overlay: f.nav === 'modal' || f.nav === 'sheet' };
+    // a flow with no nav that stays on the current screen is a state change: same layer, no new entry
+    if (!f.nav && cur && cur.screen === f.to) { entry.overlay = !!cur.overlay; stack.pop(); }
+    else if (f.nav === 'replace' && stack.length) stack.pop();
+    stack.push(entry);
+    show();
+  }
+  function fromHash() {
+    var hsh = decodeURIComponent(location.hash.slice(1)); if (!hsh) return null;
+    if (statesOf(hsh).length) return { screen: hsh, state: 'Default' };
+    var i = hsh.lastIndexOf('.'); if (i < 1) return null;
+    var screen = hsh.slice(0, i), state = hsh.slice(i + 1);
+    return viewOf(screen, state) ? { screen: screen, state: state } : null;
+  }
+  views.forEach(function (v) { arm(v, v.getAttribute('data-screen')); });
+  document.body.classList.toggle('show-hotspots', hot.checked);
+  hot.addEventListener('change', function () { document.body.classList.toggle('show-hotspots', hot.checked); });
+  screenSel.addEventListener('change', function () { stack = [{ screen: screenSel.value, state: 'Default' }]; show(); });
+  stateSel.addEventListener('change', function () { var t = top(); if (!t) return; if (t.overlay) stack.pop(); top().state = stateSel.value; show(); });
+  back.addEventListener('click', function () { if (stack.length > 1) { stack.pop(); show(); } });
+  overlay.addEventListener('click', function (e) { if (e.target === overlay && stack.length > 1) { stack.pop(); show(); } });
+  window.addEventListener('hashchange', function () { var t = fromHash(); var c = top(); if (t && (!c || t.screen !== c.screen || t.state !== c.state)) { stack = [t]; show(); } });
+  var first = fromHash() || (screenSel.value ? { screen: screenSel.value, state: 'Default' } : null);
+  if (first) { stack = [first]; show(); }
 })();
 `;
