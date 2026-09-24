@@ -46,7 +46,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\"",
+    "test": "node --test test/*.test.js",
     "check": "npm test && node src/cli.js lint examples/orders --branch feature/demo && node src/cli.js lint examples/store-ops --branch feature/demo && node src/cli.js render examples/store-ops --out /tmp/design-core-check --branch feature/demo",
     "demo": "node src/cli.js serve examples/store-ops --components antd --branch feature/demo",
     "start": "node src/cli.js serve design"
