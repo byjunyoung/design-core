@@ -128,6 +128,15 @@ node src/cli.js render examples/store-ops --out out
 
 Open `out/index.html`. Each screen page shows every state side by side, and each variant (an edit dialog in Create mode and in Edit mode) in its own row. Click any element and a panel tells you what it is, which design-system component it maps to, its properties, and the exact file and line it came from. Undecided values are yellow chips; placeholders are dashed boxes; modals sit on a dimmed backdrop.
 
+**Open the viewer, live.**
+
+```bash
+node src/cli.js serve design --components antd
+#   viewer at http://127.0.0.1:4870/
+```
+
+The same pages, rendered from the files on every request, plus what a static page cannot do: click an element and leave a **comment** on it (anchored to its YAML path, stored in `.comments/`, shown as a 💬 on the element and listed on the index); open a pending proposal and press **Apply** with your name or **Reject**; `/api/lint` for a bot. The agent reads the comments (`list_comments`), answers them with proposals, and marks them resolved. This is the seed of the hosted service: put it behind a URL per branch and you have the viewer, the preview and the approval surface.
+
 **Let the agent in.**
 
 ```json
@@ -164,8 +173,7 @@ This project takes the other side of the bet: the agent holds the pen, humans re
 ## What is not here yet
 
 - Adapters for libraries other than antd (MUI, your own) — the adapter contract is one file, `src/render/adapters/antd.js` is the model.
-- Comments on the rendered page (today a comment is what you tell the agent).
-- Hosting: a viewer per branch, a lint bot on pull requests, share links. Everything above runs locally.
+- Hosting: the viewer above behind a URL per branch, a lint bot on pull requests, share links. Everything above runs locally today.
 
 ## Where the rules come from
 
@@ -173,6 +181,6 @@ The checks are lifted from the [`fig` plugin](https://github.com/byjunyoung/clau
 
 ## Tests and license
 
-`npm test` — 98 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
+`npm test` — 105 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
 
 MIT.

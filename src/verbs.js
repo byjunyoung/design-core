@@ -10,6 +10,7 @@ import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { renderScreen, renderIndex, renderProposal } from './render/index.js';
 import { listProposals } from './proposals.js';
+import { addComment, listComments, resolveComment } from './comments.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { initProject, componentBases } from './init.js';
 import { importFigmaTree, writeImport, fetchFigmaPage } from './import/figma.js';
@@ -148,3 +149,5 @@ export async function mapFigma(dir, { fileKey, page, write = false, tree = null 
   if (write) Object.assign(result, await writeFigmaMap(dir, suggestion.mapped));
   return result;
 }
+
+export { addComment, listComments, resolveComment };

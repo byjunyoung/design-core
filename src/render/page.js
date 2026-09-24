@@ -88,6 +88,8 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .inspector table { font-size: 12px; } .inspector th { width: 34%; }
 .inspector code { background: var(--color-surface); padding: 1px 4px; border-radius: 3px; }
 .el.selected { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.cbadge { position: absolute; top: -6px; right: -6px; font-size: 12px; z-index: 3; }
+.inspector textarea, .inspector input { width: 100%; margin: 4px 0; }
 body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; left: 0; font-size: 9px; background: var(--color-text); color: var(--color-bg); padding: 0 4px; border-radius: 2px; z-index: 2; pointer-events: none; }
 .index { margin: var(--space-lg); width: auto; min-width: 640px; background: var(--color-bg); } .bad { color: var(--color-danger); font-weight: 600; }
 `;
@@ -124,5 +126,40 @@ export const INSPECTOR_JS = `
   });
   var dev = document.getElementById('dev');
   if (dev) dev.addEventListener('change', function () { document.body.classList.toggle('dev', dev.checked); });
+
+  // Live viewer only (served by "design-core serve"): comments and approvals go to the API.
+  var api = window.DESIGN_CORE_API === true;
+  var comments = window.DESIGN_CORE_COMMENTS || [];
+  comments.forEach(function (c) {
+    var el = document.querySelector('.el[data-path="' + c.path + '"]');
+    if (el) { var b = document.createElement('span'); b.className = 'cbadge'; b.textContent = '💬'; b.title = c.author + ': ' + c.text; el.appendChild(b); }
+  });
+  if (api) {
+    document.addEventListener('click', function (e) {
+      var el = e.target.closest('.el');
+      if (!el || e.target.closest('a') || !panel) return;
+      var mine = comments.filter(function (c) { return c.path === el.getAttribute('data-path'); });
+      var box = document.createElement('div');
+      box.innerHTML = '<h4>Comments</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">none on this element</div>') +
+        '<textarea id="ctext" rows="3" placeholder="say what should change"></textarea><input id="cwho" placeholder="your name"><button class="btn btn-primary" id="csend">Comment</button><span class="hint" id="cstate"></span>';
+      panel.appendChild(box);
+      document.getElementById('csend').addEventListener('click', function () {
+        var text = document.getElementById('ctext').value.trim(); var who = document.getElementById('cwho').value.trim();
+        if (!text) return;
+        fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: window.DESIGN_CORE_SCREEN, path: el.getAttribute('data-path'), line: Number(el.getAttribute('data-line')) || null, text: text, author: who || 'anonymous' }) })
+          .then(function (r) { return r.ok ? location.reload() : r.json().then(function (j) { document.getElementById('cstate').textContent = j.error; }); });
+      });
+    });
+    var approve = document.getElementById('approve'), reject = document.getElementById('reject');
+    function verdict(kind) {
+      var by = (document.getElementById('by') || {}).value || '';
+      var id = (approve || reject).getAttribute('data-id');
+      if (kind === 'apply' && !by.trim()) { document.getElementById('verdict').textContent = 'your name first'; return; }
+      fetch('/api/proposals/' + id + '/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(kind === 'apply' ? { by: by } : { reason: by }) })
+        .then(function (r) { return r.json(); }).then(function (j) { document.getElementById('verdict').textContent = j.error ? j.error : j.status; if (!j.error) setTimeout(function () { location.href = '/'; }, 600); });
+    }
+    if (approve) approve.addEventListener('click', function () { verdict('apply'); });
+    if (reject) reject.addEventListener('click', function () { verdict('reject'); });
+  }
 })();
 `;

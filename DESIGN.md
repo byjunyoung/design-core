@@ -2,7 +2,7 @@
 
 Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: comments on the page, hosting, adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -305,6 +305,8 @@ MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view) a
 
 The engine (§3–§9) is open source and runs locally. The service is the engine hosted, which is what makes it a tool a team opens instead of Figma:
 
+Shipped 2026-09-24 as `serve`: a local viewer that renders from the files on every request and adds the three things a static page cannot do — a comment box in the inspector (a comment is a screen + a YAML path + a text, stored in `.comments/<screen>.json`, shown as a badge on the element and as "N open" on the index), Apply / Reject on a proposal page with the approver's name, and `/api/lint`, `/api/proposals`, `/api/comments` for a bot or an agent. The MCP server reads and resolves comments, so the loop closes: a person comments on the page, the agent proposes, the person applies on the page, the agent resolves the comment naming the proposal. Verified in a browser by doing exactly that. Hosting is this process behind a URL per branch.
+
 | Layer | What a person sees |
 |---|---|
 | Hosted viewer | the project page, always current with `main` |
@@ -357,5 +359,5 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
 | Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
-| Comment storage | design | in the hosted service, or as a file in the repo so the local viewer has it too |
+| Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer |
 | Agent runtime for the hosted loop | later | bring-your-own (Claude Code, Codex via MCP) first; a hosted agent is a pricing decision, not a design one |

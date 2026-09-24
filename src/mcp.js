@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { resolve } from 'node:path';
 import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
+import { addComment, listComments, resolveComment } from './comments.js';
 
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
 // for most: the merged view of one screen, and only the findings that mean "missing".
@@ -174,6 +175,33 @@ server.registerTool(
     inputSchema: { file_key: z.string(), page: z.string(), write: z.boolean().default(false) },
   },
   guard((input) => mapFigma(dir, { fileKey: input.file_key, page: input.page, write: input.write })),
+);
+
+server.registerTool(
+  'list_comments',
+  {
+    description: 'Comments people left on the rendered screens, each anchored to a screen and a YAML path. These are the requests the edit loop turns into proposals. Open ones by default.',
+    inputSchema: { screen: z.string().optional(), status: z.enum(['open', 'resolved', 'all']).default('open') },
+  },
+  guard((input) => listComments(dir, input).then((comments) => ({ comments }))),
+);
+
+server.registerTool(
+  'resolve_comment',
+  {
+    description: 'Mark a comment handled — after the proposal that answers it was applied — with who resolved it and a note naming the proposal.',
+    inputSchema: { id: z.string(), by: z.string().default('agent'), note: z.string().default('') },
+  },
+  guard((input) => resolveComment(dir, input)),
+);
+
+server.registerTool(
+  'add_comment',
+  {
+    description: 'Leave a comment on an element on behalf of the person, anchored to a YAML path — for when they say it in chat and want it on the page.',
+    inputSchema: { screen: z.string(), path: z.string(), text: z.string(), author: z.string().default('agent') },
+  },
+  guard((input) => addComment(dir, input)),
 );
 
 // The discipline behind a new or changed screen. fig:draw carried this as a skill document;

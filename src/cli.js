@@ -3,6 +3,7 @@ import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma } from './verbs.js';
+import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
@@ -35,6 +36,9 @@ const USAGE = `usage: design-core <verb> …
   map figma <project-dir> <file-key> --page "<page name>" [--write]
         pair the page's component masters with kinds by name and (with --write) put them into
         conventions.yaml as maps_to.figma. Run this before import figma; it is what makes kinds resolve.
+  serve <project-dir> [--port 4870] [--components antd] [--branch <name>]
+        the viewer, live: pages rendered from the files on every request, comments on elements,
+        Apply / Reject on a proposal page, /api/lint for a bot. The seed of the hosted service.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
   propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--json]
@@ -167,8 +171,16 @@ async function mapCommand(opts) {
   return 0;
 }
 
+async function serveCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const s = await startServer(dir, { port: Number(opts.port) || 4870, branch: opts.branch, today: opts.today, components: opts.components ?? null });
+  process.stdout.write(`viewer at ${s.url}  (ctrl-c to stop)\n`);
+  return new Promise(() => {});
+}
+
 const verbs = {
-  init: initCommand, bases: basesCommand, import: importCommand, map: mapCommand,
+  init: initCommand, bases: basesCommand, import: importCommand, map: mapCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

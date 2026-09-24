@@ -88,7 +88,7 @@ function flowLink(project, screen, flow) {
   return `<a href="${h(href)}">${h(flow.to)}</a>`;
 }
 
-export function renderScreen(project, screen, { branch = null, adapter = null } = {}) {
+export function renderScreen(project, screen, { branch = null, adapter = null, api = false, comments = [] } = {}) {
   const doc = screen.doc;
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
@@ -130,12 +130,14 @@ export function renderScreen(project, screen, { branch = null, adapter = null } 
 ${variants}
 <h2 class="row-title">Flows</h2><ul class="flows">${flows || '<li class="hint">none</li>'}</ul>
 <h2 class="row-title">Notes</h2><ul class="notes">${notes || '<li class="hint">none</li>'}</ul>
+<h2 class="row-title">Comments <span class="hint">${comments.length} open</span></h2><ul class="notes" id="comments">${comments.map((c) => `<li data-comment="${h(c.id)}"><b>${h(c.author)}</b> on <code>${h(c.path)}</code>: ${h(c.text)}</li>`).join('') || '<li class="hint">none</li>'}</ul>
 <aside id="inspector" class="inspector"><div class="hint">Click an element to inspect it.</div></aside>
+<script>window.DESIGN_CORE_API = ${api ? 'true' : 'false'}; window.DESIGN_CORE_SCREEN = ${JSON.stringify(doc.screen)}; window.DESIGN_CORE_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
 
-export function renderIndex(project, { branch = null, today, proposals = [] } = {}) {
+export function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false } = {}) {
   const findings = lint(project, { branch, today });
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const rows = project.screens
@@ -143,14 +145,15 @@ export function renderIndex(project, { branch = null, today, proposals = [] } = 
       const mine = findings.filter((f) => f.file === s.file);
       const sum = summarize(mine);
       const tbd = mine.filter((f) => f.id === 'L08').length;
-      return `<tr><td><a href="${h(s.doc.screen)}.html">${h(s.doc.screen)}</a></td><td>${h(s.doc.section)}</td><td>${h(s.doc.type)}</td><td>${Object.keys(s.doc.states ?? {}).length}</td><td class="${sum.blocking ? 'bad' : ''}">${sum.blocking}</td><td>${sum.warning}</td><td>${tbd ? `<span class="tbd">$tbd × ${tbd}</span>` : ''}</td></tr>`;
+      const open = comments.filter((c) => c.screen === s.doc.screen).length;
+      return `<tr><td><a href="${h(s.doc.screen)}.html">${h(s.doc.screen)}</a></td><td>${h(s.doc.section)}</td><td>${h(s.doc.type)}</td><td>${Object.keys(s.doc.states ?? {}).length}</td><td class="${sum.blocking ? 'bad' : ''}">${sum.blocking}</td><td>${sum.warning}</td><td>${tbd ? `<span class="tbd">$tbd × ${tbd}</span>` : ''}</td><td>${open ? `${open} open` : ''}</td></tr>`;
     })
     .join('');
   const total = summarize(findings);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>screens</title><style>${tokensToCss(tokens)}\n${CSS}</style></head>
 <body><header class="top"><h1>Screens</h1><span class="meta">${project.screens.length} screens${branch ? ` on ${h(branch)}` : ''} — ${total.blocking} blocking, ${total.warning} warning</span></header>
-<table class="index"><thead><tr><th>screen</th><th>section</th><th>type</th><th>states</th><th>blocking</th><th>warning</th><th>$tbd</th></tr></thead><tbody>${rows}</tbody></table>
+<table class="index"><thead><tr><th>screen</th><th>section</th><th>type</th><th>states</th><th>blocking</th><th>warning</th><th>$tbd</th><th>comments</th></tr></thead><tbody>${rows}</tbody></table>
 ${proposals.length ? `<h2 class="row-title">Waiting for a person</h2><table class="index"><thead><tr><th>proposal</th><th>screen</th><th>tier</th><th>summary</th><th>lint after</th></tr></thead><tbody>${proposals
   .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html">${h(p.id)}</a></td><td>${h(p.screen)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} blocking, ${p.lint?.after?.warning ?? 0} warning</td></tr>`)
   .join('')}</tbody></table>` : ''}
@@ -160,7 +163,7 @@ ${proposals.length ? `<h2 class="row-title">Waiting for a person</h2><table clas
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
 // state AS-IS beside TO-BE. This is the sketch step of DESIGN.md §7 — nothing is written
 // until a person has seen the screen it would produce.
-export function renderProposal(project, proposal, { branch = null, adapter = null } = {}) {
+export function renderProposal(project, proposal, { branch = null, adapter = null, api = false } = {}) {
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
   const before = parseScreenText(proposal.before, proposal.file);
@@ -197,9 +200,12 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
 <p style="margin:var(--space-md) var(--space-lg);font-size:15px">${h(proposal.summary || '(no summary)')}</p>
 <h2 class="row-title">Decided before this version</h2>${decisions}
 <h2 class="row-title">What changes</h2>${diff}
-<p class="hint" style="margin:0 var(--space-lg)">to accept: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · to decline: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>
+${api && proposal.status === 'pending'
+    ? `<p style="margin:0 var(--space-lg)"><input id="by" placeholder="your name" style="width:160px;display:inline-block"> <button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">Apply</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">Reject</button> <span class="hint" id="verdict"></span></p>`
+    : `<p class="hint" style="margin:0 var(--space-lg)">to accept: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · to decline: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`}
 ${body}
 <aside id="inspector" class="inspector"><div class="hint">Click an element to inspect it.</div></aside>
+<script>window.DESIGN_CORE_API = ${api ? 'true' : 'false'}; window.DESIGN_CORE_SCREEN = ${JSON.stringify(proposal.screen)}; window.DESIGN_CORE_COMMENTS = [];</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
