@@ -114,6 +114,21 @@
         }
       }
     },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primitive": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "refs": {
       "type": "object",
       "additionalProperties": false,

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
-import { DEFAULT_TOKENS } from './render/tokens.js';
+import { DEFAULT_TOKEN_FILES } from './tokens.js';
 
 // A project starts by choosing what its screens are drawn with. Either a component library
 // the team already uses — then each kind maps to one of its components — or nothing: the
@@ -15,8 +15,8 @@ const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 export function componentBases() {
   return [
     { id: 'none', label: 'Self-built (100% yours)', status: 'ready', note: 'the bundled set is copied into your project and becomes your component library' },
-    { id: 'antd', label: 'Ant Design', status: 'ready', note: 'kinds map to antd components, drawn server-side and themed from tokens.json' },
-    { id: 'mui', label: 'MUI', status: 'ready', note: 'kinds map to MUI components, drawn server-side through emotion and themed from tokens.json' },
+    { id: 'antd', label: 'Ant Design', status: 'ready', note: 'kinds map to antd components, drawn server-side and themed from tokens/' },
+    { id: 'mui', label: 'MUI', status: 'ready', note: 'kinds map to MUI components, drawn server-side through emotion and themed from tokens/' },
     { id: 'shadcn', label: 'shadcn/ui', status: 'n/a', note: 'shadcn is copied source in your repo, not a package: start with --base none and point render.components at your own module' },
   ];
 }
@@ -64,7 +64,7 @@ notes:
 
 const PROJECT_README = (base) => `# design
 
-Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens.json\`.
+Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens/\` (DTCG files: primitives, semantic, light, dark, and the resolver).
 
 Component base: **${base}**${base === 'none' ? ' — the component set is in `components/kinds.js` and is yours to edit.' : ' — kinds map to that library through `maps_to` in conventions.yaml.'}
 
@@ -111,8 +111,13 @@ export async function initProject(dir, { base = 'none' } = {}) {
   created.push('screens/sample-list.yaml');
   await writeFile(join(dir, 'README.md'), PROJECT_README(base));
   created.push('README.md');
-  await writeFile(join(dir, 'tokens.json'), JSON.stringify(DEFAULT_TOKENS, null, 2) + '\n');
-  created.push('tokens.json');
+  // tokens/: DTCG files — primitives, the fixed semantic set, one colour file per theme, and
+  // the resolver that says how they combine. Resolved for light this is the bundled default.
+  await mkdir(join(dir, 'tokens'), { recursive: true });
+  for (const [name, body] of Object.entries(DEFAULT_TOKEN_FILES)) {
+    await writeFile(join(dir, 'tokens', name), JSON.stringify(body, null, 2) + '\n');
+    created.push(`tokens/${name}`);
+  }
 
   if (base === 'none') {
     await mkdir(join(dir, 'components'), { recursive: true });

@@ -67,7 +67,7 @@ npx @junyoung735/doan init design --base antd   # 또는 --base none: 컴포넌�
 npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ```
 
-`design/`에 `conventions.yaml`(규칙), `sections.yaml`, `tokens.json`, 시작 화면 한 장, 그리고 그 폴더의 README가 생깁니다. 뷰어를 열어 시작 화면을 누르면 상태 탭, 그림, 요소마다 어느 파일 몇 줄에서 왔는지 말해 주는 드로어가 있습니다.
+`design/`에 `conventions.yaml`(규칙), `sections.yaml`, `tokens/`(DTCG 토큰 파일과 light/dark 리졸버), 시작 화면 한 장, 그리고 그 폴더의 README가 생깁니다. 뷰어를 열어 시작 화면을 누르면 상태 탭, 그림, 요소마다 어느 파일 몇 줄에서 왔는지 말해 주는 드로어가 있습니다.
 
 에이전트를 들입니다. Claude Code — 프로젝트의 `.mcp.json`:
 
@@ -135,7 +135,7 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 
 <img src="docs/img/antd-modal.png" alt="antd 어댑터: 수정 모달의 Default·Validation·Submitting을 진짜 antd 컴포넌트로" width="100%">
 
-`--base antd`나 `--base mui`는 kind를 그 라이브러리의 컴포넌트에 짝지어 서버에서 그리고, `tokens.json`으로 테마를 입힙니다. `--base none`은 기본 세트를 `design/components/`에 복사합니다 — 그때부터 그건 팀의 컴포넌트 라이브러리이고 도구는 그걸 소유하지 않습니다. shadcn/ui나 자체 디자인 시스템도 이 길입니다. 뷰어 자체의 말은 conventions의 `meta.language`(`en`, `ko`)를 따르고, 화면 내용은 절대 번역하지 않습니다.
+`--base antd`나 `--base mui`는 kind를 그 라이브러리의 컴포넌트에 짝지어 서버에서 그리고, `tokens/`로 테마를 입힙니다. `--base none`은 기본 세트를 `design/components/`에 복사합니다 — 그때부터 그건 팀의 컴포넌트 라이브러리이고 도구는 그걸 소유하지 않습니다. shadcn/ui나 자체 디자인 시스템도 이 길입니다. 뷰어 자체의 말은 conventions의 `meta.language`(`en`, `ko`)를 따르고, 화면 내용은 절대 번역하지 않습니다.
 
 ## 왜 파일과 명령줄인가
 
@@ -151,7 +151,8 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 |---|---|
 | `init <dir> [--base none\|antd\|mui]` | 프로젝트 시작. `none`은 컴포넌트 세트를 복사해 내 것으로, 라이브러리 기반은 kind를 그 라이브러리에 대응 |
 | `bases` | 컴포넌트 기반 목록과 준비 여부 |
-| `lint <dir>` | 스키마 검사 + 규칙 L01–L17. 지적마다 파일·YAML 경로·줄. 차단이 있으면 exit 1 |
+| `tokens <dir>` | 토큰 전부 — 값, 테마별 값, 파일, 계층(primitive · semantic · bundled) |
+| `lint <dir>` | 스키마 검사 + 규칙 L01–L20. 지적마다 파일·YAML 경로·줄. 차단이 있으면 exit 1 |
 | `prep <file>` | 유형이 요구하는데 없는 상태를 `$tbd` 자리표시로 채움 |
 | `diff <a> <b>` · `diff <file> --from <ref>` | 두 판의 AS-IS / TO-BE. 요소는 id로 비교 |
 | `render <dir> [--components antd\|mui] [--proposal <id>]` | 정적 HTML: 인덱스, 화면마다 한 장, 대기 제안마다 한 장 |
@@ -168,7 +169,7 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 design/
 ├── conventions.yaml     이름 규칙 · 플랫폼 · 화면 유형과 필수 상태 · kind 와 대응 · 배치 어휘 · 흐름 어휘 · 수명주기 · meta.language
 ├── sections.yaml        기능 묶음, 순서대로
-├── tokens.json          색·간격·모서리·글꼴 — render 가 테마로 씀
+├── tokens/              DTCG 2025.10 — primitive · semantic · light · dark · theme.resolver.json. 예전 평평한 tokens.json 도 읽음
 ├── components/          --base none 일 때만: 컴포넌트 세트의 내 사본
 ├── screens/*.yaml       화면마다 파일 하나
 ├── .proposals/          편집 루프의 대기열

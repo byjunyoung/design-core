@@ -1,6 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { parseDocument, LineCounter, isNode } from 'yaml';
+import { loadTokens } from './tokens.js';
 
 // A screen file, parsed twice over: `doc` is the plain object every verb works on,
 // `lineOf(path)` maps a YAML path back to a 1-based line so findings can point at it.
@@ -30,11 +31,10 @@ export async function loadProject(dir) {
   const screensDir = join(dir, 'screens');
   const names = (await readdir(screensDir)).filter((n) => /\.ya?ml$/.test(n)).sort();
   const screens = await Promise.all(names.map((n) => loadScreen(join(screensDir, n))));
-  let tokens = null;
-  try {
-    tokens = JSON.parse(await readFile(join(dir, 'tokens.json'), 'utf8'));
-  } catch {
-    tokens = null; // optional: render falls back to the bundled token set
-  }
-  return { dir, conventions, sections, screens, tokens, screenName: (s) => basename(s.file) };
+  // tokens.json, tokens/*.tokens.json or a resolver — see src/tokens.js. `tokens` is the
+  // resolved default context in the shape render and the adapters always read; `tokenSet`
+  // carries every context, the source and any problems for lint. Missing is fine: render
+  // falls back to the bundled set.
+  const tokenSet = await loadTokens(dir);
+  return { dir, conventions, sections, screens, tokens: tokenSet.tokens, tokenSet, screenName: (s) => basename(s.file) };
 }

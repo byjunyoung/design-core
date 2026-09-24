@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — 2026-09-24
+
+Tokens as a design system, not a colour list.
+
+- **`tokens/` holds DTCG 2025.10 files** — `$value`, `$type`, `{alias}`, `$extends`; colour objects and `{ value, unit }` dimensions become css strings. The flat `tokens.json` from before still reads.
+- **Two tiers by file.** `primitive.tokens.json` is the palette and the scale; the other files name it by alias. `conventions.tokens.primitive` lists the primitive stems and **L19** blocks a screen that names one. Token names in screens are unchanged (`space.md`).
+- **Modes through a DTCG Resolver** — `theme.resolver.json` with sets, modifiers and `resolutionOrder`. `render` emits one custom-property block per context and a `theme` select in the header; the bundled kinds and the chrome follow it. A library adapter keeps the default context (DESIGN.md §4.4).
+- **`doan tokens <dir>`** and the MCP tool **`list_tokens`**: every token with its value, per-theme values, file and tier, for an agent to read before naming one.
+- **L18** warns on a layout token that resolves to nothing; **L20** relays what the loader could not resolve — a broken alias, an unreadable `$ref`, a token one theme has and another lacks.
+- `init` writes `tokens/` (primitive, semantic, light, dark, resolver) instead of `tokens.json`; resolved for light it is exactly the bundled default.
+- The `draw` prompt has a **wireframe step** again: a text sketch of every state in the conversation, and a yes, before any YAML is written. The first cut had replaced it with the rendered proposal; that made people argue with a diff (DESIGN.md §7).
+
 ## 0.2.1 — 2026-09-24
 
 - **`kiosk` platform removed.** It was a portrait frame and nothing else. Built-in platforms are `web`, `ios`, `android`, `tablet`; a team that needs another size adds it under `conventions.platforms` with frame `tablet` or `none`.

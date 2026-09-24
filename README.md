@@ -67,7 +67,7 @@ npx @junyoung735/doan init design --base antd   # or --base none: the component 
 npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ```
 
-`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json`, a starter screen and its own README. Open the viewer and click the starter screen: state tabs, a picture, a drawer that says which file and line each element came from.
+`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens/` (DTCG token files and a light/dark resolver), a starter screen and its own README. Open the viewer and click the starter screen: state tabs, a picture, a drawer that says which file and line each element came from.
 
 Let an agent in. Claude Code — `.mcp.json` in the project:
 
@@ -135,7 +135,7 @@ The format is platform-neutral; the picture is not. A screen says `platform: ios
 
 <img src="docs/img/antd-modal.png" alt="The antd adapter: an edit modal in Default, Validation and Submitting, drawn with real antd components" width="100%">
 
-`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens.json`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated.
+`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated.
 
 ## Why files and a command line
 
@@ -151,7 +151,8 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 |---|---|
 | `init <dir> [--base none\|antd\|mui]` | start a project; `none` copies the component set into it, a library base maps kinds to that library |
 | `bases` | the component bases and whether each is ready |
-| `lint <dir>` | schema check + rules L01–L17; every finding has file, YAML path and line; exit 1 on blocking |
+| `tokens <dir>` | every token with its value, per-theme values, file and tier (primitive · semantic · bundled) |
+| `lint <dir>` | schema check + rules L01–L20; every finding has file, YAML path and line; exit 1 on blocking |
 | `prep <file>` | stub the states the screen type requires and the file lacks, as `$tbd` placeholders |
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS / TO-BE between two versions; elements compared by id |
 | `render <dir> [--components antd\|mui] [--proposal <id>]` | static HTML: index, one page per screen, one per pending proposal |
@@ -168,7 +169,7 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 design/
 ├── conventions.yaml     naming · platforms · screen types and their required states · kinds and what they map to · layout vocabulary · flow vocabulary · lifecycle · meta.language
 ├── sections.yaml        the feature groups, in order
-├── tokens.json          colours, spacing, radius, font — what render themes with
+├── tokens/              DTCG 2025.10 — primitive · semantic · light · dark · theme.resolver.json; a flat tokens.json still reads
 ├── components/          only with --base none: your copy of the component set
 ├── screens/*.yaml       one file per screen
 ├── .proposals/          the edit loop's queue

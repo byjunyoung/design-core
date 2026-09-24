@@ -149,10 +149,32 @@ function sidebar(project, { current = null, findings = null, comments = [], prop
   return `<nav class="side"><div class="brand">${D.screens} <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
 }
 
-function page({ title, tokens, extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
+// Modes. Every modifier axis of the project's token resolver (theme: light | dark …) becomes
+// a data attribute on <html> and a select in the header: `data-theme="dark"` swaps the custom
+// properties for that context's set. The bundled kinds and the page chrome follow at once; a
+// component library's own pieces keep the default context, since their theme was baked in
+// server-side. No resolver, no controls.
+const attrName = (s) => String(s).toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+function modeCss(project) {
+  const contexts = project.tokenSet?.contexts ?? {};
+  return Object.entries(contexts)
+    .flatMap(([axis, byCtx]) => Object.entries(byCtx).map(([ctx, t]) => tokensToCss(mergeTokens(DEFAULT_TOKENS, t)).replace(/^:root/, `:root[data-${attrName(axis)}="${h(ctx)}"]`)))
+    .join('\n');
+}
+
+function modeControls(project) {
+  const contexts = project.tokenSet?.contexts ?? {};
+  const defaults = project.tokenSet?.defaults ?? {};
+  return Object.entries(contexts)
+    .map(([axis, byCtx]) => `<label class="toggle">${h(axis)} <select data-mode="${attrName(axis)}">${Object.keys(byCtx).map((c) => `<option value="${h(c)}"${c === defaults[axis] ? ' selected' : ''}>${h(c)}</option>`).join('')}</select></label>`)
+    .join('');
+}
+
+function page({ title, tokens, modeCss = '', extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
   return `<!doctype html>
 <html lang="${h(lang)}"><head><meta charset="utf-8"><title>${h(title)}</title>
-<style>${tokensToCss(tokens)}\n${CSS}</style>${extraCss}</head>
+<style>${tokensToCss(tokens)}\n${modeCss}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
 <script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
@@ -191,7 +213,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
   const body = `<div class="shell">
 ${sidebar(project, { current: doc.screen, findings, comments: api ? comments : [], proposals: [] })}
 <main class="main">
-<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
+<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}<label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
 <div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
 <div class="states">${statePanels}${variantPanels}</div>
 <div class="section-title">${D.flows}</div><ul class="list">${flows || `<li class="hint">${D.none}</li>`}</ul>
@@ -201,7 +223,7 @@ ${refs ? `<div class="section-title">${D.references}</div><div class="hint" styl
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: doc.screen, tokens, extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
+  return page({ title: doc.screen, tokens, modeCss: modeCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
 }
 
 export function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false } = {}) {
@@ -243,13 +265,13 @@ export function renderIndex(project, { branch = null, today, proposals = [], com
   const body = `<div class="shell">
 ${sidebar(project, { current: null, findings, comments, proposals })}
 <main class="main">
-<header class="top"><h1>${D.overview}</h1><span class="meta">${project.screens.length} ${D.screens}${branch ? ` ${D.on} ${h(branch)}` : ''} — ${total.blocking} ${D.blocking}, ${total.warning} ${D.warning}${comments.length ? `, ${comments.length} ${D.openComments}` : ''}</span></header>
+<header class="top"><h1>${D.overview}</h1><span class="meta">${project.screens.length} ${D.screens}${branch ? ` ${D.on} ${h(branch)}` : ''} — ${total.blocking} ${D.blocking}, ${total.warning} ${D.warning}${comments.length ? `, ${comments.length} ${D.openComments}` : ''}</span><span class="spacer"></span>${modeControls(project)}</header>
 ${waiting}
 ${cards}
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: D.screens, tokens, body, api, screen: '', comments: [], lang });
+  return page({ title: D.screens, tokens, modeCss: modeCss(project), body, api, screen: '', comments: [], lang });
 }
 
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
@@ -295,7 +317,7 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const body = `<div class="shell">
 ${sidebar(project, { current: proposal.screen })}
 <main class="main">
-<header class="top"><h1>${h(proposal.screen)} <span class="hint">${D.proposal}</span></h1><span class="meta">${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
+<header class="top"><h1>${h(proposal.screen)} <span class="hint">${D.proposal}</span></h1><span class="meta">${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}<label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
 <p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>
 <div class="section-title">${D.decided}</div>${decisions}
 <div class="section-title">${D.whatChanges}</div>${diff}
@@ -306,5 +328,5 @@ ${verdict}
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: `${D.proposal} ${proposal.id}`, tokens, extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
+  return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
 }

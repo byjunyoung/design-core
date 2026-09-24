@@ -34,6 +34,7 @@ a { color: inherit; text-decoration: none; }
 .top .spacer { flex: 1; }
 .toggle { font-size: 12px; color: var(--color-muted); display: inline-flex; align-items: center; gap: var(--space-xs); cursor: pointer; white-space: nowrap; padding: 4px 10px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-bg); }
 .toggle input { margin: 0; }
+.toggle select { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 .toggle:has(input:checked) { color: var(--color-text); border-color: var(--color-primary); }
 .tabs-row { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; margin: var(--space-xs) 0 var(--space-md); }
 .tabs-row .axis { font-size: 11px; color: var(--color-muted); margin-right: var(--space-xs); }
@@ -229,6 +230,19 @@ export const INSPECTOR_JS = `
   });
   var compare = document.getElementById('compare');
   if (compare && states) compare.addEventListener('change', function () { states.classList.toggle('compare', compare.checked); fit(); });
+
+  // mode selects: a token resolver axis (theme: light | dark) becomes data-<axis> on <html>,
+  // which switches the custom properties to that context's set. Remembered per browser.
+  document.querySelectorAll('select[data-mode]').forEach(function (sel) {
+    var axis = sel.getAttribute('data-mode'); var key = 'doan.mode.' + axis; var saved = null;
+    try { saved = localStorage.getItem(key); } catch (e) {}
+    if (saved && Array.prototype.some.call(sel.options, function (o) { return o.value === saved; })) sel.value = saved;
+    document.documentElement.setAttribute('data-' + axis, sel.value);
+    sel.addEventListener('change', function () {
+      document.documentElement.setAttribute('data-' + axis, sel.value);
+      try { localStorage.setItem(key, sel.value); } catch (e) {}
+    });
+  });
 
   // comment dots on elements that have comments
   comments.forEach(function (c) {

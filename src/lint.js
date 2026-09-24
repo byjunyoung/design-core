@@ -1,12 +1,16 @@
 import { mergeState } from './merge.js';
 import { resolveFlowTarget } from './flows.js';
 import { walkElements, findElement, elementIds } from './elements.js';
+import { basename } from 'node:path';
+import { hasToken } from './tokens.js';
+import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
 // can edit the exact line. Severity: blocking stops handoff; warning is counted.
 // Rules whose convention key is null or empty are skipped, never fired wrongly.
 
 const BARE_UNIT = /^-?\d+(\.\d+)?(px|rem|em|%|pt)?$/;
+const isTbd = (x) => x && typeof x === 'object' && '$tbd' in x;
 
 function finding(id, severity, s, path, message) {
   return { id, severity, screen: s.doc.screen, file: s.file, path, line: s.lineOf(path), message };
@@ -224,6 +228,61 @@ const rules = {
     return ctx.screens
       .filter((s) => s.doc.platform && !known.includes(s.doc.platform))
       .map((s) => finding('L17', 'warning', s, ['platform'], `platform "${s.doc.platform}" is not in conventions.platforms (have: ${known.join(', ')})`));
+  },
+  // --- tokens -------------------------------------------------------------------------------
+  // What a screen names in layout (gap, padding) must be a token that resolves, and never a
+  // primitive: the palette and the scale are the design system's private vocabulary, screens
+  // speak in the semantic layer above it. Which files are primitive is conventions.tokens.primitive
+  // (file stems under tokens/); null switches L19 off. L20 relays what the token loader could
+  // not resolve — a broken alias, a $ref it could not open, a token missing in one theme —
+  // because render would draw a hole where that value should be.
+  L18(ctx) {
+    const tokens = mergeTokens(DEFAULT_TOKENS, ctx.tokens ?? {});
+    const out = [];
+    const check = (s, rule, base) => {
+      for (const key of ['gap', 'padding']) {
+        const v = rule[key];
+        if (v === undefined || BARE_UNIT.test(String(v)) || isTbd(v)) continue;
+        if (!hasToken(tokens, v)) out.push(finding('L18', 'warning', s, [...base, key], `${key} "${v}" names no token`));
+      }
+    };
+    for (const s of ctx.screens) {
+      for (const [key, rule] of Object.entries(s.doc.layout ?? {})) check(s, rule, ['layout', key]);
+      for (const [state, patches] of Object.entries(s.doc.states ?? {}))
+        patches.forEach((p, i) => p.layout && check(s, p.layout, ['states', state, i, 'layout']));
+    }
+    return out;
+  },
+  L19(ctx) {
+    const stems = ctx.conventions.tokens?.primitive;
+    const origins = ctx.tokenSet?.origins;
+    if (!stems?.length || !origins) return [];
+    const stem = (file) => (file ? basename(file).replace(/\.tokens\.json$/, '') : null);
+    const primitive = (name) => stems.includes(stem(origins[String(name)]));
+    const out = [];
+    const check = (s, rule, base) => {
+      for (const key of ['gap', 'padding']) {
+        const v = rule[key];
+        if (v !== undefined && primitive(v)) out.push(finding('L19', 'blocking', s, [...base, key], `${key} "${v}" is a primitive token; name the semantic token that uses it`));
+      }
+    };
+    for (const s of ctx.screens) {
+      for (const [key, rule] of Object.entries(s.doc.layout ?? {})) check(s, rule, ['layout', key]);
+      for (const [state, patches] of Object.entries(s.doc.states ?? {}))
+        patches.forEach((p, i) => p.layout && check(s, p.layout, ['states', state, i, 'layout']));
+    }
+    return out;
+  },
+  L20(ctx) {
+    return (ctx.tokenSet?.problems ?? []).map((p) => ({
+      id: 'L20',
+      severity: p.severity ?? 'blocking',
+      screen: null,
+      file: p.file ?? ctx.tokenSet.files?.[0] ?? null,
+      path: String(p.path ?? '').split('.'),
+      line: null,
+      message: p.context ? `${p.message} (${p.context})` : p.message,
+    }));
   },
 };
 

@@ -25,7 +25,7 @@ const call = async (name, args = {}) => {
 
 test('the server exposes the verbs and the two agent reads', async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_screens', 'prep', 'render', 'propose', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_screens', 'list_tokens', 'prep', 'render', 'propose', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());
 });
 
 test('lint returns the same JSON the CLI does', async () => {
@@ -101,6 +101,8 @@ test('the server offers a "draw" prompt that walks the agent through decisions b
   assert.match(text, /order-list/);
   assert.match(text, /one at a time/i);
   assert.match(text, /propose/);
+  // the sketch comes before the file: a wireframe step sits between the decisions table and propose
+  assert.ok(text.indexOf("wireframe") > text.indexOf("item | decision | why") && text.indexOf("wireframe") < text.indexOf("call propose"), "wireframe step sits between the table and propose");
 });
 
 test('render can draw a pending proposal and returns its page', async () => {
@@ -108,4 +110,12 @@ test('render can draw a pending proposal and returns its page', async () => {
   const p = await call('propose', { screen: 'inventory-list', after: before.replace('page_size: 10', 'page_size: 20'), summary: 'twenty per page' });
   const r = await call('render', { out: join(dir, 'out2'), proposal: p.json.id });
   assert.ok(r.json.pages.some((x) => x.endsWith(`proposal-${p.json.id}.html`)));
+});
+
+test('list_tokens gives every token with its value, tier and file, so an agent knows what it may name', async () => {
+  const { json } = await call('list_tokens');
+  assert.equal(json.source, 'none'); // store-ops ships no tokens: everything is the bundled set
+  const md = json.tokens.find((t) => t.name === 'space.md');
+  assert.deepEqual(md, { name: 'space.md', value: '16px', tier: 'bundled', file: null });
+  assert.deepEqual(json.problems, []);
 });

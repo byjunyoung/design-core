@@ -23,7 +23,7 @@ test('init --base none copies the component set into the project so the team own
   const r = await initProject(dir, { base: 'none' });
   assert.ok(existsSync(join(dir, 'conventions.yaml')));
   assert.ok(existsSync(join(dir, 'sections.yaml')));
-  assert.ok(existsSync(join(dir, 'tokens.json')));
+  assert.ok(existsSync(join(dir, 'tokens', 'theme.resolver.json')));
   assert.ok(existsSync(join(dir, 'components', 'kinds.js')));
   const conv = parse(readFileSync(join(dir, 'conventions.yaml'), 'utf8'));
   assert.equal(conv.render.base, 'none');
@@ -85,4 +85,23 @@ test('mui is a ready base and shadcn says why it is not one', async () => {
   assert.equal(conv.kinds.table.maps_to.mui, 'Table');
   assert.equal(conv.kinds.table.maps_to.antd, undefined);
   await assert.rejects(initProject(fresh(), { base: 'shadcn' }), /copied source/);
+});
+
+test('init writes DTCG token files with a light/dark resolver; resolved for light they are the bundled default, and the page carries both themes', async () => {
+  const dir = fresh();
+  await initProject(dir, { base: 'none' });
+  for (const f of ['primitive.tokens.json', 'semantic.tokens.json', 'light.tokens.json', 'dark.tokens.json', 'theme.resolver.json']) assert.ok(existsSync(join(dir, 'tokens', f)), f);
+  const project = await loadProject(dir);
+  assert.equal(project.tokenSet.source, 'dtcg');
+  assert.deepEqual(project.tokenSet.problems, []);
+  assert.equal(project.tokens.color.primary, '#2f6fed');
+  assert.equal(project.tokens.space.md, '16px');
+  assert.equal(project.tokenSet.contexts.theme.dark.color.bg, '#1f2328');
+  assert.match(project.tokenSet.origins['gray.0'], /primitive\.tokens\.json$/);
+  const conv = parse(readFileSync(join(dir, 'conventions.yaml'), 'utf8'));
+  assert.deepEqual(conv.tokens.primitive, ['primitive']);
+  const screen = project.screens.find((s) => s.doc.screen === 'sample-list');
+  const html = renderScreen(project, screen);
+  assert.match(html, /:root\[data-theme="dark"\] \{[^}]*--color-bg: #1f2328;/);
+  assert.match(html, /<select data-mode="theme"><option value="light" selected>light<\/option><option value="dark">dark<\/option><\/select>/);
 });

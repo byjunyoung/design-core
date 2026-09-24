@@ -2,7 +2,7 @@
 
 Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
 
-What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L20), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -97,7 +97,7 @@ One screen, one file, YAML, validated by JSON Schema.
 ```
 design/
 ├── conventions.yaml     naming, screen types, kinds, refs, lifecycle, layout vocabulary
-├── tokens.json          the team's tokens (or a pointer to the DS package that has them)
+├── tokens/              DTCG 2025.10 files and a resolver (§4.4); a flat tokens.json from before 0.3 still reads
 ├── sections.yaml        "03. Orders - Order list" and their order
 └── screens/
     ├── order-list.yaml
@@ -195,6 +195,8 @@ layout:
   containers: [stack, grid, columns]
   spacing_tokens: 'space.'                      # prefix; only names starting with it may appear in layout
   size_classes: [sm, md, lg, full]
+tokens:
+  primitive: [primitive]                        # file stems under tokens/ a screen must never name (L19)
 refs:
   required: []                                  # example: [prd]
   schemes: [notion, github, figma, file, https]
@@ -204,6 +206,31 @@ lifecycle:
 edit:
   auto_apply: [text]                            # which comment-driven changes skip preview (§7)
 ```
+
+### 4.4 Tokens
+
+```
+design/tokens/
+├── primitive.tokens.json   the palette and the scale — gray.900, blue.500, size.4
+├── semantic.tokens.json    what does not change with the theme: space.md → {size.4}, radius, font
+├── light.tokens.json       colour in the light theme: color.bg → {gray.0}
+├── dark.tokens.json        colour in the dark theme: color.bg → {gray.900}
+└── theme.resolver.json     sets, modifiers, resolutionOrder — how the files combine
+```
+
+Decided 2026-09-24, one question at a time, when the owner set the goal that doan carries everything the `fig` plugin used to keep in Figma — the design system, the components, the whole flow — not screens alone:
+
+| Decision | Chosen | Why |
+|---|---|---|
+| Format | DTCG Format 2025.10 — `$value`, `$type`, `{alias}`, `$extends` | the first stable version of the spec; Figma Variables and Style Dictionary speak it, so tokens come in and go out without a converter of ours. Colour `$value` is an object (`colorSpace`, `components`, `hex`) and dimension is `{ value, unit }`; the loader turns both into css strings |
+| Tiers | two — primitive → semantic | primitives are the design system's private vocabulary; screens and components name the semantic layer only. A third tier (component tokens) was judged too much for a small team — add a file when a team needs it |
+| How a tier is marked | by file — `conventions.tokens.primitive` lists the stems | a name prefix (`primitive.blue.500`) would have changed every reference; a file boundary is visible in `ls` and in git |
+| Names in screens | unchanged — `space.md`, as before | zero edits to existing screens and to the field-test project; the flat `tokens.json` from before 0.3 still reads (`source: flat`, no tiers) |
+| Modes | DTCG Resolver — `theme.resolver.json` with sets, modifiers, contexts, resolutionOrder | the same document the spec's tooling exchanges; light/dark is a modifier, not a copy of the file. Spacing, radius and type sit in one set for every context, only colour is per theme, so nothing is repeated |
+
+What the engine does with them: `loadTokens` resolves the default context into the nested shape render always read (`space.md` → `--space-md`) and every other context into its own set; `render` emits `:root[data-theme="dark"] { … }` per context and a select in the header that sets the attribute on `<html>`; `list_tokens` (verb and MCP tool) gives an agent every name with its value, its per-context values, its file and its tier before it names one. Lint: L18 a layout names a token that resolves to nothing; L19 a layout names a primitive; L20 whatever the loader could not resolve — a broken alias, a `$ref` it could not open, a token one theme defines and another does not. Nothing in the loader throws on a bad token; every miss is a finding with a file and a path.
+
+Known limit: a component library adapter (antd, MUI) is themed at render time from the default context. The mode select recolours the bundled kinds and the page chrome, not the library's own pieces. Rendering once per context would close that at the cost of one server-side pass per theme — §13.
 
 ## 5. Lint catalogue
 
@@ -226,8 +253,13 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L13 layout-vocabulary | blocking | `layout` uses only declared containers, size classes and token names; no bare units | — (new) |
 | L14 layout-orphan | warning | a `layout` key names an element that does not exist in that state | — (new) |
 | L15 variant-shape | warning | a variant axis has ≥ 2 options; no option shares a name with a state | — (new) |
+| L16 flow-vocabulary | warning | `gesture` and `nav` on a flow are words `conventions.flows` lists | arrow line styles |
+| L17 platform-known | warning | a screen's `platform` is one `conventions.platforms` declares | — (new) |
+| L18 token-missing | warning | a layout `gap` or `padding` names a token that resolves to nothing | — (new) |
+| L19 token-primitive | blocking | a layout names a token from a file `conventions.tokens.primitive` lists | colour token binding (`fig:tokens`), moved from the canvas to the file |
+| L20 token-problem | as the loader says | a broken alias, a `$ref` the resolver cannot open, a token one theme has and another does not | — (new) |
 
-Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property, colour token binding. All are canvas geometry; none exists here.
+Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
 ## 6. Render is the product surface
 
@@ -271,7 +303,7 @@ One tier rule so a typo does not cost a round trip: changes in `edit.auto_apply`
 
 Shipped 2026-09-23: `propose(screen, after)` takes the whole new YAML text — not a patch language, because an agent already writes whole files well and a patch language is one more thing to get wrong. The proposal stores the base file's hash; `apply` refuses if the file moved since. The tier is read off the diff: every changed path ending in a text prop (`text`, `label`, `title`, `placeholder`, `caption`, `hint`, `note`, `when`) or under `notes` is `text`; anything else is `structure`. `edit.auto_apply` names the tiers that skip the person; a tier still waits if lint after would block. Proposals are files under `.proposals/`, so the CLI, the MCP server and a future viewer share one queue. The MCP `apply` tool needs `approved_by` and its description tells the agent not to call it on its own — that is a convention, not a lock; the lock is that a person can always `undo`, and that the viewer (when it exists) is where approval is meant to happen.
 
-Shipped later the same day — the sketch step. `fig:draw` agrees the direction in the conversation before a single node is written: the list of what must be decided, one question at a time with a recommendation, a table once settled, a text wireframe per state. Here the wireframe is replaced by the real thing, because nothing is written until `apply`: a proposal carries `decisions: [{ item, decision, why }]`, and `render` draws every pending proposal as a page — decisions, then the diff, then every state AS-IS beside TO-BE, with the inspector. The interview itself is agent behaviour, so the MCP server publishes it as the `draw` prompt: any agent that connects gets the same six steps (anchor → list decisions → ask one at a time → table → propose with decisions → render and wait). A proposal that arrives with no decisions renders with a line saying so — the page shows when the interview was skipped.
+Shipped later the same day — the sketch step. `fig:draw` agrees the direction in the conversation before a single node is written: the list of what must be decided, one question at a time with a recommendation, a table once settled, a text wireframe per state. The first cut dropped the wireframe on the theory that the real thing could replace it, since nothing is written until `apply`. The owner reversed that on 2026-09-24 after the first session that drew screens without one: the agent went straight from the decisions table to a rendered proposal, and the person had to argue with a diff and a picture instead of a sketch. So the wireframe stays, in the conversation, before any YAML — a box drawing of Default at the platform's proportions and one line per state — and the person says yes to it first. A wireframe is cheaper to argue with than a diff. After the yes, a proposal carries `decisions: [{ item, decision, why }]`, and `render` draws every pending proposal as a page — decisions, then the diff, then every state AS-IS beside TO-BE, with the inspector. The interview itself is agent behaviour, so the MCP server publishes it as the `draw` prompt: any agent that connects gets the same seven steps (anchor → list decisions → ask one at a time → table → wireframe and a yes → propose with decisions → render and wait). A proposal that arrives with no decisions renders with a line saying so — the page shows when the interview was skipped.
 
 The agent behind the loop is not part of this project. The tool exposes MCP verbs (§9) and a comment feed; Claude Code, Codex or a hosted agent drives them. This keeps the tool small and lets a team bring the agent it already pays for.
 
@@ -363,6 +395,9 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
+| Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
+| Components as files | next | contract (props, variants, states, token bindings) and composition (a team's own compound parts) as `components/*.yaml`; a screen instance may set only what the component declares. Decided 2026-09-24, planned after tokens |
+| Flow map | next | the whole product's flows on one page, auto-laid-out (ELK) and grouped by section; no coordinates in the files. Then a click-through prototype on top of it |
 | Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
 | Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer |

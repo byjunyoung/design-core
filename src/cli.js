@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens } from './verbs.js';
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
@@ -17,6 +17,9 @@ usage: doan <verb> …
         start a project: conventions, sections, tokens, screens/. --base none (default) copies the
         component set into <project-dir>/components so it is yours; a library base maps kinds to it.
   bases  list the component bases and whether each is ready
+  tokens <project-dir> [--json]
+        every token the project resolves — name, value, per-theme values, file, tier (primitive · semantic · bundled).
+        tokens/ holds DTCG 2025.10 files and a resolver; a flat tokens.json from before 0.3 still reads.
 
   lint <project-dir> [--branch <name>] [--today YYYY-MM-DD] [--json]
         validate every screen file against the schema and run rules L01–L15.
@@ -147,6 +150,19 @@ async function initCommand(opts) {
   process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  npx doan serve ${dir}     # open http://127.0.0.1:4870/\n  npx doan lint ${dir}\n  add the MCP server to your agent — see README\n`);
   return 0;
 }
+async function tokensCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await listTokens(dir);
+  if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
+  process.stdout.write(`${r.tokens.length} tokens from ${r.source}${r.resolver ? ` (${r.resolver})` : ''}${Object.keys(r.axes).length ? ` — ${Object.entries(r.axes).map(([a, c]) => `${a}: ${c.join(' | ')}`).join(', ')}` : ''}\n`);
+  for (const t of r.tokens) {
+    const per = t.values ? '  ' + Object.entries(t.values).map(([k, v]) => `${k}=${v}`).join(' ') : '';
+    process.stdout.write(`${t.name.padEnd(26)} ${String(t.value).padEnd(40)} ${t.tier.padEnd(9)} ${t.file ?? ''}${per}\n`);
+  }
+  for (const p of r.problems) process.stdout.write(`${p.severity === 'blocking' ? 'BLOCK' : 'warn '}  ${p.file ?? ''}  ${p.path}  ${p.message}\n`);
+  return r.problems.some((p) => p.severity === 'blocking') ? 1 : 0;
+}
 function basesCommand() {
   for (const b of componentBases()) process.stdout.write(`${b.id.padEnd(8)} ${b.status.padEnd(8)} ${b.label} — ${b.note}\n`);
   return 0;
@@ -194,7 +210,7 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, import: importCommand, map: mapCommand, serve: serveCommand,
+  init: initCommand, bases: basesCommand, tokens: tokensCommand, import: importCommand, map: mapCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

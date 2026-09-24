@@ -238,3 +238,9 @@ test('every mobile kind in the shipped set renders something of its own, not the
     assert.doesNotMatch(html, /class="el el-[^"]*el-unknown/, `${name} has an unknown kind`);
   }
 });
+
+test('a project with no token resolver gets no mode select and no per-context css', async () => {
+  const { html } = await page(orders, 'order-list');
+  assert.doesNotMatch(html, /data-mode=/);
+  assert.doesNotMatch(html, /:root\[data-/);
+});

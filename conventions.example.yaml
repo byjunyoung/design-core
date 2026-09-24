@@ -98,6 +98,11 @@ layout:
   spacing_tokens: 'space.'             # prefix: only names starting with this may appear in gap/padding
   size_classes: [sm, md, lg, full]
 
+tokens:
+  # the files under tokens/ that hold primitives — palette and scale a screen must never name
+  # directly (L19). File stems: primitive.tokens.json → primitive. null switches the check off.
+  primitive: [ primitive ]
+
 refs:
   required: []                         # example: [prd]
   schemes: [notion, github, figma, file, https]

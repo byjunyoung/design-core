@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -44,6 +44,16 @@ server.registerTool(
   'list_screens',
   { description: 'Every screen in the project with its section, type, states and variant axes. Start here.', inputSchema: {} },
   guard(() => listScreens(dir)),
+);
+
+server.registerTool(
+  'list_tokens',
+  {
+    description:
+      'Every token the project resolves: name, value in the default context, value per theme, the file that defines it, and its tier — primitive (the palette and the scale; a screen never names one, L19 blocks it), semantic (what layout and components name), bundled (the default set, no project file). Read this before naming a token in a layout.',
+    inputSchema: {},
+  },
+  guard(() => listTokens(dir)),
 );
 
 server.registerTool(
@@ -210,7 +220,7 @@ server.registerPrompt(
   'draw',
   {
     title: 'Draw or change a screen',
-    description: 'How to go from a request to a proposal the person can judge: anchor, list the decisions, ask one at a time, then propose with the decisions attached and render it.',
+    description: 'How to go from a request to a proposal the person can judge: anchor, list the decisions, ask one at a time, sketch every state as a text wireframe and get a yes, then propose with the decisions attached and render it.',
     argsSchema: { screen: z.string().describe('the screen to draw or change'), request: z.string().optional().describe('what the person asked for, in their words') },
   },
   ({ screen, request }) => ({
@@ -229,9 +239,11 @@ server.registerPrompt(
 
 4. When everything is settled, show a table — item | decision | why — and the list of states the screen will have, one line each on what changes from Default.
 
-5. Write the whole screen file and call propose with the complete YAML, a one-line summary in the person's words, and the decisions table from step 4 as the decisions argument. Then call render with that proposal id and give the person the page path: it shows the agreed decisions, what changes, and every state AS-IS beside TO-BE.
+5. Sketch before any YAML. In the conversation, draw the Default state as a text wireframe — a box drawing at the platform's proportions, every element in its place with its real label — and under it one line per other state on what the picture changes. Wait for a yes. If the person wants something moved, fix the sketch and show it again; a wireframe is cheaper to argue with than a diff.
 
-6. Wait. The person applies or rejects; you do not call apply yourself. If they ask for changes, propose again — the earlier proposal stays pending until it is rejected.
+6. Only then write the whole screen file and call propose with the complete YAML, a one-line summary in the person's words, and the decisions table from step 4 as the decisions argument. Then call render with that proposal id and give the person the page path: it shows the agreed decisions, what changes, and every state AS-IS beside TO-BE.
+
+7. Wait. The person applies or rejects; you do not call apply yourself. If they ask for changes, go back to the sketch and propose again — the earlier proposal stays pending until it is rejected.
 
 Copy comes from the spec the screen references, from sibling screens, or from the person; where none of those gives a value, write { $tbd: { owner: ... } } instead of something plausible. A value nobody decided is not a design decision.`,
         },

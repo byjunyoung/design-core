@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { join, relative, basename } from 'node:path';
 import { parse } from 'yaml';
 import { loadProject } from './project.js';
+import { tokenNames, getToken } from './tokens.js';
+import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 import { validateScreen, validateConventions } from './validate.js';
 import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
@@ -151,3 +153,29 @@ export async function mapFigma(dir, { fileKey, page, write = false, tree = null 
 }
 
 export { addComment, listComments, resolveComment };
+
+// Every token the project resolves, with what an agent needs before naming one: the value in
+// the default context, the value per theme, the file it comes from and its tier. Tier is by
+// file — conventions.tokens.primitive lists the stems that hold primitives; anything from
+// another file is semantic; a value only the bundled default set provides is 'bundled', and
+// a flat tokens.json from before 0.3 has no tiers ('flat').
+export async function listTokens(dir) {
+  const project = await loadProject(dir);
+  const set = project.tokenSet;
+  const stems = project.conventions.tokens?.primitive ?? [];
+  const stem = (f) => (f ? basename(f).replace(/\.tokens\.json$/, '') : null);
+  const merged = mergeTokens(DEFAULT_TOKENS, set.tokens ?? {});
+  const axes = Object.fromEntries(Object.entries(set.contexts ?? {}).map(([a, c]) => [a, Object.keys(c)]));
+  const tokens = tokenNames(merged).map((name) => {
+    const file = set.origins?.[name] ?? null;
+    const values = {};
+    for (const [axis, byCtx] of Object.entries(set.contexts ?? {}))
+      for (const [ctx, t] of Object.entries(byCtx)) {
+        const v = getToken(t, name);
+        if (v !== undefined) values[`${axis}=${ctx}`] = v;
+      }
+    const tier = file ? (stems.includes(stem(file)) ? 'primitive' : 'semantic') : set.source === 'flat' && getToken(set.tokens, name) !== undefined ? 'flat' : 'bundled';
+    return { name, value: getToken(merged, name), tier, file: file ? relative(dir, file) : null, ...(Object.keys(values).length ? { values } : {}) };
+  });
+  return { source: set.source, resolver: set.resolver, defaults: set.defaults, axes, tokens, problems: set.problems.map((p) => ({ ...p, file: p.file ? relative(dir, p.file) : null })) };
+}

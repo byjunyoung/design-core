@@ -217,3 +217,45 @@ test('a screen platform outside conventions.platforms is a warning (L17)', () =>
   p.conventions.platforms = { default: 'web', web: { width: 1280 }, ios: { width: 390, height: 844, frame: 'phone' } };
   assert.equal(only(lint(p, { branch: 'x' }), 'L17').length, 1);
 });
+
+test('L18 warns when a layout gap or padding names a token that does not resolve', () => {
+  const p = project({ screens: [screen({ layout: { root: { kind: 'stack', gap: 'space.huge' } } })] });
+  const f = lint(p).filter((x) => x.id === 'L18');
+  assert.equal(f.length, 1);
+  assert.equal(f[0].severity, 'warning');
+  assert.deepEqual(f[0].path, ['layout', 'root', 'gap']);
+  assert.equal(lint(project({ screens: [screen()] })).filter((x) => x.id === 'L18').length, 0);
+});
+
+test('L19 blocks a layout that names a primitive token; which files are primitive is conventions.tokens.primitive, null switches it off', () => {
+  const p = project({ screens: [screen({ layout: { root: { kind: 'stack', gap: 'space.md' } } })] });
+  p.tokens = { space: { md: '16px' } };
+  p.tokenSet = { origins: { 'space.md': '/x/tokens/primitive.tokens.json' }, problems: [] };
+  const f = lint(p).filter((x) => x.id === 'L19');
+  assert.equal(f.length, 1);
+  assert.equal(f[0].severity, 'blocking');
+  assert.match(f[0].message, /primitive/);
+  p.tokenSet.origins['space.md'] = '/x/tokens/light.tokens.json';
+  assert.equal(lint(p).filter((x) => x.id === 'L19').length, 0);
+  p.tokenSet.origins['space.md'] = '/x/tokens/primitive.tokens.json';
+  p.conventions.tokens = { primitive: null };
+  assert.equal(lint(p).filter((x) => x.id === 'L19').length, 0);
+});
+
+test('L20 relays token loader problems as findings on the token file, keeping the loader severity', () => {
+  const p = project({ screens: [screen()] });
+  p.tokenSet = {
+    files: ['/x/tokens/theme.resolver.json'],
+    problems: [
+      { severity: 'blocking', file: '/x/tokens/light.tokens.json', path: 'color.a', message: 'alias {color.z} names no token' },
+      { severity: 'warning', file: '/x/tokens.json', path: 'tokens.json', message: 'tokens.json ignored: tokens/ takes precedence' },
+    ],
+  };
+  const f = lint(p).filter((x) => x.id === 'L20');
+  assert.equal(f.length, 2);
+  assert.equal(f[0].file, '/x/tokens/light.tokens.json');
+  assert.deepEqual(f[0].path, ['color', 'a']);
+  assert.equal(f[0].severity, 'blocking');
+  assert.equal(f[0].screen, null);
+  assert.equal(f[1].severity, 'warning');
+});
