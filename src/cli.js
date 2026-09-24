@@ -144,7 +144,7 @@ async function initCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
   const r = await initProject(dir, { base: opts.base ?? 'none' });
-  process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n`);
+  process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  npx design-core serve ${dir}     # open http://127.0.0.1:4870/\n  npx design-core lint ${dir}\n  add the MCP server to your agent — see README\n`);
   return 0;
 }
 function basesCommand() {

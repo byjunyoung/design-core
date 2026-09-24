@@ -60,3 +60,15 @@ test('init refuses a base that is only planned, and refuses to overwrite an exis
   await initProject(dir, { base: 'none' });
   await assert.rejects(initProject(dir, { base: 'none' }), /already/);
 });
+
+
+test('init leaves a starter screen that lints clean on a feature branch, and a project README', async () => {
+  const dir = fresh();
+  await initProject(dir, { base: 'none' });
+  assert.ok(existsSync(join(dir, 'screens', 'sample-list.yaml')));
+  assert.ok(existsSync(join(dir, 'README.md')));
+  const { lintProject } = await import('../src/verbs.js');
+  const { summary } = await lintProject(dir, { branch: 'feature/start', today: '2026-09-24' });
+  assert.equal(summary.blocking, 0);
+  assert.equal(summary.screens, 1);
+});

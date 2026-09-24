@@ -12,25 +12,30 @@ It replaces Figma for product screens. Decks, diagrams, vectors and marketing st
 
 ## Quick start
 
-```bash
-git clone https://github.com/byjunyoung/design-core && cd design-core && npm install
-npx design-core init design --base antd     # or --base none: the component set is copied into design/ and is yours
-npx design-core serve design                # http://127.0.0.1:4870/
-```
-
-`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json` and an empty `screens/`. To see the tool with screens in it first:
+No clone needed — Node 20 or newer is the only requirement:
 
 ```bash
-npm run demo                                # six real admin screens, generic names, drawn with antd
+npx -y github:byjunyoung/design-core init design --base antd   # or --base none: the component set is copied into design/ and is yours
+npx -y github:byjunyoung/design-core serve design              # http://127.0.0.1:4870/
 ```
 
-To let an agent in, add the MCP server to Claude Code (or any MCP client):
+`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json`, a starter screen and its own README. (Once the package is on npm the command shortens to `npx design-core …`.) To see the tool with real screens in it first, clone and `npm run demo` — six admin screens under generic names, drawn with antd.
+
+To let an agent in, add the MCP server to your client. Claude Code — `.mcp.json` in the project:
 
 ```json
-{ "mcpServers": { "design-core": { "command": "node", "args": ["/path/to/design-core/src/mcp.js", "design"] } } }
+{ "mcpServers": { "design-core": { "command": "npx", "args": ["-y", "github:byjunyoung/design-core", "mcp", "design"] } } }
 ```
 
-Then ask it for a screen. It will use the `draw` prompt: anchor to the nearest screen, list what has to be decided, ask one thing at a time, propose with the decisions attached, render, and wait for you.
+Cursor uses the same JSON in `.cursor/mcp.json`; Codex takes it in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.design-core]
+command = "npx"
+args = ["-y", "github:byjunyoung/design-core", "mcp", "design"]
+```
+
+Then ask the agent for a screen. It will use the `draw` prompt: anchor to the nearest screen, list what has to be decided, ask one thing at a time, propose with the decisions attached, render, and wait for you.
 
 ## What a screen file looks like
 
@@ -109,7 +114,7 @@ All of them: `npx design-core <verb>`. Every one prints JSON with `--json`; the 
 | `import figma <dir> <key> --page "…"` | one screen file per `{screen}-{state}` frame group; states as patches; unresolved → `$tbd` |
 | `mcp <dir>` | the MCP server on stdio |
 
-Bringing in what you already drew: run `map figma` first (it reads the masters the page uses and pairs them with kinds by name), then `import figma`. On a real page the difference was 468 undecided values without the map and 16 with it and one hand-written mapping. `FIGMA_TOKEN` (a personal access token, read scope) must be set.
+Bringing in what you already drew (`<file-key>` is the part of the Figma URL after `/design/`): run `map figma` first (it reads the masters the page uses and pairs them with kinds by name), then `import figma`. On a real page the difference was 468 undecided values without the map and 16 with it and one hand-written mapping. `FIGMA_TOKEN` (a personal access token, read scope) must be set.
 
 ## Drawing with your own components
 

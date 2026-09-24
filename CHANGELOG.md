@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 — 2026-09-24
+
+For anyone, not just the author's machine.
+
+- Install without a clone: `npx -y github:byjunyoung/design-core …` for the CLI and as the MCP `command` for Claude Code, Cursor and Codex (config snippets in the README).
+- `init` writes a starter screen and a project README, and prints what to do next, so `serve` is never empty.
+- The default `screen_pattern` accepts letters in any script; a team whose screens are named in Korean or Japanese no longer trips L01 on its first lint.
+- No company file keys in the docs; `<file-key>` explains itself.
+
 ## 0.1.0 — 2026-09-24
 
 First usable version. Everything below runs locally from a clone; nothing is hosted yet.
