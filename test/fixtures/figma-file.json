@@ -1,0 +1,55 @@
+{
+  "name": "Orders",
+  "components": {
+    "c-table": { "name": "Table / default" },
+    "c-btn": { "name": "Button / Primary" },
+    "c-pager": { "name": "Pagination" },
+    "c-empty": { "name": "Empty state" },
+    "c-skel": { "name": "Skeleton" },
+    "c-filter": { "name": "Filter form" }
+  },
+  "document": {
+    "id": "0:0", "type": "DOCUMENT", "children": [
+      { "id": "1:1", "type": "CANVAS", "name": "[UI] Orders", "children": [
+        { "id": "2:1", "type": "SECTION", "name": "03. Orders - Order list", "children": [
+          { "id": "3:1", "type": "FRAME", "name": "order-list-Default", "layoutMode": "VERTICAL", "itemSpacing": 24, "paddingLeft": 32, "paddingTop": 32, "children": [
+            { "id": "3:10", "type": "FRAME", "name": "Header", "layoutMode": "HORIZONTAL", "itemSpacing": 16, "children": [
+              { "id": "3:11", "type": "TEXT", "name": "Title", "characters": "Orders" },
+              { "id": "3:12", "type": "INSTANCE", "name": "Export", "componentId": "c-btn", "children": [ { "id": "3:13", "type": "TEXT", "name": "label", "characters": "Export" } ] }
+            ] },
+            { "id": "3:20", "type": "INSTANCE", "name": "Filter", "componentId": "c-filter", "children": [
+              { "id": "3:21", "type": "TEXT", "name": "f1", "characters": "Period" },
+              { "id": "3:22", "type": "TEXT", "name": "f2", "characters": "Branch" }
+            ] },
+            { "id": "3:30", "type": "INSTANCE", "name": "Table", "componentId": "c-table", "transitionNodeID": "3:100", "children": [
+              { "id": "3:31", "type": "FRAME", "name": "header row", "children": [
+                { "id": "3:32", "type": "TEXT", "name": "h", "characters": "Order no" },
+                { "id": "3:33", "type": "TEXT", "name": "h", "characters": "Amount" }
+              ] }
+            ] },
+            { "id": "3:40", "type": "INSTANCE", "name": "Paging", "componentId": "c-pager" },
+            { "id": "3:50", "type": "FRAME", "name": "Mystery widget", "children": [ { "id": "3:51", "type": "RECTANGLE", "name": "bg" } ] }
+          ] },
+          { "id": "4:1", "type": "FRAME", "name": "order-list-Empty", "layoutMode": "VERTICAL", "itemSpacing": 24, "children": [
+            { "id": "4:10", "type": "FRAME", "name": "Header", "layoutMode": "HORIZONTAL", "children": [
+              { "id": "4:11", "type": "TEXT", "name": "Title", "characters": "Orders" },
+              { "id": "4:12", "type": "INSTANCE", "name": "Export", "componentId": "c-btn", "children": [ { "id": "4:13", "type": "TEXT", "name": "label", "characters": "Export" } ] }
+            ] },
+            { "id": "4:20", "type": "INSTANCE", "name": "Filter", "componentId": "c-filter" },
+            { "id": "4:30", "type": "INSTANCE", "name": "Table", "componentId": "c-empty", "children": [ { "id": "4:31", "type": "TEXT", "name": "t", "characters": "No orders match." } ] },
+            { "id": "4:50", "type": "FRAME", "name": "Mystery widget", "children": [] }
+          ] },
+          { "id": "5:1", "type": "FRAME", "name": "order-list-Loading", "children": [
+            { "id": "5:30", "type": "INSTANCE", "name": "Table", "componentId": "c-skel" }
+          ] }
+        ] },
+        { "id": "2:2", "type": "SECTION", "name": "04. Orders - Order detail", "children": [
+          { "id": "3:100", "type": "FRAME", "name": "order-detail-Default", "children": [
+            { "id": "3:101", "type": "TEXT", "name": "Title", "characters": "Order" }
+          ] }
+        ] },
+        { "id": "9:1", "type": "FRAME", "name": "scratch", "children": [] }
+      ] }
+    ]
+  }
+}

@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
@@ -156,6 +156,15 @@ server.registerTool(
   'undo',
   { description: 'Put back the previous text of a screen an applied proposal changed, if nothing else touched it since.', inputSchema: { id: z.string() } },
   guard((input) => undoProposal(dir, input)),
+);
+
+server.registerTool(
+  'import_figma',
+  {
+    description: 'Bring a Figma page in as screen files: one per {screen}-{state} frame group, other states as patches, kinds via maps_to.figma then node names, unresolved values as $tbd. Needs FIGMA_TOKEN in the server environment. Refuses to overwrite unless force.',
+    inputSchema: { file_key: z.string(), page: z.string(), force: z.boolean().default(false) },
+  },
+  guard((input) => importFigma(dir, { fileKey: input.file_key, page: input.page, force: input.force })),
 );
 
 // The discipline behind a new or changed screen. fig:draw carried this as a skill document;

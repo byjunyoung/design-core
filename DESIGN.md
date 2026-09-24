@@ -2,7 +2,7 @@
 
 Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
-What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: `import`, comments on the page, adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: comments on the page, hosting, adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -295,7 +295,7 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `propose <screen> <after>` · `apply <id> --by` · `reject <id>` · `undo <id>` · `proposals` | the edit loop (§7): diff + lint delta + tier; text-only auto-applies; structure waits for a person | that file, and `.proposals/` |
 | `rename <old> <new>` | file and every reference | project |
 | `import html <dir>` | Claude Design / Open Design / any HTML export → screen files: `kind` by reverse `maps_to` on component markup, `layout` from flex/grid structure, unresolved → `$tbd` | new files |
-| `import figma <file>` | on-ramp for a team already drawing: `{screen}-{state}` frames → files; `kind` by reverse `maps_to` on master name; `type` by reverse match on states present; unresolved → `$tbd` | new files |
+| `import figma <key> --page` | on-ramp for a team already drawing, over the REST API: `{screen}-{state}` frames → files, other states as patches by diffing element trees; `kind` by `maps_to.figma` on the master name, then by node-name hints; `layout` from auto-layout in token names; flows from prototype links; scaffold frames (`[label]`, `-->`) skipped; unresolved → `$tbd` owned by `import`; required states nobody drew → placeholders; no convention at all → one screen per top-level frame, flagged | new files, sections.yaml |
 | `export <adapter>` | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
 
 MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view) and `list_missing()` (L03/L08 only), because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
@@ -341,6 +341,10 @@ What it found, in the order it hurt:
 | 10 | Button rows needed a bare container; `row` was a layout container, not an element kind | vocabulary | `group` kind added to the shipped set |
 
 After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (an error state the build does not have; a help caption nobody captured).
+
+### 12.1 Import field test (2026-09-24)
+
+`import figma` was run against two real pages of the same company's files, read-only, output not committed. A page with **no naming convention** (every frame called by the product's name, groups called "3dots") imported zero screens until the fallback existed; with it, every top-level frame became a screen named by position and flagged — correct, and useless until a person names them. A page **kept by `fig`** (frames `{screen}-{state}`, sections `NN. domain - feature`, arrows drawn by `fig:arrows`) imported 10 "screens" on the first run, five of them arrow labels (`[label] A --> B`) — scaffold frames are now skipped by default — and blocked on Korean screen names until the pattern took `\p{L}` (the lint now compiles patterns with the `u` flag; the example says how). After that: 5 screens, 0 blocking, 954 warnings, of which 468 are `$tbd` — almost every element is `kind: frame` because the file's component masters are not in `maps_to.figma` and the layer names ("navigation", "right", "wrapper", "contents") say nothing a hint can read. That is the honest shape of an import from a file that was never written for this format: the structure and the states come across, the vocabulary does not, and the agent's next job is to walk the `$tbd` list with a person. Filling `maps_to.figma` from the design system's master names is what turns the ratio around, and is the first thing a team should do before importing.
 
 ## 13. TBD
 

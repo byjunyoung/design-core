@@ -28,9 +28,9 @@ const rules = {
     const out = [];
     const { screen_pattern, section_pattern } = ctx.conventions.naming ?? {};
     for (const s of ctx.screens) {
-      if (screen_pattern && !new RegExp(screen_pattern).test(s.doc.screen))
+      if (screen_pattern && !new RegExp(screen_pattern, 'u').test(s.doc.screen))
         out.push(finding('L01', 'blocking', s, ['screen'], `screen name "${s.doc.screen}" does not match ${screen_pattern}`));
-      if (section_pattern && !new RegExp(section_pattern).test(s.doc.section))
+      if (section_pattern && !new RegExp(section_pattern, 'u').test(s.doc.section))
         out.push(finding('L01', 'blocking', s, ['section'], `section name "${s.doc.section}" does not match ${section_pattern}`));
     }
     return out;

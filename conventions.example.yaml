@@ -3,8 +3,13 @@
 # switches that check off rather than firing on a file that does things differently.
 
 naming:
-  screen_pattern: '^[a-z0-9-]+$'      # no '.', because flow targets are split on the last '.'
+  screen_pattern: '^[a-z0-9-]+$'      # no '.', because flow targets are split on the last '.'. Non-Latin names: '^[\p{L}\p{N}-]+$'
   section_pattern: null                # example: '^\d{2}\. .+ - .+$'
+  frame_pattern: null                  # import figma: how a frame name splits into screen and state; default '^(.+)-([^-\s]+)$'
+  scaffold_patterns: null              # import figma: frames to skip; null = ['^\[label\] ', '^\[state\] ', ' --> ', ' ~ ']
+
+pages:
+  exclude_sections: []                 # import figma: sections to skip, e.g. ['^Archived$', '^\[?[Aa]rchive']
 
 states:
   known: [Default, Empty, Loading, Error, Validation, Selected]

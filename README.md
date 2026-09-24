@@ -71,6 +71,16 @@ node src/cli.js init design --base none
 
 Two roads, and the tool does not care which. **Self-built** copies the component set into `design/components/kinds.js` — from then on it is your file, edit it and the drawings change; the tool never owns a team's components. **A library** (antd today; others are one adapter file each) maps every kind to one of its components and draws with the real thing, themed from your tokens. Either way `render` reads the choice from `conventions.yaml`; `--components antd` on the command line overrides it for one run.
 
+**Bring in what you already drew.**
+
+```bash
+FIGMA_TOKEN=… node src/cli.js import figma design 8SknCl…wpGF --page "[UI] Home"
+#   page "[UI] Home": 5 screen(s) → design/screens/home.yaml, …
+#   468 $tbd left for a person; run lint to see them
+```
+
+One page over the Figma REST API. Frames named `{screen}-{state}` become one file per screen with the other states as patches; sections become sections; instances become kinds through `maps_to.figma` on the master's name, then through the node's name; auto-layout becomes `layout` in token names; prototype links become flows. Arrow labels and state chains a flow tool left on the page are skipped. Whatever cannot be resolved — a frame called "wrapper", a required state nobody drew — lands as `$tbd` owned by `import`, so the first `lint` after an import is an honest to-do list rather than a guess. A page with no naming convention still imports: every top-level frame becomes a screen, named by the importer and flagged as such.
+
 **See what is missing.**
 
 ```bash
@@ -145,7 +155,6 @@ This project takes the other side of the bet: the agent holds the pen, humans re
 ## What is not here yet
 
 - Adapters for libraries other than antd (MUI, your own) — the adapter contract is one file, `src/render/adapters/antd.js` is the model.
-- `import figma` — the on-ramp for a team that already drew everything.
 - Comments on the rendered page (today a comment is what you tell the agent).
 - Hosting: a viewer per branch, a lint bot on pull requests, share links. Everything above runs locally.
 
@@ -155,6 +164,6 @@ The checks are lifted from the [`fig` plugin](https://github.com/byjunyoung/clau
 
 ## Tests and license
 
-`npm test` — 82 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
+`npm test` — 93 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
 
 MIT.

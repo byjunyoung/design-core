@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma } from './verbs.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
@@ -29,6 +29,9 @@ const USAGE = `usage: design-core <verb> …
         every state side by side, variants in their own rows, an inspector on click. file:// safe.
         pending proposals get a page each (AS-IS beside TO-BE); --proposal draws one of any status.
         --components draws mapped kinds with that library (maps_to in conventions); unmapped kinds keep the bundled set.
+  import figma <project-dir> <file-key> --page "<page name>" [--force]
+        one screen file per {screen}-{state} frame group on that page; other states become patches;
+        kinds by maps_to.figma on the master name, then by node name; unresolved → $tbd. Needs FIGMA_TOKEN.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
   propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--json]
@@ -41,7 +44,7 @@ function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === '--json') opts.json = true;
+    if (a === '--json' || a === '--force') opts[a.slice(2)] = true;
     else if (a.startsWith('--') && rest[i + 1] !== undefined) opts[a.slice(2)] = rest[++i];
     else opts._.push(a);
   }
@@ -140,8 +143,16 @@ function basesCommand() {
   return 0;
 }
 
+async function importCommand(opts) {
+  const [source, dir, fileKey] = opts._;
+  if (source !== 'figma' || !dir || !fileKey || !opts.page) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await importFigma(dir, { fileKey, page: opts.page, force: opts.force === 'true' || opts.force === true });
+  process.stdout.write(`page "${r.page}": ${r.screens.length} screen(s) → ${r.files.map((f) => relative(process.cwd(), f)).join(', ')}\n${r.tbd} $tbd left for a person; run lint to see them\n`);
+  return 0;
+}
+
 const verbs = {
-  init: initCommand, bases: basesCommand,
+  init: initCommand, bases: basesCommand, import: importCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

@@ -20,6 +20,21 @@
             "string",
             "null"
           ]
+        },
+        "frame_pattern": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scaffold_patterns": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -149,6 +164,18 @@
             "string",
             "null"
           ]
+        }
+      }
+    },
+    "pages": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exclude_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }

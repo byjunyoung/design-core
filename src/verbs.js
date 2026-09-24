@@ -12,6 +12,7 @@ import { renderScreen, renderIndex, renderProposal } from './render/index.js';
 import { listProposals } from './proposals.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { initProject, componentBases } from './init.js';
+import { importFigmaTree, writeImport, fetchFigmaPage } from './import/figma.js';
 
 // One implementation per verb, returning plain JSON. The CLI prints it, the MCP server
 // returns it, the viewer will read it. Nothing here writes to stdout.
@@ -126,3 +127,12 @@ export async function renderProject(dir, opts = {}) {
 }
 
 export { initProject, componentBases };
+
+// import figma: fetch one page over REST, turn it into screen files, write them.
+export async function importFigma(dir, { fileKey, page, force = false, tree = null }) {
+  const project = await loadProject(dir);
+  const file = tree ?? (await fetchFigmaPage(fileKey, page));
+  const result = importFigmaTree(file, { page, conventions: project.conventions, tokens: project.tokens ?? {}, fileKey });
+  const written = await writeImport(dir, result, { force });
+  return { page: result.page, screens: result.screens.map((s) => s.screen), ...written };
+}
