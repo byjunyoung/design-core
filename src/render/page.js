@@ -32,7 +32,9 @@ a { color: inherit; text-decoration: none; }
 .top h1 { font-size: 18px; margin: 0; }
 .meta, .hint { color: var(--color-muted); font-size: 12px; }
 .top .spacer { flex: 1; }
-.toggle { font-size: 12px; color: var(--color-muted); display: inline-flex; align-items: center; gap: var(--space-xs); cursor: pointer; white-space: nowrap; }
+.toggle { font-size: 12px; color: var(--color-muted); display: inline-flex; align-items: center; gap: var(--space-xs); cursor: pointer; white-space: nowrap; padding: 4px 10px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-bg); }
+.toggle input { margin: 0; }
+.toggle:has(input:checked) { color: var(--color-text); border-color: var(--color-primary); }
 .tabs-row { display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap; margin: var(--space-xs) 0 var(--space-md); }
 .tabs-row .axis { font-size: 11px; color: var(--color-muted); margin-right: var(--space-xs); }
 .tab { padding: 4px 10px; border-radius: 999px; font-size: 12px; color: var(--color-muted); cursor: pointer; border: 1px solid transparent; background: none; font: inherit; }

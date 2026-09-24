@@ -180,7 +180,7 @@ export const kinds = {
     return `<div class="tiles" style="--cols:${Number(el.columns) || 10}">${Array.from({ length: n }, (_, i) => `<span class="tile t${i % 5}"></span>`).join('')}</div>`;
   },
   tooltip(el) {
-    return `<div class="hint">ⓘ ${v(el.trigger ?? 'tooltip')}: ${v(el.items)}</div>`;
+    return `<span class="hint" title="${h(list(el.items).join(' · '))}">ⓘ</span>`;
   },
   'sortable-list'(el) {
     return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">⋮⋮ ${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;

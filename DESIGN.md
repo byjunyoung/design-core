@@ -1,6 +1,6 @@
 # Design core — a design tool where the agent holds the pen
 
-Status: design draft v0.2.1 · 2026-09-23 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
+Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
 
 What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 

@@ -9,7 +9,9 @@ import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { readFileSync } from 'node:fs';
 
-const USAGE = `usage: design-core <verb> …
+const USAGE = `design-core — screens as files; the agent draws, you say what to change.
+
+usage: design-core <verb> …
 
   init <project-dir> [--base none|antd]
         start a project: conventions, sections, tokens, screens/. --base none (default) copies the
@@ -179,14 +181,27 @@ async function serveCommand(opts) {
   return new Promise(() => {});
 }
 
+function helpCommand() {
+  process.stdout.write(USAGE + '\n');
+  return 0;
+}
+async function versionCommand() {
+  const { readFileSync } = await import('node:fs');
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  process.stdout.write(`design-core ${pkg.version}\n`);
+  return 0;
+}
+
 const verbs = {
+  help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
   init: initCommand, bases: basesCommand, import: importCommand, map: mapCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };
 const { verb, opts } = parseArgs(process.argv.slice(2));
 try {
-  if (!verbs[verb]) throw Object.assign(new Error(USAGE), { exit: 2 });
+  if (!verb) throw Object.assign(new Error(USAGE), { exit: 2 });
+  if (!verbs[verb]) throw Object.assign(new Error(`unknown verb "${verb}"\n\n${USAGE}`), { exit: 2 });
   process.exit(await verbs[verb](opts));
 } catch (err) {
   process.stderr.write((err.exit === 2 ? err.message : `error: ${err.message}\n${USAGE}`) + '\n');

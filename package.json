@@ -1,9 +1,32 @@
 {
   "name": "design-core",
-  "version": "0.0.1",
-  "description": "A design tool for product screens where the agent holds the pen. Engine: screen files, lint, states, flows.",
+  "version": "0.1.0",
+  "description": "A design tool for product screens where the agent holds the pen: screens as YAML, lint, states, proposals, a live viewer, MCP.",
   "type": "module",
   "license": "MIT",
+  "author": {
+    "name": "Junyoung Kim",
+    "url": "https://github.com/byjunyoung"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/byjunyoung/design-core.git"
+  },
+  "homepage": "https://github.com/byjunyoung/design-core#readme",
+  "bugs": {
+    "url": "https://github.com/byjunyoung/design-core/issues"
+  },
+  "keywords": [
+    "design",
+    "design-tool",
+    "agent",
+    "mcp",
+    "figma",
+    "lint",
+    "yaml",
+    "ux",
+    "handoff"
+  ],
   "engines": {
     "node": ">=20"
   },
@@ -13,9 +36,20 @@
   "exports": {
     ".": "./src/index.js"
   },
+  "files": [
+    "src",
+    "schema",
+    "conventions.example.yaml",
+    "README.md",
+    "DESIGN.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
-    "lint:examples": "node src/cli.js lint examples/orders --branch feature/demo"
+    "check": "npm test && node src/cli.js lint examples/orders --branch feature/demo && node src/cli.js lint examples/store-ops --branch feature/demo && node src/cli.js render examples/store-ops --out /tmp/design-core-check --branch feature/demo",
+    "demo": "node src/cli.js serve examples/store-ops --components antd --branch feature/demo",
+    "start": "node src/cli.js serve design"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

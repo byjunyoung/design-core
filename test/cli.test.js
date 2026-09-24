@@ -63,3 +63,11 @@ test('diff via the CLI prints an AS-IS / TO-BE table between two files, and JSON
   const json = await run('node', [cli, 'diff', a, b, '--json']);
   assert.equal(JSON.parse(json.stdout).changed.length, 1);
 });
+
+test('help and version exit 0; an unknown verb names itself', async () => {
+  const h = await run('node', [cli, '--help']);
+  assert.match(h.stdout, /usage: design-core/);
+  const v = await run('node', [cli, '--version']);
+  assert.match(v.stdout, /^design-core \d+\.\d+\.\d+/);
+  await assert.rejects(run('node', [cli, 'draw']), (err) => err.code === 2 && /unknown verb "draw"/.test(err.stderr));
+});
