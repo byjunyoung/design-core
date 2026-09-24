@@ -232,12 +232,16 @@ Not carried over: section bounds and overlap, arrow elbow geometry, component de
 `render` was a preview in v0.1. In v0.2 it is what people open.
 
 ```
-Project
- └─ Screen list            sections, lint badge per screen, $tbd count, who owns what
-     └─ Screen page        every state side by side · flows clickable · version picker
-         └─ Element         hover shows kind + props · click opens its comment thread
-                            developer toggle: props, tokens, the YAML path, the DS component name
+Shell (every page)
+ ├─ Sidebar      sections → screens, each with pills: blocking · $tbd · open comments; Overview + waiting proposals
+ ├─ Main         screen title · state tabs (Default | Empty | …, variants by axis) · "compare states" toggle
+ │               one state at a time, scaled to fit; compare = every state, shrunk into a grid
+ │               below: flows · notes · comments · references
+ └─ Drawer       closed until an element is clicked: id, kind, component it maps to, conditions,
+                 props, "values are samples", file · path · line, copy, comments + comment box
 ```
+
+Redesigned 2026-09-24 after the owner's first look ("the UX/UI is poor"). Four decisions, each asked one at a time: the shell above (Figma's own editor shape, so it needs no explanation); states as tabs with a compare toggle (one screen large by default, all of them when you ask); meta information as a dot on the picture — grey for a condition, yellow for an undecided value, blue for a comment — with the words in the drawer, so the picture stays a picture; and empty cells filled with sample values made from the column name ("amount" → 12,400, "paid_at" → a date), with the drawer saying they are samples. Also fixed: a leaf element (a tile grid) was inheriting its layout rule's grid and collapsing to one column.
 
 Each `kind` resolves to a component: through `maps_to` when the team names a design system with a web build (antd, MUI, the team's own), otherwise the bundled default set — one tokenised HTML component per shipped `kind`. `layout` becomes CSS from tokens. Because the page is built from the production library, a developer inspecting it sees the real `Table` with its real props. That is the handoff: no redlines, no measurement, no picture.
 

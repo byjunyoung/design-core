@@ -26,6 +26,27 @@ const props = (el) => Object.entries(el).filter(([k]) => !RESERVED.has(k));
 
 const list = (items) => (Array.isArray(items) ? items : items === undefined ? [] : [items]);
 
+// A cell with no value gets a sample made from its column name, so the picture reads as a
+// screen and not as a broken one. The inspector says the values are samples.
+export function sample(key, i = 0) {
+  const k = String(typeof key === 'object' && key ? key.key ?? key.label ?? key.id ?? '' : key ?? '').toLowerCase();
+  const n = i + 1;
+  if (/percent|rate|level|uptime|%/.test(k)) return ['92%', '47%', '18%'][i % 3];
+  if (/\b(date|time|created|updated|paid|ordered)\b|_at$|\bat\b/.test(k)) return ['2026-09-24 10:12', '2026-09-23 18:40', '2026-09-21 09:05'][i % 3];
+  if (/amount|price|total|sales|revenue|cost|sum|value|avg|average/.test(k)) return ['12,400', '8,900', '31,250'][i % 3];
+  if (/_no$|\bno\b|number|order_no|\bid$/.test(k)) return `ORD-${1040 + n}`;
+  if (/status|state/.test(k)) return ['Paid', 'Pending', 'Refunded'][i % 3];
+  if (/count|qty|quantity|orders|visitors|units|rank/.test(k)) return String([128, 64, 12][i % 3]);
+  if (/name|title|item|product/.test(k)) return `Item ${n}`;
+  if (/store|branch|shop/.test(k)) return ['Gangnam', 'Seongsu', 'Pangyo'][i % 3];
+  if (/method|type|kind/.test(k)) return ['Card', 'Mobile', 'Cash'][i % 3];
+  if (/email/.test(k)) return `user${n}@example.com`;
+  if (/phone/.test(k)) return '010-1234-5678';
+  if (/version/.test(k)) return `v2.${n}.0`;
+  if (/duration|fulfil|elapsed/.test(k)) return ['4m 12s', '3m 48s', '6m 01s'][i % 3];
+  return `Sample ${n}`;
+}
+
 export const kinds = {
   generic(el, r) {
     const rows = props(el).map(([k, val]) => `<div class="prop"><span class="k">${h(k)}</span><span class="v">${v(val)}</span></div>`).join('');
@@ -33,7 +54,7 @@ export const kinds = {
   },
   'page-header'(el, r) {
     const actions = list(el.actions).map((a) => (typeof a === 'object' && a.kind ? r.element(a) : `<button class="btn">${v(a)}</button>`)).join('');
-    const tabs = list(el.tabs).map((t, i) => `<span class="tab${i === 0 ? ' active' : ''}">${v(t)}</span>`).join('');
+    const tabs = list(el.tabs).map((t, i) => `<span class="tab${i === 0 ? ' active' : ''}" data-ui-tab>${v(t)}</span>`).join('');
     return `<div class="ph-left"><h2>${v(el.title)}</h2>${tabs ? `<div class="tabs">${tabs}</div>` : ''}</div><div class="ph-actions">${actions}${r.children(el)}</div>`;
   },
   card(el, r) {
@@ -76,12 +97,12 @@ export const kinds = {
   table(el) {
     const cols = list(el.columns);
     const head = cols.map((c) => `<th>${v(label(c))}${typeof c === 'object' && c?.sortable ? ' ↕' : ''}</th>`).join('');
-    const cell = (c) => {
-      if (typeof c === 'object' && c?.kind === 'progress') return `<td><div class="bar"><span style="width:62%"></span></div></td>`;
-      if (typeof c === 'object' && c?.sub) return `<td>—<div class="sub">${v(c.sub)}</div></td>`;
-      return `<td>—</td>`;
+    const cell = (c, i) => {
+      if (typeof c === 'object' && c?.kind === 'progress') return `<td><div class="bar"><span style="width:${[62, 38, 84][i % 3]}%"></span></div></td>`;
+      if (typeof c === 'object' && c?.sub) return `<td>${h(sample(c, i))}<div class="sub">${v(c.sub)}</div></td>`;
+      return `<td>${h(sample(c, i))}</td>`;
     };
-    const rows = Array.from({ length: 3 }, () => `<tr>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map(cell).join('')}</tr>`).join('');
+    const rows = Array.from({ length: 3 }, (_, i) => `<tr>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map((c) => cell(c, i)).join('')}</tr>`).join('');
     return `<table><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>${el.row_action ? `<div class="hint">row → ${v(el.row_action)}</div>` : ''}`;
   },
   pagination(el) {
@@ -129,7 +150,7 @@ export const kinds = {
     return `<div class="select">${v(Array.isArray(el.options) ? el.options[0] : el.options ?? 'Select')} ▾</div>`;
   },
   radio(el) {
-    return `<div class="radio">${list(el.options).map((o, i) => `<label><span class="dot${i === 0 ? ' on' : ''}"></span>${v(o)}</label>`).join('')}</div>`;
+    return `<div class="radio">${list(el.options).map((o, i) => `<label><span class="dot-r${i === 0 ? ' on' : ''}"></span>${v(o)}</label>`).join('')}</div>`;
   },
   date(el) {
     return `<div class="select">${h(el.format ?? 'YYYY.MM.DD')} ▾</div>`;
@@ -145,14 +166,14 @@ export const kinds = {
   },
   'kv-table'(el) {
     const rows = Array.isArray(el.rows) ? el.rows : [];
-    const body = rows.map((r) => `<tr>${list(r).map((k) => `<th>${v(k)}</th><td>—</td>`).join('')}</tr>`).join('');
+    const body = rows.map((r, i) => `<tr>${list(r).map((k) => `<th>${v(k)}</th><td>${h(sample(k, i))}</td>`).join('')}</tr>`).join('');
     return `${el.title ? `<div class="section-title">${v(el.title)}</div>` : ''}<table class="kv">${body || `<tr><td class="hint">${v(el.rows)}</td></tr>`}</table>`;
   },
   'detail-card'(el) {
-    return `<table class="kv">${list(el.fields).map((f) => `<tr><th>${v(f)}</th><td>—</td></tr>`).join('')}</table>`;
+    return `<table class="kv">${list(el.fields).map((f, i) => `<tr><th>${v(f)}</th><td>${h(sample(f, i))}</td></tr>`).join('')}</table>`;
   },
   'stat-strip'(el) {
-    return `<div class="stats">${list(el.stats).map((s) => `<div class="stat"><div class="stat-v">—</div><div class="stat-l">${v(s)}</div></div>`).join('')}</div>`;
+    return `<div class="stats">${list(el.stats).map((s, i) => `<div class="stat"><div class="stat-v">${h(sample(s, i))}</div><div class="stat-l">${v(s)}</div></div>`).join('')}</div>`;
   },
   'tile-grid'(el) {
     const n = Math.min(Number(el.per_page) || 25, 100);

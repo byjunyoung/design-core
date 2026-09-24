@@ -146,3 +146,42 @@ test('asking for an adapter that does not exist is a readable error', async () =
   const { createAdapter } = await import('../src/render/adapters/index.js');
   await assert.rejects(createAdapter('sketch', await loadProject(ops)), /sketch/);
 });
+
+test('the viewer shell: sidebar with every screen, state tabs with the first active, compare toggle, drawer inspector closed by default', async () => {
+  const project = await loadProject(ops);
+  const screen = project.screens.find((s) => s.doc.screen === 'inventory-list');
+  const html = renderScreen(project, screen);
+  for (const s of project.screens) assert.match(html, new RegExp(`class="side-link[^"]*" href="${s.doc.screen}\\.html"`));
+  assert.match(html, /class="tab active" data-state="Default"/);
+  assert.match(html, /class="tab" data-state="Empty"/);
+  assert.match(html, /id="compare"/);
+  assert.match(html, /<aside id="inspector" class="drawer"/);
+  assert.doesNotMatch(html, /class="drawer open"/);
+});
+
+test('conditions become dots with the text in the title, not badges in the picture', async () => {
+  const project = await loadProject(ops);
+  const screen = project.screens.find((s) => s.doc.screen === 'payment-list');
+  const html = renderScreen(project, screen);
+  assert.match(html, /class="dot cond" title="shown when: a row is selected"/);
+  assert.doesNotMatch(html, /<span class="cond">shown when/);
+});
+
+test('empty cells carry sample values made from the column name, and a leaf element does not inherit a grid from its layout rule', async () => {
+  const project = await loadProject(ops);
+  const screen = project.screens.find((s) => s.doc.screen === 'home');
+  const html = renderScreen(project, screen);
+  assert.doesNotMatch(html, /<td>—<\/td>/);
+  const pay = renderScreen(project, project.screens.find((s) => s.doc.screen === 'payment-list'));
+  assert.match(pay, /<td>[^<]*2026-/);
+  const tiles = html.slice(html.indexOf('data-id="tiles"'), html.indexOf('data-id="tiles"') + 400);
+  assert.doesNotMatch(tiles, /grid-template-columns:repeat\(25/);
+});
+
+test('the index is the same shell: sections in the sidebar, cards per section in the main area', async () => {
+  const project = await loadProject(ops);
+  const html = renderIndex(project, { branch: 'x', today: '2026-09-24' });
+  assert.match(html, /class="side"/);
+  assert.match(html, /class="card-grid"/);
+  assert.match(html, /02\. Inventory/);
+});

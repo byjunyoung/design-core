@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { createCache, extractStyle, StyleProvider } from '@ant-design/cssinjs';
 import * as antd from 'antd';
-import { h, v, isTbd } from '../kinds.js';
+import { h, v, isTbd, sample } from '../kinds.js';
 import { DEFAULT_TOKENS, mergeTokens } from '../tokens.js';
 
 // Draws each mapped kind as the antd component its `maps_to.antd` names, server-side, with
@@ -15,7 +15,7 @@ const list = (x) => (Array.isArray(x) ? x : x === undefined ? [] : [x]);
 const text = (x) => (isTbd(x) ? `TBD${x.$tbd?.owner ? ` (${x.$tbd.owner})` : ''}` : x === undefined || x === null ? '' : String(x));
 const label = (c) => (typeof c === 'object' && c && !isTbd(c) ? c.label ?? c.key ?? c.id ?? JSON.stringify(c) : c);
 const raw = (html) => e('div', { dangerouslySetInnerHTML: { __html: html } });
-const dummyRows = (cols) => Array.from({ length: 3 }, (_, i) => Object.fromEntries([['key', i], ...cols.map((c) => [c.dataIndex, '—'])]));
+const dummyRows = (cols) => Array.from({ length: 3 }, (_, i) => Object.fromEntries([['key', i], ...cols.map((c) => [c.dataIndex, sample(c.title, i)])]));
 
 function themeFrom(tokens) {
   const t = mergeTokens(DEFAULT_TOKENS, tokens);
@@ -48,10 +48,10 @@ const components = {
   Skeleton: (el) => e(antd.Skeleton, { active: false, paragraph: { rows: Math.min(Number(el.rows) || 3, 6) } }),
   Descriptions: (el) => {
     const rows = Array.isArray(el.rows) ? el.rows.flat() : list(el.fields);
-    return e(antd.Descriptions, { size: 'small', bordered: true, column: Number(el.columns) || 2, title: el.title ? text(el.title) : undefined }, ...rows.map((k, i) => e(antd.Descriptions.Item, { key: i, label: text(k) }, '—')));
+    return e(antd.Descriptions, { size: 'small', bordered: true, column: Number(el.columns) || 2, title: el.title ? text(el.title) : undefined }, ...rows.map((k, i) => e(antd.Descriptions.Item, { key: i, label: text(k) }, sample(k, i))));
   },
   Segmented: (el) => e(antd.Segmented, { options: list(el.options).map(text), value: text(list(el.options)[0]) }),
-  Statistic: (el) => e(antd.Space, { size: 'large', wrap: true }, ...list(el.stats).map((s, i) => e(antd.Statistic, { key: i, title: text(s), value: '—' }))),
+  Statistic: (el) => e(antd.Space, { size: 'large', wrap: true }, ...list(el.stats).map((s, i) => e(antd.Statistic, { key: i, title: text(s), value: sample(s, i) }))),
   Form: (el) => e(antd.Form, { layout: 'inline', size: 'small' }, ...list(el.fields).map((f, i) => e(antd.Form.Item, { key: i, label: text(label(f)) }, e(antd.Input, { placeholder: text(label(f)), readOnly: true })))),
   Input: (el) => e(antd.Input, { readOnly: true, value: text(el.text ?? el.value ?? ''), placeholder: text(el.placeholder), disabled: !!el.readonly }),
   'Input.TextArea': (el) => e(antd.Input.TextArea, { readOnly: true, rows: 2, placeholder: text(el.placeholder), showCount: !!el.max, maxLength: el.max ? Number(el.max) : undefined }),

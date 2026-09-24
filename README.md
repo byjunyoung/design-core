@@ -126,7 +126,7 @@ node src/cli.js render examples/store-ops --out out
 #   7 pages → out/
 ```
 
-Open `out/index.html`. Each screen page shows every state side by side, and each variant (an edit dialog in Create mode and in Edit mode) in its own row. Click any element and a panel tells you what it is, which design-system component it maps to, its properties, and the exact file and line it came from. Undecided values are yellow chips; placeholders are dashed boxes; modals sit on a dimmed backdrop.
+Open `out/index.html`. A sidebar lists every screen by section with what needs attention; a screen page shows one state at a time as tabs (variants too), or every state side by side with **compare states**. Click any element and a drawer tells you what it is, which design-system component it maps to, its conditions and properties, and the exact file and line it came from. On the picture itself, meta information is only a dot — grey for a condition, yellow for an undecided value, blue for a comment. Empty cells carry sample values so the screen reads as a screen; the drawer says they are samples.
 
 **Open the viewer, live.**
 
@@ -181,6 +181,6 @@ The checks are lifted from the [`fig` plugin](https://github.com/byjunyoung/clau
 
 ## Tests and license
 
-`npm test` — 105 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
+`npm test` — 109 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
 
 MIT.
