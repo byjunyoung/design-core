@@ -2,6 +2,8 @@
 
 # doan
 
+[한국어](README.ko.md) · **English**
+
 **도안** — the Korean word for a design drawing, the plan a thing is made from.
 
 Imagine every screen of your product is a short text file. It says what is on the screen, what it looks like when it is empty or loading or broken, where each button goes, and which spec it came from. An AI agent writes those files. You open a page in your browser, point at an element, and say "drop that column" or "the empty message should be warmer." The agent proposes a new version — with the diff, the lint result and the decisions it was based on — and you press **Apply**. Versions are git. No canvas, no dragging, no design file drifting away from the code.
