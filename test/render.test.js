@@ -212,7 +212,7 @@ test('the viewer speaks the language conventions.meta.language names, samples in
   assert.match(index, /개요/);
 });
 
-test('an ios screen draws inside a phone frame at the platform width; a kiosk screen in a portrait frame; web has no frame', async () => {
+test('an ios screen draws inside a phone frame at the platform width; a tablet screen in a tablet frame; web has no frame', async () => {
   const mobile = fileURLToPath(new URL('../examples/mobile-app', import.meta.url));
   const project = await loadProject(mobile);
   const feed = project.screens.find((s) => s.doc.screen === 'feed');
@@ -224,8 +224,8 @@ test('an ios screen draws inside a phone frame at the platform width; a kiosk sc
   assert.match(html, /el-list-cell/);
   assert.match(html, /gesture-tap/);
   assert.match(html, /nav-push/);
-  const kiosk = { ...feed, doc: { ...feed.doc, platform: 'kiosk' } };
-  assert.match(renderScreen(project, kiosk), /class="frame device-kiosk"[^>]*--ref-w:1080px/);
+  const tablet = { ...feed, doc: { ...feed.doc, platform: 'tablet' } };
+  assert.match(renderScreen(project, tablet), /class="frame device-tablet"[^>]*--ref-w:1024px/);
   const web = { ...feed, doc: { ...feed.doc, platform: 'web' } };
   assert.match(renderScreen(project, web), /class="frame device-web"[^>]*--ref-w:1280px/);
 });

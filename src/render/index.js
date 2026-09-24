@@ -78,7 +78,6 @@ const DEFAULT_PLATFORMS = {
   ios: { width: 390, height: 844, frame: 'phone' },
   android: { width: 412, height: 915, frame: 'phone' },
   tablet: { width: 1024, height: 768, frame: 'tablet' },
-  kiosk: { width: 1080, height: 1920, frame: 'kiosk' },
 };
 export function platformOf(project, screen) {
   const table = { ...DEFAULT_PLATFORMS, ...(project.conventions.platforms ?? {}) };

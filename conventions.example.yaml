@@ -20,7 +20,6 @@ platforms:                             # what a screen is drawn as; a screen say
   ios:     { width: 390, height: 844, frame: phone }
   android: { width: 412, height: 915, frame: phone }
   tablet:  { width: 1024, height: 768, frame: tablet }
-  kiosk:   { width: 1080, height: 1920, frame: kiosk }
 
 flows:                                 # the words a flow may use; lint warns on anything else
   gestures: [tap, swipe-left, swipe-right, swipe-down, swipe-up, long-press, back, pull]

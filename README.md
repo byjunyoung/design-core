@@ -8,11 +8,11 @@
 
 Imagine every screen of your product is a short text file. It says what is on the screen, what it looks like when it is empty or loading or broken, where each button goes, and which spec it came from. An AI agent writes those files. You open a page in your browser, point at an element, and say "drop that column" or "the empty message should be warmer." The agent proposes a new version — with the diff, the lint result and the decisions it was based on — and you press **Apply**. Versions are git. No canvas, no dragging, no design file drifting away from the code.
 
-It replaces Figma for product screens — web, app and kiosk. Decks, diagrams, vectors and marketing stay wherever they are.
+It replaces Figma for product screens — web and app. Decks, diagrams, vectors and marketing stay wherever they are.
 
 **You do not write code to use it.** You talk to the agent you already have (Claude Code, Cursor, Codex) and look at a web page. The command line is there for the people and machines that want it: CI, scripts, a quick check.
 
-[What it solves](#what-it-solves) · [Who it's for](#who-its-for) · [The whole loop](#the-whole-loop) · [Your first five minutes](#your-first-five-minutes) · [What a screen file says](#what-a-screen-file-says) · [The viewer](#the-viewer) · [What lint catches](#what-lint-catches) · [Already drew it in Figma?](#already-drew-it-in-figma) · [Web, app, kiosk](#web-app-kiosk) · [Why files and a command line](#why-files-and-a-command-line) · [Commands](#commands) · [Configuration](#configuration)
+[What it solves](#what-it-solves) · [Who it's for](#who-its-for) · [The whole loop](#the-whole-loop) · [Your first five minutes](#your-first-five-minutes) · [What a screen file says](#what-a-screen-file-says) · [The viewer](#the-viewer) · [What lint catches](#what-lint-catches) · [Already drew it in Figma?](#already-drew-it-in-figma) · [Web and app](#web-and-app) · [Why files and a command line](#why-files-and-a-command-line) · [Commands](#commands) · [Configuration](#configuration)
 
 <details>
 <summary>If any of the words below are new — ten of them, one line each</summary>
@@ -125,11 +125,11 @@ Every finding names the file, the YAML path and the line, so an agent can edit t
 
 Two commands and a personal access token (`FIGMA_TOKEN`, read scope). Run `map figma` first — it pairs the page's component masters with kinds by name — then `import figma`. Frames named `{screen}-{state}` become one file per screen with the other states as patches; auto-layout becomes layout in token names; prototype links become flows. Whatever cannot be resolved is a `$tbd` owned by `import`, so the first lint after an import is an honest to-do list. `<file-key>` is the part of the Figma URL after `/design/`.
 
-## Web, app, kiosk
+## Web and app
 
 <img src="docs/img/mobile-compare.jpg" alt="Three states of an iOS feed, side by side in phone frames" width="100%">
 
-The format is platform-neutral; the picture is not. A screen says `platform: ios` (or `android`, `tablet`, `kiosk`, `web`), the project sets a default, and `render` draws it at that platform's width inside its frame — a phone with status bar and home indicator, a portrait kiosk, a bare web canvas. Twelve mobile kinds ship by name because iOS HIG and Material both have them (`app-bar`, `tab-bar`, `list-cell`, `bottom-sheet`, `fab`, `snackbar`, …). Flows carry a `gesture` and a `nav` (push, modal, sheet, tab, dismiss). `examples/mobile-app` is a three-screen consumer app.
+The format is platform-neutral; the picture is not. A screen says `platform: ios` (or `android`, `tablet`, `web`), the project sets a default, and `render` draws it at that platform's width inside its frame — a phone with status bar and home indicator, a tablet, a bare web canvas. Twelve mobile kinds ship by name because iOS HIG and Material both have them (`app-bar`, `tab-bar`, `list-cell`, `bottom-sheet`, `fab`, `snackbar`, …). Flows carry a `gesture` and a `nav` (push, modal, sheet, tab, dismiss). `examples/mobile-app` is a three-screen consumer app.
 
 ### Drawing with your own components
 

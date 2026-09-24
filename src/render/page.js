@@ -63,10 +63,9 @@ a { color: inherit; text-decoration: none; }
 
 /* device frames */
 .frame.device-web { width: var(--ref-w); }
-.frame.device-phone, .frame.device-tablet, .frame.device-kiosk { width: var(--ref-w); background: var(--color-bg); border: 10px solid #1f2328; border-radius: 44px; overflow: hidden; margin: var(--space-md) auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
+.frame.device-phone, .frame.device-tablet { width: var(--ref-w); background: var(--color-bg); border: 10px solid #1f2328; border-radius: 44px; overflow: hidden; margin: var(--space-md) auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
 .frame.device-tablet { border-radius: 24px; }
-.frame.device-kiosk { border-radius: 8px; border-width: 14px; }
-.frame.device-phone .view-root, .frame.device-tablet .view-root, .frame.device-kiosk .view-root { flex: 1; min-height: 0; overflow: hidden; }
+.frame.device-phone .view-root, .frame.device-tablet .view-root { flex: 1; min-height: 0; overflow: hidden; }
 .frame[style*="--ref-h"] { height: var(--ref-h); }
 .status-bar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-lg); font-size: 12px; font-weight: 600; flex: 0 0 auto; }
 .status-bar .notch { width: 120px; height: 28px; background: #1f2328; border-radius: 0 0 16px 16px; position: absolute; left: 50%; transform: translateX(-50%); top: 0; }

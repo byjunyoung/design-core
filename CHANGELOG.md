@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 — 2026-09-24
+
+- **`kiosk` platform removed.** It was a portrait frame and nothing else. Built-in platforms are `web`, `ios`, `android`, `tablet`; a team that needs another size adds it under `conventions.platforms` with frame `tablet` or `none`.
+
 ## 0.2.0 — 2026-09-24
 
 **design-core is now doan (도안).** 도안 is the Korean word for a design drawing — the plan a thing is made from. Same repository (GitHub redirects the old address), same files, same verbs.
