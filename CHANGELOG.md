@@ -4,7 +4,7 @@
 
 **design-core is now doan (도안).** 도안 is the Korean word for a design drawing — the plan a thing is made from. Same repository (GitHub redirects the old address), same files, same verbs.
 
-- The command is `doan`; the MCP server is `doan`; the package is `doan` on npm.
+- The command is `doan`; the MCP server is `doan`; the package is `@junyoung735/doan` on npm (the registry refuses bare `doan` as too similar to `dot`, `docz` and friends).
 - Screen files say `schema: doan/0.2`. `design-core/0.2` is still accepted, so nothing you wrote breaks.
 - The page's runtime globals are `DOAN_*`.
 
