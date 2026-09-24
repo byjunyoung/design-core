@@ -136,3 +136,32 @@ test('the proposal page draws a new screen against an empty AS-IS instead of fai
   assert.match(html, /A new screen — there is no AS-IS to compare\./);
   assert.match(html, /data-id="title"/);
 });
+
+test('a proposal names the comments it answers: apply resolves them with the approver, undo reopens them', async () => {
+  const dir = sandbox();
+  const { addComment, listComments } = await import('../src/comments.js');
+  const c = await addComment(dir, { screen: 'order-list', path: 'elements.table', text: 'drop the branch column', author: 'me' });
+  const after = read(dir).replace('columns: [order_no, branch, amount, status, ordered_at]', 'columns: [order_no, amount, status, ordered_at]');
+  const p = await propose(dir, { screen: 'order-list', after, comments: [c.id] }, opts);
+  assert.deepEqual(p.comments, [c.id]);
+  assert.equal((await listComments(dir, { screen: 'order-list' })).length, 1); // still open while the proposal waits
+  await applyProposal(dir, { id: p.id, approved_by: 'me' });
+  const [done] = await listComments(dir, { screen: 'order-list', status: 'resolved' });
+  assert.equal(done.id, c.id);
+  assert.equal(done.resolved_by, 'me');
+  assert.match(done.resolution, new RegExp(p.id));
+  await undoProposal(dir, { id: p.id });
+  assert.equal((await listComments(dir, { screen: 'order-list' }))[0].id, c.id);
+});
+
+test('a comment id mentioned in a decision counts, a text change that applies at once resolves it as "auto", and an unknown id is refused', async () => {
+  const dir = sandbox();
+  const { addComment, listComments } = await import('../src/comments.js');
+  const c = await addComment(dir, { screen: 'order-list', path: 'states.Empty', text: 'wording', author: 'me' });
+  const after = read(dir).replace('text: "No orders match."', 'text: "Nothing matches these filters."');
+  const p = await propose(dir, { screen: 'order-list', after, decisions: [{ item: 'empty copy', decision: 'Nothing matches these filters.', why: `comment ${c.id}` }] }, opts);
+  assert.equal(p.status, 'applied');
+  assert.deepEqual(p.comments_resolved, [c.id]);
+  assert.equal((await listComments(dir, { screen: 'order-list', status: 'resolved' }))[0].resolved_by, 'auto');
+  await assert.rejects(propose(dir, { screen: 'order-list', after, comments: ['c_nope00'] }, opts), /no open comment "c_nope00"/);
+});

@@ -6,6 +6,7 @@ import { loadProject, parseScreenText } from './project.js';
 import { validateScreen } from './validate.js';
 import { lint, summarize } from './lint.js';
 import { diffScreens, renderDiffMarkdown } from './diff.js';
+import { listComments, resolveComment, reopenComment } from './comments.js';
 
 // The edit loop's write half (DESIGN.md §7). An agent proposes a whole new version of one
 // screen file — or a screen that does not exist yet, which the proposal creates as
@@ -13,8 +14,10 @@ import { diffScreens, renderDiffMarkdown } from './diff.js';
 // a tier. A text-only change that keeps lint clean applies at once with undo; everything
 // else, a new screen always, waits for a person to apply or reject it. Proposals live in
 // <project>/.proposals/ so the CLI, the MCP server and the viewer see the same queue.
+// A proposal names the comments it answers; applying it resolves them, undoing reopens them.
 
 const TEXT_PROPS = new Set(['text', 'label', 'title', 'placeholder', 'caption', 'counter', 'hint', 'note', 'notes', 'when']);
+const COMMENT_ID = /\bc_[a-z0-9]{6,}\b/g;
 const dirOf = (dir) => join(dir, '.proposals');
 const sha = (text) => createHash('sha1').update(text).digest('hex');
 const newId = () => `p_${Date.now().toString(36)}${randomBytes(3).toString('hex')}`;
@@ -39,6 +42,32 @@ async function lintWith(project, file, text, opts) {
   return { ...summarize(findings), findings: findings.filter((f) => f.file === file) };
 }
 
+// the comments a proposal answers: the ids it was given, plus any id mentioned in its summary
+// or decisions (the draw prompt writes "why: 코멘트 c_…"). Given ids must be open comments on
+// the screen; mentioned ones that are not are simply not counted.
+async function answersOf(dir, screen, { comments = [], summary = '', decisions = [] }) {
+  const open = new Set((await listComments(dir, { screen, status: 'open' })).map((c) => c.id));
+  for (const id of comments) if (!open.has(id)) throw new Error(`no open comment "${id}" on screen "${screen}"`);
+  const text = [summary, ...decisions.flatMap((d) => [d.item, d.decision, d.why ?? ''])].join('\n');
+  const mentioned = (text.match(COMMENT_ID) ?? []).filter((id) => open.has(id));
+  return [...new Set([...comments, ...mentioned])];
+}
+
+// resolve the comments a proposal answers, once it is on disk; a comment resolved by hand in
+// the meantime is left alone
+async function settle(dir, proposal, by) {
+  const done = [];
+  for (const id of proposal.comments ?? []) {
+    try {
+      await resolveComment(dir, { id, by, note: `${proposal.id} applied${proposal.summary ? `: ${proposal.summary}` : ''}` });
+      done.push(id);
+    } catch {
+      /* already resolved or gone */
+    }
+  }
+  return done;
+}
+
 async function store(dir, proposal) {
   await mkdir(dirOf(dir), { recursive: true });
   await writeFile(join(dirOf(dir), `${proposal.id}.json`), JSON.stringify(proposal, null, 2));
@@ -56,7 +85,7 @@ async function write(dir, proposal, text) {
   await writeFile(join(dir, relative(dir, proposal.file)), text);
 }
 
-export async function propose(dir, { screen, after, summary = '', decisions = [] }, opts = {}) {
+export async function propose(dir, { screen, after, summary = '', decisions = [], comments = [] }, opts = {}) {
   const project = await loadProject(dir);
   const found = project.screens.find((s) => s.doc.screen === screen);
   // a screen the project does not have yet: the proposal creates screens/<name>.yaml, and the
@@ -76,6 +105,7 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
   // a new file must be the screen it was proposed as; in an existing file a renamed `screen:`
   // is a change like any other, and lint (L01, L05) is what judges it
   if (creates && parsed.doc.screen !== screen) throw new Error(`the proposed YAML names screen "${parsed.doc.screen}", not "${screen}"`);
+  const answers = creates ? [] : await answersOf(dir, screen, { comments, summary, decisions });
 
   const before = found ? await readFile(found.file, 'utf8') : '';
   const diff = diffScreens(found ? found.doc : {}, parsed.doc);
@@ -92,6 +122,7 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
     creates, // true when applying writes a file the project did not have; undo removes it
     summary,
     decisions, // what was agreed before this version was written: [{ item, decision, why? }]
+    comments: answers, // the open comments this version answers; resolved on apply, reopened on undo
     created: new Date().toISOString(),
     tier,
     status: tier === 'none' ? 'empty' : auto ? 'applied' : 'pending',
@@ -107,6 +138,7 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
   if (auto) {
     await write(dir, proposal, after);
     proposal.applied_at = proposal.created;
+    proposal.comments_resolved = await settle(dir, proposal, 'auto');
   }
   return store(dir, proposal);
 }
@@ -120,6 +152,7 @@ export async function applyProposal(dir, { id, approved_by }) {
   if (sha(current) !== p.base_hash) throw new Error(`"${p.screen}" changed since the proposal was made; propose again`);
   await write(dir, p, p.after);
   Object.assign(p, { status: 'applied', approved_by, applied_at: new Date().toISOString() });
+  p.comments_resolved = await settle(dir, p, approved_by);
   return store(dir, p);
 }
 
@@ -138,6 +171,14 @@ export async function undoProposal(dir, { id }) {
   // undoing a proposal that created the file removes the file, not writes an empty one
   if (p.creates) await unlink(p.file);
   else await write(dir, p, p.before);
+  // the comments it had resolved are open again
+  for (const cid of p.comments_resolved ?? []) {
+    try {
+      await reopenComment(dir, { id: cid });
+    } catch {
+      /* resolved again by hand since, or gone */
+    }
+  }
   Object.assign(p, { status: 'undone', undone_at: new Date().toISOString() });
   return store(dir, p);
 }

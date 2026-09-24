@@ -166,6 +166,10 @@ server.registerTool(
         .array(z.object({ item: z.string(), decision: z.string(), why: z.string().optional() }))
         .default([])
         .describe('what was agreed with the person before this version was written; see the "draw" prompt'),
+      comments: z
+        .array(z.string())
+        .default([])
+        .describe('ids of the open comments this version answers; applying the proposal resolves them (an id mentioned in the summary or a decision counts too), undoing it reopens them'),
     },
   },
   guard((input) => propose(dir, input, common)),
@@ -180,7 +184,7 @@ server.registerTool(
 server.registerTool(
   'apply',
   {
-    description: 'Write a pending proposal to the file. Only after the person said yes in the conversation; approved_by is their name, and the call is refused without it or if the file changed since.',
+    description: 'Write a pending proposal to the file and resolve the comments it answers. Only after the person said yes in the conversation; approved_by is their name, and the call is refused without it or if the file changed since.',
     inputSchema: { id: z.string(), approved_by: z.string().optional() },
   },
   guard((input) => applyProposal(dir, input)),
@@ -270,7 +274,7 @@ server.registerPrompt(
 
 5. Sketch before any YAML. In the conversation, draw the Default state as a text wireframe — a box drawing at the platform's proportions, every element in its place with its real label — and under it one line per other state on what the picture changes. Wait for a yes. If the person wants something moved, fix the sketch and show it again; a wireframe is cheaper to argue with than a diff.
 
-6. Only then write the whole screen file and call propose with the complete YAML, a one-line summary in the person's words, and the decisions table from step 4 as the decisions argument. Then call render with that proposal id and give the person the page path: it shows the agreed decisions, what changes, and every state AS-IS beside TO-BE.
+6. Only then write the whole screen file and call propose with the complete YAML, a one-line summary in the person's words, the decisions table from step 4 as the decisions argument, and the ids of the comments this version answers as comments — applying it resolves them. Then call render with that proposal id and give the person the page path: it shows the agreed decisions, what changes, and every state AS-IS beside TO-BE.
 
 7. Wait. The person applies or rejects; you do not call apply yourself. If they ask for changes, go back to the sketch and propose again — the earlier proposal stays pending until it is rejected.
 

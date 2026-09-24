@@ -54,3 +54,22 @@ export async function resolveComment(dir, { id, by, note = '' }) {
   }
   throw new Error(`no comment "${id}"`);
 }
+
+// The opposite, for a proposal that is undone: the comment it answered is open again, and the
+// record keeps when it was reopened.
+export async function reopenComment(dir, { id }) {
+  const project = await loadProject(dir);
+  for (const s of project.screens) {
+    const list = await read(dir, s.doc.screen);
+    const c = list.find((x) => x.id === id);
+    if (!c) continue;
+    if (!c.resolved) throw new Error(`comment "${id}" is not resolved`);
+    Object.assign(c, { resolved: false, reopened_at: new Date().toISOString() });
+    delete c.resolved_by;
+    delete c.resolved_at;
+    delete c.resolution;
+    await write(dir, s.doc.screen, list);
+    return c;
+  }
+  throw new Error(`no comment "${id}"`);
+}

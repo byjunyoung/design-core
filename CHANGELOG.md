@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.3 — 2026-09-25
+
+- **Applying a proposal resolves the comments it answers.** `propose` takes `comments` — the ids of the open comments this version answers — and counts any id mentioned in its summary or decisions (the draw prompt writes `why: 코멘트 c_…`). `apply` resolves them with the approver's name and the proposal id as the resolution; a text-only change that applies at once resolves them as `auto`; `undo` reopens them. Until now the loop's last step, closing the comment, was done by hand (the kiosk's first comment was). CLI: `propose … --comments <id,id>`.
+
 ## 0.9.2 — 2026-09-25
 
 - **`propose` takes a new screen.** Name a screen the project does not have and the proposal creates `screens/<name>.yaml` — always pending, since a new file is never a text-only change; the name must pass `naming.screen_pattern` and the YAML must say the same `screen:`. `apply` writes it only while the file is still absent; `undo` removes the file. The proposal page shows the new screen against an empty AS-IS. Until now a new screen had to be written by hand outside the edit loop (the kiosk's done screen was).

@@ -53,8 +53,9 @@ usage: doan <verb> …
         Apply / Reject on a proposal page, /api/lint for a bot. The seed of the hosted service.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
-  propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--json]
-        queue a new version of a screen: diff, lint before/after, tier. text-only + clean lint applies at once.
+  propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--comments <id,id>] [--json]
+        queue a new version of a screen (or a new screen): diff, lint before/after, tier. text-only + clean lint applies at once.
+        --comments names the open comments it answers; apply resolves them, undo reopens them.
   proposals <project-dir> [--status pending|applied|all]
   apply <project-dir> <id> --by <name>      reject <project-dir> <id> [--reason "…"]      undo <project-dir> <id>`;
 
@@ -129,7 +130,8 @@ async function proposeCommand(opts) {
   const [dir, screen] = opts._;
   if (!dir || !screen || !opts.with) throw Object.assign(new Error(USAGE), { exit: 2 });
   const decisions = opts.decisions ? JSON.parse(readFileSync(opts.decisions, 'utf8')) : [];
-  const p = await propose(dir, { screen, after: readFileSync(opts.with, 'utf8'), summary: opts.summary ?? '', decisions }, { branch: opts.branch, today: opts.today });
+  const comments = opts.comments ? String(opts.comments).split(',').map((x) => x.trim()).filter(Boolean) : [];
+  const p = await propose(dir, { screen, after: readFileSync(opts.with, 'utf8'), summary: opts.summary ?? '', decisions, comments }, { branch: opts.branch, today: opts.today });
   if (opts.json) process.stdout.write(JSON.stringify(p, null, 2) + '\n');
   else process.stdout.write(`${p.id}  ${p.status}  tier=${p.tier}  lint ${p.lint.before.blocking}→${p.lint.after.blocking} blocking\n${p.markdown}`);
   return 0;
