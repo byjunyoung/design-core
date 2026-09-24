@@ -337,6 +337,9 @@ Since 2026-09-24 the map is a section of the overview, not a page of its own: th
 
 ### 6.5 The click-through prototype
 
+Since 2026-09-25 the prototype selects nothing: a click follows a flow and does nothing else, the inspect panel says where the prototype is and lists the flows that leave this screen, and an element with several flows asks which — the owner found a click that also selected the element confusing, and Figma's present mode does not select either. Elements are selected on the canvas.
+
+
 Shipped 2026-09-24 (0.6.0). `proto.html` holds every screen in every state and shows one; the elements a flow leaves from are hotspots, and pressing one lands on the flow's target screen and state. That is the whole scope — the owner set it when the stages were planned: the product's navigation, pressed, from the files alone. Typing, validation and branching on input are `fig:proto`'s job, and stay there.
 
 | Decision | Chosen | Why |

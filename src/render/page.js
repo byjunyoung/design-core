@@ -170,6 +170,7 @@ body.cv-no-arrows .cv-arrows { display: none; }
 .proto-overlay[hidden] { display: none; }
 .proto-choose { position: fixed; z-index: 30; display: flex; flex-direction: column; gap: var(--space-xs); padding: 6px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
 .proto-choose .btn { text-align: left; font-size: 12px; } .proto-choose .proto-cond { border-style: dashed; }
+.proto-flows { display: flex; flex-direction: column; gap: var(--space-xs); } .proto-flows .btn { text-align: left; font-size: 12px; } .proto-flows .proto-cond { border-style: dashed; }
 .proto-overlay .proto-view { width: min(92vw, 720px); max-height: 92vh; overflow: auto; }
 .proto-overlay .proto-view .stage { box-shadow: 0 12px 40px rgba(0,0,0,.35); }
 .hotspot { cursor: pointer; }
@@ -496,6 +497,7 @@ export const INSPECTOR_JS = `
   };
   document.addEventListener('click', function (e) {
     var el = e.target.closest('.el');
+    if (document.body.getAttribute('data-mode') === 'proto') return;
     if (!el || e.target.closest('a') || e.target.closest('.drawer') || e.target.closest('.tab[data-state]')) return;
     e.preventDefault();
     openDrawer(el);
@@ -585,6 +587,9 @@ export const PROTO_JS = `
 (function () {
   var flows = window.DOAN_FLOWS || [];
   var views = Array.prototype.slice.call(document.querySelectorAll('.proto-view'));
+  // the prototype selects nothing: the inspector's click handler stands down on this page
+  document.body.setAttribute('data-mode', 'proto');
+  var T = window.DOAN_I18N || {}, panel = document.getElementById('inspector');
   var screenSel = document.getElementById('proto-screen'), stateSel = document.getElementById('proto-state');
   var back = document.getElementById('proto-back'), hot = document.getElementById('proto-hot'), overlay = document.getElementById('proto-overlay');
   var stack = [];
@@ -619,6 +624,7 @@ export const PROTO_JS = `
   function choose(el, list) {
     closeChooser();
     chooser = document.createElement('div'); chooser.className = 'proto-choose';
+    var head = document.createElement('div'); head.className = 'hint'; head.textContent = T.chooseFlow || 'Which flow?'; chooser.appendChild(head);
     list.forEach(function (f) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'btn' + (f.style === 'conditional' ? ' proto-cond' : '');
       b.textContent = lineOf(f);
@@ -644,6 +650,22 @@ export const PROTO_JS = `
     stateSel.innerHTML = statesOf(base.screen).map(function (s) { return '<option value="' + s + '"' + (s === base.state ? ' selected' : '') + '>' + s + '</option>'; }).join('');
     var want = t.screen + (t.state !== 'Default' ? '.' + t.state : '');
     if (decodeURIComponent(location.hash.slice(1)) !== want) history.replaceState(null, '', '#' + want);
+    // the panel: where the prototype is, and the flows that leave this screen, each a button
+    if (panel) {
+      var here = flows.filter(function (f) { return f.screen === t.screen; });
+      panel.innerHTML = '';
+      var h3 = document.createElement('h3'); h3.textContent = t.screen + (t.state !== 'Default' ? ' · ' + t.state : ''); panel.appendChild(h3);
+      var help = document.createElement('div'); help.className = 'hint'; help.textContent = T.protoHelp || ''; panel.appendChild(help);
+      var title = document.createElement('div'); title.className = 'section-title'; title.textContent = T.flowsFrom || 'Flows'; panel.appendChild(title);
+      if (!here.length) { var none = document.createElement('div'); none.className = 'hint'; none.textContent = T.noFlowsFrom || ''; panel.appendChild(none); }
+      var box = document.createElement('div'); box.className = 'proto-flows'; panel.appendChild(box);
+      here.forEach(function (f) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'btn' + (f.style === 'conditional' ? ' proto-cond' : '');
+        b.textContent = lineOf(f);
+        b.addEventListener('click', function () { go(f); });
+        box.appendChild(b);
+      });
+    }
     if (typeof window.doanTreeFollow === 'function') window.doanTreeFollow();
     if (typeof window.doanFit === 'function') window.doanFit();
   }

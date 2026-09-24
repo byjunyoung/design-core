@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 — 2026-09-25
+
+- **The prototype selects nothing.** On `proto.html` a click used to do two things at once — follow the flow *and* select the element into the inspect panel — and an element with several flows opened a bare menu on top of that (the owner: "클릭이랑 컴포넌트 선택이랑 액션이 겹쳐서 혼란스럽네"). Now the page is interaction-only, the way Figma's present mode is: the inspector's click handler stands down, the panel says where the prototype is and lists the flows that leave this screen as buttons, and the chooser for an element with several flows carries a heading. Selecting elements is the canvas's job.
+
 ## 0.9.0 — 2026-09-24
 
 The design system, seen: a tokens page, and assets — the person's own files — named from screens and seen on a page of their own (DESIGN.md §4.6, §6.9).

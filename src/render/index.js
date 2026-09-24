@@ -207,8 +207,9 @@ function topBar(project, D, { title, meta = '', mode = null, place = {}, tools =
 }
 
 function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [] }) {
-  // the zoom keys exist only on the canvas; the other pages keep the same empty panel without the hint
-  const empty = `<div class="hint">${D.clickToInspect}</div>${mode === 'canvas' ? `<p class="hint">${D.shortcutsHint}</p>` : ''}`;
+  // the zoom keys exist only on the canvas; the other pages keep the same empty panel without the hint.
+  // The prototype selects nothing — its panel says so and lists the flows instead (PROTO_JS)
+  const empty = mode === 'proto' ? `<div class="hint">${D.protoHelp}</div>` : `<div class="hint">${D.clickToInspect}</div>${mode === 'canvas' ? `<p class="hint">${D.shortcutsHint}</p>` : ''}`;
   return `<div class="shell workspace">
 ${navSidebar(project, D, place, { findings, comments, proposals })}
 <main class="main${mainClass ? ` ${mainClass}` : ''}">

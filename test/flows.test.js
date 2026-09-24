@@ -129,3 +129,16 @@ test('the flow map and the screen page link into the prototype at that screen', 
   const flows = await renderIndex(project);
   assert.match(flows, /<a class="flow-go" href="proto\.html#feed"/);
 });
+
+test('the prototype selects nothing: its panel explains and lists the flows, the inspector click handler stands down, an element with several flows asks which', async () => {
+  const dir = new URL('../examples/mobile-app', import.meta.url).pathname;
+  const project = await loadProject(dir);
+  const { renderProto } = await import('../src/render/index.js');
+  const html = renderProto(project, { branch: 'x' });
+  assert.match(html, /<aside id="inspector" class="drawer"><div class="hint">A prototype only follows flows/);
+  assert.match(html, /document\.body\.setAttribute\('data-mode', 'proto'\)/);
+  assert.match(html, /if \(document\.body\.getAttribute\('data-mode'\) === 'proto'\) return;/);
+  assert.match(html, /box\.className = 'proto-flows'/);
+  assert.match(html, /T\.chooseFlow/);
+  assert.match(html, /"flowsFrom":"Flows from this screen"/);
+});
