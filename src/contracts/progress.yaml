@@ -1,0 +1,13 @@
+kind: progress
+description: A bar that fills.
+maps_to:
+  antd: Progress
+  mui: LinearProgress
+props:
+  value:
+    type: number
+tokens:
+  bg: color.surface
+  accent: color.primary
+sample:
+  value: 62

@@ -1,16 +1,18 @@
 import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join, relative, basename } from 'node:path';
-import { parse } from 'yaml';
+import { parse, parseDocument } from 'yaml';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { loadProject } from './project.js';
 import { tokenNames, getToken } from './tokens.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
-import { validateScreen, validateConventions } from './validate.js';
+import { validateScreen, validateConventions, validateComponent } from './validate.js';
 import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex, renderProposal } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary } from './render/index.js';
 import { listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 import { resolveAdapter } from './render/adapters/index.js';
@@ -41,6 +43,12 @@ export async function lintProject(dir, opts = {}) {
   for (const s of project.screens)
     for (const e of validateScreen(s.doc).errors)
       schemaFindings.push({ id: 'SCHEMA', severity: 'blocking', screen: s.doc.screen, file: s.file, path: e.path, line: null, message: e.message });
+  for (const c of Object.values(project.components ?? {})) {
+    if (!c.file) continue;
+    const { file, legacy, ...doc } = c;
+    for (const e of validateComponent(doc).errors) schemaFindings.push({ id: 'SCHEMA', severity: 'blocking', file, path: e.path, line: null, message: e.message });
+  }
+  for (const p of project.componentSet?.problems ?? []) schemaFindings.push({ id: 'SCHEMA', severity: 'blocking', file: p.file, path: p.path, line: null, message: p.message });
   const findings = schemaFindings.length ? schemaFindings : lint(project, { branch, today: today(opts.today) });
   const cwd = opts.cwd ?? process.cwd();
   for (const f of findings) f.file = relative(cwd, f.file) || f.file;
@@ -113,6 +121,8 @@ export async function renderProject(dir, opts = {}) {
   const pending = await listProposals(dir, { status: 'pending' });
   await writeFile(join(out, 'index.html'), renderIndex(project, { branch, today: today(opts.today), proposals: pending }));
   pages.push(join(out, 'index.html'));
+  await writeFile(join(out, 'components.html'), renderLibrary(project, { branch, adapter }));
+  pages.push(join(out, 'components.html'));
   for (const s of project.screens) {
     const file = join(out, `${s.doc.screen}.html`);
     await writeFile(file, renderScreen(project, s, { branch, adapter }));
@@ -136,7 +146,7 @@ export { initProject, componentBases };
 export async function importFigma(dir, { fileKey, page, force = false, tree = null }) {
   const project = await loadProject(dir);
   const file = tree ?? (await fetchFigmaPage(fileKey, page));
-  const result = importFigmaTree(file, { page, conventions: project.conventions, tokens: project.tokens ?? {}, fileKey });
+  const result = importFigmaTree(file, { page, conventions: project.conventions, components: project.components, tokens: project.tokens ?? {}, fileKey });
   const written = await writeImport(dir, result, { force });
   return { page: result.page, screens: result.screens.map((s) => s.screen), ...written };
 }
@@ -146,7 +156,7 @@ export async function mapFigma(dir, { fileKey, page, write = false, tree = null 
   const project = await loadProject(dir);
   const file = tree ?? (await fetchFigmaPage(fileKey, page));
   const names = masterNames(file);
-  const suggestion = suggestFigmaMap(names, project.conventions);
+  const suggestion = suggestFigmaMap(names, project.components);
   const result = { page, masters: names.length, ...suggestion, written: [], skipped: [] };
   if (write) Object.assign(result, await writeFigmaMap(dir, suggestion.mapped));
   return result;
@@ -178,4 +188,67 @@ export async function listTokens(dir) {
     return { name, value: getToken(merged, name), tier, file: file ? relative(dir, file) : null, ...(Object.keys(values).length ? { values } : {}) };
   });
   return { source: set.source, resolver: set.resolver, defaults: set.defaults, axes, tokens, problems: set.problems.map((p) => ({ ...p, file: p.file ? relative(dir, p.file) : null })) };
+}
+
+// migrate kinds: every row of conventions.kinds becomes components/<kind>.yaml — the bundled
+// contract where one exists, with the row's own anchors and maps_to laid over it; a minimal
+// contract where none does — and the block leaves conventions.yaml. One command, so a project
+// from before 0.4 lands on the file-per-kind registry without hand work.
+export async function migrateKinds(dir) {
+  const file = join(dir, 'conventions.yaml');
+  const doc = parseDocument(await readFile(file, 'utf8'));
+  const rows = doc.get('kinds')?.toJSON?.() ?? {};
+  const bundled = fileURLToPath(new URL('./contracts/', import.meta.url));
+  await mkdir(join(dir, 'components'), { recursive: true });
+  const written = [];
+  const updated = [];
+  const minimal = [];
+  for (const [kind, row] of Object.entries(rows)) {
+    const target = join(dir, 'components', `${kind}.yaml`);
+    let cdoc;
+    let bucket;
+    if (existsSync(target)) {
+      cdoc = parseDocument(await readFile(target, 'utf8'));
+      bucket = updated;
+    } else if (existsSync(join(bundled, `${kind}.yaml`))) {
+      cdoc = parseDocument(await readFile(join(bundled, `${kind}.yaml`), 'utf8'));
+      bucket = written;
+    } else {
+      cdoc = parseDocument(`kind: ${kind}\ndescription: (moved from conventions.kinds — describe it)\n`);
+      bucket = minimal;
+    }
+    if (Array.isArray(row?.anchors) && !cdoc.has('anchors')) cdoc.set('anchors', row.anchors);
+    for (const [ds, name] of Object.entries(row?.maps_to ?? {})) if (!cdoc.hasIn(['maps_to', ds])) cdoc.setIn(['maps_to', ds], name);
+    await writeFile(target, cdoc.toString({ lineWidth: 0 }));
+    bucket.push(kind);
+  }
+  if (doc.has('kinds')) {
+    doc.delete('kinds');
+    await writeFile(file, doc.toString({ lineWidth: 0 }));
+  }
+  return { written, updated, minimal, removed: Object.keys(rows).length };
+}
+
+// Every contract in the registry, as an agent needs it before drawing: which kinds exist,
+// what each declares, what it binds, whether it is a compound part or a row still in
+// conventions.kinds. The library page is the same list, drawn.
+export async function listComponents(dir) {
+  const project = await loadProject(dir);
+  const components = Object.values(project.components ?? {})
+    .sort((a, b) => a.kind.localeCompare(b.kind))
+    .map((c) => ({
+      kind: c.kind,
+      description: c.description ?? '',
+      file: c.file ? relative(dir, c.file) : null,
+      legacy: !!c.legacy,
+      compound: Array.isArray(c.elements) && c.elements.length > 0,
+      anchors: c.anchors ?? [],
+      maps_to: c.maps_to ?? {},
+      props: c.props ?? {},
+      slots: c.slots ?? [],
+      tokens: c.tokens ?? {},
+      variants: c.variants ?? {},
+      sample: c.sample ?? {},
+    }));
+  return { count: components.length, legacy: project.componentSet?.legacy ?? [], components };
 }

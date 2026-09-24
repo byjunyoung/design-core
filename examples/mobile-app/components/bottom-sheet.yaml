@@ -1,0 +1,13 @@
+kind: bottom-sheet
+description: A sheet that rises from the bottom; its elements are its children.
+anchors:
+  - handle
+props:
+  title:
+    type: string
+tokens:
+  bg: color.bg
+  border: color.border
+  radius: radius.md
+sample:
+  title: Options

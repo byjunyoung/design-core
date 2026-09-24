@@ -135,7 +135,7 @@ The format is platform-neutral; the picture is not. A screen says `platform: ios
 
 <img src="docs/img/antd-modal.png" alt="The antd adapter: an edit modal in Default, Validation and Submitting, drawn with real antd components" width="100%">
 
-`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated.
+`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated. Every kind is a file under `components/` — its props, slots and the tokens it binds — and the viewer's Components page draws them all from those files.
 
 ## Why files and a command line
 
@@ -152,6 +152,8 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 | `init <dir> [--base none\|antd\|mui]` | start a project; `none` copies the component set into it, a library base maps kinds to that library |
 | `bases` | the component bases and whether each is ready |
 | `tokens <dir>` | every token with its value, per-theme values, file and tier (primitive · semantic · bundled) |
+| `components <dir>` | every kind's contract — props, slots, token bindings, compound or not |
+| `migrate kinds <dir>` | move the rows of `conventions.kinds` into `components/<kind>.yaml` (a project from before 0.4) |
 | `lint <dir>` | schema check + rules L01–L20; every finding has file, YAML path and line; exit 1 on blocking |
 | `prep <file>` | stub the states the screen type requires and the file lacks, as `$tbd` placeholders |
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS / TO-BE between two versions; elements compared by id |
@@ -159,7 +161,7 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 | `serve <dir> [--port] [--components …]` | the live viewer: comments, Apply / Reject, `/api/lint` |
 | `propose <dir> <screen> --with <new.yaml>` | queue a new version with diff, lint delta and tier |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | the rest of the loop |
-| `map figma <dir> <key> --page "…" [--write]` | pair a Figma page's component masters with kinds (`maps_to.figma`) |
+| `map figma <dir> <key> --page "…" [--write]` | pair a Figma page's component masters with kinds (`maps_to.figma` in `components/<kind>.yaml`) |
 | `import figma <dir> <key> --page "…"` | one screen file per frame group; states as patches; unresolved → `$tbd` |
 | `mcp <dir>` | the MCP server on stdio |
 
@@ -167,10 +169,10 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 
 ```
 design/
-├── conventions.yaml     naming · platforms · screen types and their required states · kinds and what they map to · layout vocabulary · flow vocabulary · lifecycle · meta.language
+├── conventions.yaml     naming · platforms · screen types and their required states · layout vocabulary · flow vocabulary · lifecycle · meta.language
 ├── sections.yaml        the feature groups, in order
 ├── tokens/              DTCG 2025.10 — primitive · semantic · light · dark · theme.resolver.json; a flat tokens.json still reads
-├── components/          only with --base none: your copy of the component set
+├── components/          one contract per kind (<kind>.yaml): props, slots, token bindings, and for a compound part its elements; with --base none also kinds.js, your copy of the drawing set
 ├── screens/*.yaml       one file per screen
 ├── .proposals/          the edit loop's queue
 └── .comments/           comments per screen (travel with the branch)

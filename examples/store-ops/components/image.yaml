@@ -1,0 +1,20 @@
+kind: image
+description: A picture, at a size class.
+props:
+  size:
+    type: enum
+    options:
+      - sm
+      - md
+      - lg
+      - full
+    default: md
+  src:
+    type: string
+  alt:
+    type: string
+tokens:
+  bg: color.surface
+  border: color.border
+sample:
+  size: md

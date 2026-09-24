@@ -1,0 +1,15 @@
+kind: empty-notice
+description: What a list says when it has nothing.
+maps_to:
+  antd: Empty
+props:
+  title:
+    type: string
+  text:
+    type: string
+tokens:
+  text: color.text
+  muted: color.muted
+sample:
+  title: Nothing here yet
+  text: Create the first one.

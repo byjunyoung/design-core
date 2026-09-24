@@ -1,0 +1,22 @@
+kind: input
+description: One line of text.
+maps_to:
+  antd: Input
+  mui: TextField
+props:
+  placeholder:
+    type: string
+  value:
+    type: string
+  text:
+    type: string
+  readonly:
+    type: boolean
+    default: false
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample:
+  placeholder: Search

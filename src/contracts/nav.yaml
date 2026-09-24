@@ -1,0 +1,20 @@
+kind: nav
+description: A vertical menu; the first item is current.
+anchors:
+  - item
+props:
+  items:
+    type: list
+    description: item labels; a nav with children instead lists them as elements
+  active:
+    type: string
+tokens:
+  bg: color.surface
+  text: color.text
+  muted: color.muted
+  radius: radius.sm
+sample:
+  items:
+    - Orders
+    - Items
+    - Settings

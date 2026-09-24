@@ -1,0 +1,11 @@
+kind: filter-form
+description: Filter fields as an inline form; a field is a name or { key, label }.
+maps_to:
+  antd: Form
+props:
+  fields:
+    type: list
+sample:
+  fields:
+    - period
+    - status

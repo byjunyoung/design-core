@@ -1,0 +1,22 @@
+kind: segment
+description: One option from a few; selected names the current one.
+anchors:
+  - option
+maps_to:
+  antd: Segmented
+  mui: ToggleButtonGroup
+props:
+  options:
+    type: list
+  selected:
+    type: string
+tokens:
+  bg: color.primary
+  text: color.primary-text
+  border: color.border
+  radius: radius.sm
+sample:
+  options:
+    - HOT
+    - ICED
+  selected: ICED

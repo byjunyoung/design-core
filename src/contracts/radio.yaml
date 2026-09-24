@@ -1,0 +1,18 @@
+kind: radio
+description: One option from a few, all visible.
+maps_to:
+  antd: Radio.Group
+  mui: RadioGroup
+props:
+  options:
+    type: list
+  value:
+    type: string
+tokens:
+  text: color.text
+  border: color.border
+  accent: color.primary
+sample:
+  options:
+    - Pickup
+    - Delivery

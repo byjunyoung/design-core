@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { loadProject, lint } from '../src/index.js';
 
 const examples = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const conventions = parse(readFileSync(new URL('../conventions.example.yaml', import.meta.url), 'utf8'));
+// kinds are files now: the bundled contracts stand in for a project's components/
+const registry = Object.fromEntries(readdirSync(new URL(`../src/contracts`, import.meta.url)).map((f) => { const d = parse(readFileSync(new URL(`../src/contracts/${f}`, import.meta.url), `utf8`)); return [d.kind, { ...d, file: `/x/components/${f}` }]; }));
 
 // A minimal in-memory project. Each rule test starts from this and breaks one thing.
 function screen(overrides = {}) {
@@ -35,6 +37,7 @@ function project({ screens, conv = conventions, sections = ['Orders'] } = {}) {
   return {
     conventions: structuredClone(conv),
     sections,
+    components: registry,
     screens: screens.map((doc, i) => ({ file: `screens/${doc.screen}.yaml`, doc, lineOf: () => 1 + i })),
   };
 }
@@ -231,15 +234,15 @@ test('L19 blocks a layout that names a primitive token; which files are primitiv
   const p = project({ screens: [screen({ layout: { root: { kind: 'stack', gap: 'space.md' } } })] });
   p.tokens = { space: { md: '16px' } };
   p.tokenSet = { origins: { 'space.md': '/x/tokens/primitive.tokens.json' }, problems: [] };
-  const f = lint(p).filter((x) => x.id === 'L19');
+  const f = lint(p).filter((x) => x.id === 'L19' && x.screen);
   assert.equal(f.length, 1);
   assert.equal(f[0].severity, 'blocking');
   assert.match(f[0].message, /primitive/);
   p.tokenSet.origins['space.md'] = '/x/tokens/light.tokens.json';
-  assert.equal(lint(p).filter((x) => x.id === 'L19').length, 0);
+  assert.equal(lint(p).filter((x) => x.id === 'L19' && x.screen).length, 0);
   p.tokenSet.origins['space.md'] = '/x/tokens/primitive.tokens.json';
   p.conventions.tokens = { primitive: null };
-  assert.equal(lint(p).filter((x) => x.id === 'L19').length, 0);
+  assert.equal(lint(p).filter((x) => x.id === 'L19' && x.screen).length, 0);
 });
 
 test('L20 relays token loader problems as findings on the token file, keeping the loader severity', () => {

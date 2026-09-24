@@ -1,0 +1,12 @@
+kind: hint
+description: Small helper text, with an optional icon before it.
+props:
+  text:
+    type: string
+    required: true
+  icon:
+    type: string
+tokens:
+  text: color.muted
+sample:
+  text: Card, cash or coupon

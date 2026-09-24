@@ -1,0 +1,11 @@
+kind: pull-to-refresh
+description: The indicator at the top of a list being pulled.
+props:
+  active:
+    type: boolean
+    default: false
+tokens:
+  text: color.muted
+  accent: color.primary
+sample:
+  active: true

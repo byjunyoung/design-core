@@ -1,0 +1,19 @@
+kind: tag
+description: A small label — a status, a category.
+maps_to:
+  antd: Tag
+  mui: Chip
+props:
+  text:
+    type: string
+  label:
+    type: string
+  color:
+    type: string
+tokens:
+  bg: color.surface
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample:
+  text: Paid

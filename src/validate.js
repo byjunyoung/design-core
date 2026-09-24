@@ -26,3 +26,6 @@ function run(validator, doc) {
 
 export const validateScreen = (doc) => run(screenValidator, doc);
 export const validateConventions = (doc) => run(conventionsValidator, doc);
+
+const componentValidator = ajv.compile(load('component.schema.json'));
+export const validateComponent = (doc) => run(componentValidator, doc);

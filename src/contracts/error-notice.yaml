@@ -1,0 +1,16 @@
+kind: error-notice
+description: What a screen says when loading failed.
+maps_to:
+  antd: Result
+props:
+  title:
+    type: string
+  text:
+    type: string
+tokens:
+  text: color.text
+  muted: color.muted
+  accent: color.danger
+sample:
+  title: Something went wrong
+  text: Try again.

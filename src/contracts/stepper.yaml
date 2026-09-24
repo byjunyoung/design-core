@@ -1,0 +1,19 @@
+kind: stepper
+description: A quantity with − and +.
+anchors:
+  - plus
+  - minus
+props:
+  value:
+    type: number
+    default: 1
+  min:
+    type: number
+  max:
+    type: number
+tokens:
+  text: color.primary
+  border: color.border
+  radius: radius.sm
+sample:
+  value: 2

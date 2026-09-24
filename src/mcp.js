@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -44,6 +44,16 @@ server.registerTool(
   'list_screens',
   { description: 'Every screen in the project with its section, type, states and variant axes. Start here.', inputSchema: {} },
   guard(() => listScreens(dir)),
+);
+
+server.registerTool(
+  'list_components',
+  {
+    description:
+      'Every kind in the registry (components/<kind>.yaml): its props with types, required flags, defaults and enum options; its slots; the token slots it binds; whether it is a compound part drawn from its own elements. An instance in a screen may set only what its contract declares (L21, L22). Read this before writing an element.',
+    inputSchema: {},
+  },
+  guard(() => listComponents(dir)),
 );
 
 server.registerTool(
@@ -231,7 +241,7 @@ server.registerPrompt(
           type: 'text',
           text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
 
-1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Read conventions: the required states for its type, the known kinds, the layout vocabulary. New work inherits the shell every screen in the section shares.
+1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element — and list_tokens — the semantic tokens a layout may name; never a primitive. Read conventions: the required states for its type, the layout vocabulary. New work inherits the shell every screen in the section shares.
 
 2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
 

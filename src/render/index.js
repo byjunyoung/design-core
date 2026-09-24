@@ -7,6 +7,8 @@ import { dictionary, languageOf, pageStrings } from './i18n.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
 import { CSS, INSPECTOR_JS } from './page.js';
 import { parseScreenText } from '../project.js';
+import { enumAttrs } from '../components.js';
+import { expandComponents } from '../expand.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -47,21 +49,25 @@ function dots(el) {
   return out.length ? `<span class="dots">${out.join('')}</span>` : '';
 }
 
-function makeRenderer(screen, layout, maps, adapter = null) {
+function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
   const lines = new Map();
   for (const { el, path } of walkElements(screen.doc.elements ?? [], ['elements'])) lines.set(el.id, { path: path.join('.'), line: screen.lineOf(path) });
 
   const r = {
     element(el, path = null) {
-      const fn = adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic;
-      const known = lines.get(el.id);
+      // an expanded compound (src/expand.js) draws as a container of the tree its contract declared;
+      // its children point the inspector at the component file, not the screen
+      const fn = el.$expanded ? kinds.group : (adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic);
+      const known = lines.get(el.id) ?? (el.$from ? { path: `${el.$from.file} › ${el.$from.path}`, line: null } : undefined);
       const style = layoutStyle(layout[el.id], { container: !!el.children?.length });
-      const propsJson = h(JSON.stringify(Object.fromEntries(Object.entries(el).filter(([k]) => !['children'].includes(k)))));
-      const cls = ['el', `el-${el.kind}`, kinds[el.kind] ? '' : 'el-unknown', el.disabled_when ? 'is-disabled' : ''].filter(Boolean).join(' ');
+      const propsJson = h(JSON.stringify(Object.fromEntries(Object.entries(el).filter(([k]) => k !== 'children' && !k.startsWith('$')))));
+      const cls = ['el', `el-${el.kind}`, kinds[el.kind] || el.$expanded ? '' : 'el-unknown', el.disabled_when ? 'is-disabled' : ''].filter(Boolean).join(' ');
       // `repeat: N` (what an import writes for a run of identical instances) draws the element N times in a row.
       const once = fn(el, r);
       const inner = el.repeat > 1 ? `<div class="repeat">${Array.from({ length: Math.min(Number(el.repeat), 200) }, () => `<div class="rep">${once}</div>`).join('')}</div>` : once;
-      return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${style ? ` style="${style}"` : ''}>${dots(el)}${inner}</div>`;
+      // each enum prop the contract declares becomes data-<prop>, which is what a variant's css binds to
+      const attrs = Object.entries(enumAttrs(components[el.kind], el)).map(([k, val]) => ` data-${attrName(k)}="${h(val)}"`).join('');
+      return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${attrs}${style ? ` style="${style}"` : ''}>${dots(el)}${inner}</div>`;
     },
     children(el) {
       return (el.children ?? []).map((c) => r.element(c)).join('');
@@ -86,8 +92,9 @@ export function platformOf(project, screen) {
   return { name, width: spec.width ?? 1280, height: spec.height ?? null, frame: spec.frame ?? 'none' };
 }
 
-function renderView(project, screen, view, maps, adapter = null) {
-  const r = makeRenderer(screen, view.layout, maps, adapter);
+function renderView(project, screen, merged, maps, adapter = null) {
+  const view = expandComponents(merged, project.components ?? {});
+  const r = makeRenderer(screen, view.layout, maps, adapter, project.components ?? {});
   const body = view.elements.map((el) => r.element(el)).join('');
   const root = layoutStyle(view.layout.root);
   const inner = `<div class="view-root" style="${root}">${body}</div>`;
@@ -101,7 +108,7 @@ function renderView(project, screen, view, maps, adapter = null) {
 
 function mapsFor(project) {
   const out = {};
-  for (const [kind, def] of Object.entries(project.conventions.kinds ?? {})) {
+  for (const [kind, def] of Object.entries(project.components ?? project.conventions.kinds ?? {})) {
     const m = def?.maps_to;
     if (m && typeof m === 'object') out[kind] = Object.entries(m).filter(([ds]) => ds !== 'figma').map(([ds, name]) => `${ds}/${[].concat(name).join('|')}`).join(', ');
   }
@@ -145,7 +152,8 @@ function sidebar(project, { current = null, findings = null, comments = [], prop
       return `<div class="sec">${h(section)}</div>${items}`;
     })
     .join('');
-  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a></div>`;
+  const nComponents = Object.keys(project.components ?? {}).length;
+  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a><a class="side-link${current === 'components' ? ' current' : ''}" href="components.html"><span class="name">${D.library}</span><span class="hint">${nComponents}</span></a></div>`;
   return `<nav class="side"><div class="brand">${D.screens} <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
 }
 
@@ -171,10 +179,25 @@ function modeControls(project) {
     .join('');
 }
 
-function page({ title, tokens, modeCss = '', extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
+// Component bindings. A contract's `tokens:` become custom properties scoped to the element's
+// wrapper — `--k-button-bg: var(--color-primary)` — and a variant's overrides sit on the
+// wrapper's data attribute for that prop. Namespaced by kind, so a card's padding never leaks
+// into the button inside it; written as var(--token), so a theme switch flows through.
+function componentCss(project) {
+  const rules = [];
+  for (const c of Object.values(project.components ?? {})) {
+    const decl = (b) => Object.entries(b ?? {}).map(([slot, token]) => `--k-${attrName(c.kind)}-${attrName(slot)}: ${tokenVar(token)}`).join('; ');
+    if (c.tokens && Object.keys(c.tokens).length) rules.push(`.el-${attrName(c.kind)} { ${decl(c.tokens)}; }`);
+    for (const [prop, options] of Object.entries(c.variants ?? {}))
+      for (const [opt, b] of Object.entries(options ?? {})) if (b && Object.keys(b).length) rules.push(`.el-${attrName(c.kind)}[data-${attrName(prop)}="${h(opt)}"] { ${decl(b)}; }`);
+  }
+  return rules.join('\n');
+}
+
+function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
   return `<!doctype html>
 <html lang="${h(lang)}"><head><meta charset="utf-8"><title>${h(title)}</title>
-<style>${tokensToCss(tokens)}\n${modeCss}\n${CSS}</style>${extraCss}</head>
+<style>${tokensToCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
 <script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
@@ -223,7 +246,7 @@ ${refs ? `<div class="section-title">${D.references}</div><div class="hint" styl
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: doc.screen, tokens, modeCss: modeCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
+  return page({ title: doc.screen, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
 }
 
 export function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false } = {}) {
@@ -271,12 +294,70 @@ ${cards}
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: D.screens, tokens, modeCss: modeCss(project), body, api, screen: '', comments: [], lang });
+  return page({ title: D.screens, tokens, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: '', comments: [], lang });
 }
 
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
 // state AS-IS beside TO-BE. This is the sketch step of DESIGN.md §7 — nothing is written
 // until a person has seen the screen it would produce.
+// The library: every contract in the registry, drawn from its own sample — one picture, and
+// one more per option of every prop that carries variant bindings — with its props, slots and
+// bindings beside it. What a Figma library page was: the design system, seen whole.
+export function renderLibrary(project, { branch = null, adapter = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const maps = mapsFor(project);
+  const registry = project.components ?? {};
+  const stub = { doc: { elements: [] }, lineOf: () => null };
+  const picture = (contract, el) => {
+    const view = expandComponents({ elements: [el], layout: {} }, registry);
+    const r = makeRenderer(stub, view.layout, maps, adapter, registry);
+    return `<div class="lib-pic">${view.elements.map((x) => r.element(x)).join('')}</div>`;
+  };
+  const propRow = ([name, def]) => {
+    const type = def?.type ?? 'any';
+    const detail = type === 'enum' ? (def.options ?? []).join(' · ') : def?.default !== undefined ? `= ${v(def.default)}` : '';
+    return `<tr><td><code>${h(name)}</code>${def?.required ? ` <span class="pill tbd">${D.requiredMark}</span>` : ''}</td><td class="hint">${h(type)}</td><td>${h(detail)}</td><td class="hint">${h(def?.description ?? '')}</td></tr>`;
+  };
+  const bindingRows = (contract) => {
+    const rows = Object.entries(contract.tokens ?? {}).map(([slot, t]) => `<tr><td><code>${h(slot)}</code></td><td><code>${h(t)}</code></td></tr>`);
+    for (const [prop, options] of Object.entries(contract.variants ?? {}))
+      for (const [opt, b] of Object.entries(options ?? {})) for (const [slot, t] of Object.entries(b ?? {})) rows.push(`<tr><td><code>${h(slot)}</code> <span class="hint">${h(prop)}=${h(opt)}</span></td><td><code>${h(t)}</code></td></tr>`);
+    return rows.join('');
+  };
+  const sections = Object.values(registry)
+    .sort((a, b) => a.kind.localeCompare(b.kind))
+    .map((c) => {
+      const sample = { id: `sample-${c.kind}`, kind: c.kind, ...(c.sample ?? {}) };
+      const variantPics = Object.entries(c.variants ?? {})
+        .flatMap(([prop, options]) => Object.keys(options ?? {}).map((opt) => `<div class="lib-variant"><div class="hint">${h(prop)} = ${h(opt)}</div>${picture(c, { ...sample, id: `${sample.id}-${prop}-${opt}`, [prop]: c.props?.[prop]?.type === 'boolean' ? opt === 'true' : opt })}</div>`))
+        .join('');
+      const compound = Array.isArray(c.elements) && c.elements.length;
+      const meta = [c.file ? `components/${h(basenameOf(c.file))}` : `<span class="bad">${D.legacyKind}</span>`, maps[c.kind] ? `${h(maps[c.kind])}` : '', compound ? D.compound : ''].filter(Boolean).join(' · ');
+      const props = Object.entries(c.props ?? {});
+      return `<section class="lib" id="k-${h(c.kind)}">
+<h3>${h(c.kind)}</h3><div class="hint">${h(c.description ?? '')}</div><div class="hint lib-meta">${meta}</div>
+<div class="lib-row">${picture(c, sample)}${variantPics ? `<div class="lib-variants">${variantPics}</div>` : ''}</div>
+${props.length ? `<div class="section-title">${D.propsLabel}</div><table class="props">${props.map(propRow).join('')}</table>` : ''}
+${c.slots?.length ? `<div class="section-title">${D.slotsLabel}</div><div class="hint">${c.slots.map((s) => `<code>${h(s)}</code>`).join(' ')}</div>` : ''}
+${c.tokens || c.variants ? `<div class="section-title">${D.bindingsLabel}</div><table class="props">${bindingRows(c)}</table>` : ''}
+</section>`;
+    })
+    .join('');
+  const body = `<div class="shell">
+${sidebar(project, { current: 'components', proposals: [] })}
+<main class="main">
+<header class="top"><h1>${D.library}</h1><span class="meta">${Object.keys(registry).length}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}</header>
+${sections || `<div class="hint">${D.noneOfKind}</div>`}
+</main>
+<aside id="inspector" class="drawer"></aside>
+</div>`;
+  return page({ title: D.library, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+}
+const basenameOf = (p) => String(p).split('/').pop();
+
 export function renderProposal(project, proposal, { branch = null, adapter = null, api = false } = {}) {
   const lang = languageOf(project);
   const D = dictionary(lang);
@@ -328,5 +409,5 @@ ${verdict}
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
+  return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
 }

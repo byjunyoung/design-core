@@ -1,0 +1,21 @@
+kind: number
+description: A number.
+maps_to:
+  antd: InputNumber
+  mui: TextField
+props:
+  value:
+    type: number
+  min:
+    type: number
+  max:
+    type: number
+  step:
+    type: number
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample:
+  value: 3

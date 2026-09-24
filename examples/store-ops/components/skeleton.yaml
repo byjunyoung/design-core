@@ -1,0 +1,14 @@
+kind: skeleton
+description: Grey bars while the real thing loads.
+maps_to:
+  antd: Skeleton
+  mui: Skeleton
+props:
+  rows:
+    type: number
+    default: 3
+tokens:
+  bg: color.surface
+  border: color.border
+sample:
+  rows: 4

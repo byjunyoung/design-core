@@ -1,0 +1,17 @@
+kind: date
+description: A date.
+maps_to:
+  antd: DatePicker
+  mui: TextField
+props:
+  format:
+    type: string
+    default: YYYY.MM.DD
+  value:
+    type: string
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample: {}

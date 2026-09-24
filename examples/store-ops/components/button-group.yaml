@@ -1,0 +1,14 @@
+kind: button-group
+description: Buttons that act as one control.
+anchors: [option]
+props:
+  options:
+    type: list
+tokens:
+  bg: color.primary
+  text: color.primary-text
+  border: color.border
+sample:
+  options:
+    - Day
+    - Week

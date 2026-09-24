@@ -1,0 +1,29 @@
+kind: modal
+description: A dialog over the screen. Its elements are its children; notice is a line under them.
+maps_to:
+  antd: Modal
+  mui: Dialog
+props:
+  title:
+    type: string
+  notice:
+    type: any
+  size:
+    type: enum
+    options:
+      - sm
+      - md
+      - lg
+    default: md
+  overlay:
+    type: element
+    description: a busy veil a state lays over the dialog
+  toast:
+    type: element
+tokens:
+  bg: color.bg
+  text: color.text
+  radius: radius.md
+  padding: space.lg
+sample:
+  title: Edit item

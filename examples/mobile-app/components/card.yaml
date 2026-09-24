@@ -1,0 +1,20 @@
+kind: card
+description: A bordered surface that groups related elements; the title names the group.
+maps_to: { antd: Card, mui: Card }
+
+props:
+  title: { type: string }
+  hint: { type: string, description: small text after the title }
+  # what a state lays over the card, as an element: a loading overlay, a toast, an inline notice
+  overlay: { type: element }
+  toast: { type: element }
+  notice: { type: element }
+
+tokens:
+  bg: color.bg
+  border: color.border
+  radius: radius.md
+  padding: space.md
+  gap: space.md
+
+sample: { title: Order summary }

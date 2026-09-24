@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — 2026-09-24
+
+Kinds are files. The component library lives next to the screens, as text.
+
+- **`components/<kind>.yaml`** is a kind's contract: `props` (type, required, default, enum options), `slots`, `anchors`, `maps_to`, `tokens` (slot → semantic token), `variants` (bindings per option), `sample`. `init` writes one for every bundled kind; `conventions.kinds` is gone from the example and the examples, still reads as legacy, and **`doan migrate kinds <dir>`** moves a project's rows into files (DESIGN.md §4.5).
+- **Bindings drive the picture.** A contract's `tokens` become `--k-<kind>-<slot>` on the element, a variant's on `data-<prop>="<option>"`; the bundled set reads them with fallbacks. Change `button.yaml` and every button changes.
+- **Compound components.** A contract with `elements` is drawn as that tree: `$name` for a prop, `${name}` inside text, `{ slot: name }` for a slot, `show_when: soldout` settled from props. Expanded after the state merge, so `set: { soldout: true }` is what the tree sees; children are `<instance>/<child>` and cannot be patched from the screen.
+- **L21** warns on a prop a contract does not declare; **L22** blocks a missing required prop, an option the kind lacks, a slot it does not declare; **L23** is one line per project for rows still in `conventions.kinds`. L06 and L10 read the registry. Contract bindings go through L18/L19 like a layout does.
+- **Components page** in the viewer: every contract drawn from its sample, one picture per variant option, with props, slots and bindings. `doan components <dir>`; MCP `list_components`; the `draw` prompt reads it and `list_tokens` before naming a kind.
+- `map figma --write` writes `maps_to.figma` into the component file; `import figma` resolves kinds through the registry.
+- Fixed on the way: `display-settings` in `examples/store-ops` had an unquoted comma in a `tooltip` value (L21 found it); `button-group` declares its `option` anchor.
+
 ## 0.3.0 — 2026-09-24
 
 Tokens as a design system, not a colour list.

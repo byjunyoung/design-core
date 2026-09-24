@@ -2,7 +2,7 @@
 
 Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
 
-What runs: `lint` (schema + L01–L20), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L23), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -187,10 +187,7 @@ states:
     list:   [Default, Empty, Loading, Error]
     form:   [Default, Validation]
     search: [Default, Empty]
-kinds:
-  table:       { anchors: [row, header], maps_to: { antd: Table } }
-  filter-form: { maps_to: { antd: Form } }
-  page-header: { anchors: [action] }            # no maps_to: renders with the bundled default
+# kinds are files — components/<kind>.yaml (§4.5). A kinds: block here still reads, as legacy; L23 asks to move it
 layout:
   containers: [stack, grid, columns]
   spacing_tokens: 'space.'                      # prefix; only names starting with it may appear in layout
@@ -232,6 +229,31 @@ What the engine does with them: `loadTokens` resolves the default context into t
 
 Known limit: a component library adapter (antd, MUI) is themed at render time from the default context. The mode select recolours the bundled kinds and the page chrome, not the library's own pieces. Rendering once per context would close that at the cost of one server-side pass per theme — §13.
 
+### 4.5 Components
+
+```
+design/components/
+├── button.yaml        a bundled kind's contract: props, enum options, token slots, per-variant bindings
+├── table.yaml         anchors and maps_to live here too — the file is the registry entry
+├── menu-card.yaml     a compound part: props, a slot, and the elements it is drawn from
+└── kinds.js           only with --base none: the drawing set, still yours
+```
+
+Decided 2026-09-24, right after the token stage, one question at a time:
+
+| Decision | Chosen | Why |
+|---|---|---|
+| Where a kind is declared | one file per kind under `components/`; `conventions.kinds` is gone from `init` and from the examples | the owner chose the full move over keeping two places. A file is a thing a team owns and edits; a row in conventions was the tool's. A `kinds:` block still reads, as legacy — L23 (one line per project) and `doan migrate kinds` move it |
+| What a contract holds | `props` (type, required, default, enum options), `slots`, `anchors`, `maps_to`, `tokens` (slot → semantic token), `variants` (bindings per enum option), `sample`, and for a compound part `elements` + `layout` | the facts a Figma component carries — properties, variants, the tokens it is bound to — as text a diff can read |
+| Bindings reach the picture | `tokens:` becomes `--k-<kind>-<slot>` custom properties on the element's wrapper, a variant's on `[data-<prop>="<option>"]`; the bundled css reads them with fallbacks | the owner chose "in the picture" over "recorded and checked": change `button.yaml` and every button changes, as a library component would. Namespaced by kind so a card's padding never leaks into the button inside it; written as `var(--token)` so a theme switch flows through |
+| What an instance may set | only declared props and slots. L21 warns on anything else; L22 blocks a missing required prop, an option the kind lacks, a slot it does not declare | the owner's rule: the screen holds the instance, the contract holds the part. A patch cannot reach inside — children are `<instance>/<child>`, a shape the screen schema forbids |
+| Composition | `elements:` in the contract; `$name` is a prop's value, `${name}` its text inside a string, `{ slot: name }` a slot; a `show_when` that names a prop is settled; expanded after `mergeState`, before render | a state patch that sets a prop is what the tree sees; the inspector on an expanded child names the component file, not the screen |
+| Required props | rare in the bundled set — a button's label, a caption's text, a field's label; never a list | a Figma import produces kinds without props; blocking every imported table on a missing columns list would fail the on-ramp on day one |
+
+What the engine does with them: `loadComponents` reads `components/*.yaml` (and the legacy rows) into `project.components`; lint, render, `map figma` and `import figma` read only that. The viewer's **Components** page draws every contract from its `sample` — one picture, and one more per option of every prop with variant bindings — beside its props, slots and bindings; `list_components` (verb and MCP tool) is the same list as JSON, and the `draw` prompt reads it before naming a kind. `init` copies the bundled contracts into the project with `maps_to` trimmed to the chosen base.
+
+Known limits: a library adapter (antd, MUI) draws from the props its own code reads — a contract's bindings and enum options do not reach it (§13). The shipped contracts were gated against five real projects (three examples, two field projects) for zero L21 before shipping; a prop a team uses that the bundled contract lacks is a one-line edit to a file they own, which is the point.
+
 ## 5. Lint catalogue
 
 Blocking stops handoff; warning is reported and counted. Each rule names the `fig` rule it descends from.
@@ -247,7 +269,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L07 patch-target | blocking | a state or variant patch targets an element or layout key that exists | — |
 | L08 tbd-count | warning · blocking when overdue | every `$tbd`, grouped by owner | placeholder text |
 | L09 refs-required | warning | the refs `refs.required` names are present | task_tracker link |
-| L10 kind-known | warning | every `kind` is in conventions | component residue (loosely) |
+| L10 kind-known | warning | every `kind` has a `components/<kind>.yaml` | component residue (loosely) |
 | L11 canonical-clean | blocking | on the canonical branch: no `$tbd`, no blocking findings | canonical strictness |
 | L12 duplicate-id | blocking | ids unique across the project | — |
 | L13 layout-vocabulary | blocking | `layout` uses only declared containers, size classes and token names; no bare units | — (new) |
@@ -258,6 +280,9 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L18 token-missing | warning | a layout `gap` or `padding` names a token that resolves to nothing | — (new) |
 | L19 token-primitive | blocking | a layout names a token from a file `conventions.tokens.primitive` lists | colour token binding (`fig:tokens`), moved from the canvas to the file |
 | L20 token-problem | as the loader says | a broken alias, a `$ref` the resolver cannot open, a token one theme has and another does not | — (new) |
+| L21 prop-undeclared | warning | an element, a replace patch or a set patch carries a prop its contract does not declare | component residue by property |
+| L22 prop-invalid | blocking | a required prop is missing; an enum value is not an option; a slot is not declared | — (new) |
+| L23 kinds-legacy | warning, one per project | rows still in `conventions.kinds` — `doan migrate kinds` | — (new) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -333,11 +358,14 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `propose <screen> <after>` · `apply <id> --by` · `reject <id>` · `undo <id>` · `proposals` | the edit loop (§7): diff + lint delta + tier; text-only auto-applies; structure waits for a person | that file, and `.proposals/` |
 | `rename <old> <new>` | file and every reference | project |
 | `import html <dir>` | Claude Design / Open Design / any HTML export → screen files: `kind` by reverse `maps_to` on component markup, `layout` from flex/grid structure, unresolved → `$tbd` | new files |
-| `map figma <key> --page [--write]` | the page's component masters (sets) paired with kinds by name → `maps_to.figma` lists in conventions; unplaced masters listed | conventions.yaml |
+| `map figma <key> --page [--write]` | the page's component masters (sets) paired with kinds by name → `maps_to.figma` in `components/<kind>.yaml` (the conventions row for a project from before 0.4); unplaced masters listed | component files |
+| `tokens` | every token with its value, per-theme values, file and tier | no |
+| `components` | every contract — props, slots, bindings, compound or not | no |
+| `migrate kinds` | the rows of `conventions.kinds` → `components/<kind>.yaml`, the block dropped | components/, conventions.yaml |
 | `import figma <key> --page` | on-ramp for a team already drawing, over the REST API: `{screen}-{state}` frames → files, other states as patches by diffing element trees; `kind` by `maps_to.figma` on the master name, then by node-name hints; `layout` from auto-layout in token names; flows from prototype links; scaffold frames (`[label]`, `-->`) skipped; unresolved → `$tbd` owned by `import`; required states nobody drew → placeholders; no convention at all → one screen per top-level frame, flagged | new files, sections.yaml |
 | `export <adapter>` | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
 
-MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view) and `list_missing()` (L03/L08 only), because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
+MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view), `list_missing()` (L03/L08 only), `list_tokens()` and `list_components()`, because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
 
 ## 10. The service
 
@@ -396,7 +424,8 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
 | Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
-| Components as files | next | contract (props, variants, states, token bindings) and composition (a team's own compound parts) as `components/*.yaml`; a screen instance may set only what the component declares. Decided 2026-09-24, planned after tokens |
+| Adapter reads the contract | design | antd and MUI pieces draw from the props their own code reads; a contract's enum options and bindings do not reach them (§4.5). An adapter could take `sample`, options and bindings from the registry |
+| Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
 | Flow map | next | the whole product's flows on one page, auto-laid-out (ELK) and grouped by section; no coordinates in the files. Then a click-through prototype on top of it |
 | Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |

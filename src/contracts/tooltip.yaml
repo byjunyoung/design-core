@@ -1,0 +1,15 @@
+kind: tooltip
+description: A ⓘ that shows its items when hovered.
+maps_to:
+  antd: Tooltip
+  mui: Tooltip
+props:
+  items:
+    type: list
+  trigger:
+    type: string
+tokens:
+  text: color.muted
+sample:
+  items:
+    - Counted every night

@@ -1,0 +1,14 @@
+kind: sortable-list
+description: Rows a person can drag into order.
+props:
+  item:
+    type: string
+  reorder:
+    type: boolean
+    default: true
+    description: rows can be dragged
+tokens:
+  border: color.border
+  radius: radius.sm
+sample:
+  item: category

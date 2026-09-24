@@ -1,4 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseDocument } from 'yaml';
 import { KIND_HINTS } from './figma.js';
@@ -19,8 +20,10 @@ export function masterNames(file) {
   return [...names];
 }
 
-export function suggestFigmaMap(names, conventions) {
-  const kinds = conventions.kinds ?? {};
+// `registry` is project.components (kind → contract); a conventions object still works for
+// the rows it carries in `kinds`.
+export function suggestFigmaMap(names, registry) {
+  const kinds = registry?.kinds && !registry?.kinds?.kind ? registry.kinds : (registry ?? {});
   const already = {};
   for (const [kind, def] of Object.entries(kinds)) if (def?.maps_to?.figma) already[kind] = [].concat(def.maps_to.figma);
   const mapped = {};
@@ -40,23 +43,41 @@ export function suggestFigmaMap(names, conventions) {
   return { mapped, unmatched, already };
 }
 
+// The pairs go where the kind lives: components/<kind>.yaml when that file exists, else the
+// row in conventions.kinds a project from before 0.4 still has. A kind with neither is skipped.
 export async function writeFigmaMap(dir, mapping) {
   const file = join(dir, 'conventions.yaml');
   const doc = parseDocument(await readFile(file, 'utf8'));
   const kinds = doc.get('kinds');
   const written = [];
   const skipped = [];
+  let touchedConventions = false;
+  const merge = (current, masters) => {
+    const have = [].concat(current ?? []);
+    const next = [...have, ...[].concat(masters).filter((m) => !have.includes(m))];
+    return next.length === have.length ? null : next.length === 1 ? next[0] : next;
+  };
   for (const [kind, masters] of Object.entries(mapping)) {
+    const target = join(dir, 'components', `${kind}.yaml`);
+    if (existsSync(target)) {
+      const cdoc = parseDocument(await readFile(target, 'utf8'));
+      const next = merge(cdoc.getIn(['maps_to', 'figma'], false)?.toJSON?.() ?? cdoc.getIn(['maps_to', 'figma']), masters);
+      if (next === null) continue;
+      cdoc.setIn(['maps_to', 'figma'], next);
+      await writeFile(target, cdoc.toString({ lineWidth: 0 }));
+      written.push(kind);
+      continue;
+    }
     if (!kinds?.has?.(kind)) {
       skipped.push(kind);
       continue;
     }
-    const current = [].concat(doc.getIn(['kinds', kind, 'maps_to', 'figma'], false)?.toJSON?.() ?? doc.getIn(['kinds', kind, 'maps_to', 'figma']) ?? []);
-    const next = [...current, ...[].concat(masters).filter((m) => !current.includes(m))];
-    if (next.length === current.length) continue;
-    doc.setIn(['kinds', kind, 'maps_to', 'figma'], next.length === 1 ? next[0] : next);
+    const next = merge(doc.getIn(['kinds', kind, 'maps_to', 'figma'], false)?.toJSON?.() ?? doc.getIn(['kinds', kind, 'maps_to', 'figma']), masters);
+    if (next === null) continue;
+    doc.setIn(['kinds', kind, 'maps_to', 'figma'], next);
+    touchedConventions = true;
     written.push(kind);
   }
-  if (written.length) await writeFile(file, doc.toString({ lineWidth: 0 }));
+  if (touchedConventions) await writeFile(file, doc.toString({ lineWidth: 0 }));
   return { written, skipped };
 }

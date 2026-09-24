@@ -1,0 +1,15 @@
+kind: snackbar
+description: A short message at the bottom, with one action.
+props:
+  text:
+    type: string
+    required: true
+  action:
+    type: string
+tokens:
+  bg: color.text
+  text: color.bg
+  radius: radius.sm
+sample:
+  text: Added to cart
+  action: View

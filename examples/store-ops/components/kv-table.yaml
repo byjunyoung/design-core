@@ -1,0 +1,19 @@
+kind: kv-table
+description: "Label · value rows, several per line: rows is a list of key lists."
+maps_to:
+  antd: Descriptions
+props:
+  title:
+    type: string
+  rows:
+    type: list
+  columns:
+    type: number
+tokens:
+  border: color.border
+  muted: color.muted
+sample:
+  rows:
+    - - name
+      - status
+    - - created_at

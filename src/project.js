@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { parseDocument, LineCounter, isNode } from 'yaml';
 import { loadTokens } from './tokens.js';
+import { loadComponents } from './components.js';
 
 // A screen file, parsed twice over: `doc` is the plain object every verb works on,
 // `lineOf(path)` maps a YAML path back to a 1-based line so findings can point at it.
@@ -36,5 +37,7 @@ export async function loadProject(dir) {
   // carries every context, the source and any problems for lint. Missing is fine: render
   // falls back to the bundled set.
   const tokenSet = await loadTokens(dir);
-  return { dir, conventions, sections, screens, tokens: tokenSet.tokens, tokenSet, screenName: (s) => basename(s.file) };
+  // components/*.yaml plus whatever conventions.kinds still holds — see src/components.js.
+  const componentSet = await loadComponents(dir, conventions);
+  return { dir, conventions, sections, screens, tokens: tokenSet.tokens, tokenSet, components: componentSet.registry, componentSet, screenName: (s) => basename(s.file) };
 }

@@ -1,0 +1,22 @@
+kind: confirm
+description: A yes-or-no question with its buttons.
+maps_to:
+  antd: Modal.confirm
+  mui: Dialog
+props:
+  title:
+    type: string
+  text:
+    type: string
+  buttons:
+    type: list
+tokens:
+  bg: color.bg
+  text: color.text
+  radius: radius.md
+sample:
+  title: Delete this?
+  text: This cannot be undone.
+  buttons:
+    - Cancel
+    - Delete

@@ -1,0 +1,11 @@
+kind: placeholder
+description: What prep leaves where a state has no design yet. text is a $tbd.
+props:
+  text:
+    type: any
+tokens:
+  bg: color.placeholder
+  border: color.placeholder-border
+  text: color.muted
+sample:
+  text: Error state — undesigned

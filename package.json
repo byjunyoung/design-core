@@ -1,6 +1,6 @@
 {
   "name": "@junyoung735/doan",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "도안 — screens as files. The agent draws; you say what to change. Lint, states, proposals, a live viewer, MCP.",
   "type": "module",
   "license": "MIT",

@@ -1,0 +1,20 @@
+kind: page-header
+description: "The top of a page: its title, the tabs under it, the actions on the right."
+anchors:
+  - action
+  - tab
+props:
+  title:
+    type: string
+  tabs:
+    type: list
+    description: tab labels; the first is active
+  actions:
+    type: list
+    description: buttons on the right, as elements or labels
+tokens:
+  text: color.text
+sample:
+  title: Orders
+  actions:
+    - New order

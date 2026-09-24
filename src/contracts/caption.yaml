@@ -1,0 +1,18 @@
+kind: caption
+description: A line of text. style makes it a title or strong.
+props:
+  text:
+    type: string
+    required: true
+  style:
+    type: enum
+    options:
+      - plain
+      - title
+      - strong
+    default: plain
+tokens:
+  text: color.text
+sample:
+  text: Americano
+  style: title

@@ -1,0 +1,21 @@
+kind: select
+description: One option from a list.
+maps_to:
+  antd: Select
+  mui: TextField
+props:
+  options:
+    type: list
+  placeholder:
+    type: string
+  value:
+    type: string
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample:
+  options:
+    - Card
+    - Cash

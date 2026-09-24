@@ -1,0 +1,12 @@
+kind: fieldset
+description: Fields that belong together, with a hint under them.
+props:
+  hint:
+    type: string
+tokens:
+  bg: color.bg
+  border: color.border
+  radius: radius.md
+  padding: space.md
+  gap: space.md
+sample: {}

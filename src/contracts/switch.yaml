@@ -1,0 +1,17 @@
+kind: switch
+description: On or off, as a toggle.
+maps_to:
+  antd: Switch
+  mui: Switch
+props:
+  label:
+    type: string
+  on:
+    type: boolean
+    default: false
+tokens:
+  border: color.border
+  accent: color.primary
+sample:
+  label: Notifications
+  on: true

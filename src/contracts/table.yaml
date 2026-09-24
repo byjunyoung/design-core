@@ -1,0 +1,16 @@
+kind: table
+description: Rows of records. Columns are names or { key, label, sortable, sub, kind }; cells show samples unless the file sets them.
+anchors: [row, header]
+maps_to: { antd: Table, mui: Table }
+
+props:
+  columns: { type: list }
+  selectable: { type: boolean, default: false, description: a checkbox column first }
+  row_action: { type: string, description: what a tap on a row does }
+  selected_row: { type: string, description: which row a Selected state highlights }
+
+tokens:
+  border: color.border
+  muted: color.muted
+
+sample: { columns: [name, status, updated_at] }

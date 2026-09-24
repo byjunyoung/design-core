@@ -1,0 +1,20 @@
+kind: app-bar
+description: "The bar at the top of a mobile screen: back, title, actions."
+anchors:
+  - back
+  - action
+props:
+  title:
+    type: string
+  back:
+    type: boolean
+    default: false
+  actions:
+    type: list
+tokens:
+  bg: color.bg
+  text: color.text
+  accent: color.primary
+sample:
+  title: Cart
+  back: true

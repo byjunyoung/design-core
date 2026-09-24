@@ -1,0 +1,6 @@
+kind: sheet-handle
+description: The grab bar of a sheet.
+props: {}
+tokens:
+  bg: color.border
+sample: {}

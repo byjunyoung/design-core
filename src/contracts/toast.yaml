@@ -1,0 +1,26 @@
+kind: toast
+description: A short message that goes away by itself.
+maps_to:
+  antd: message
+  mui: Snackbar
+props:
+  text:
+    type: string
+    required: true
+  level:
+    type: enum
+    options:
+      - info
+      - success
+      - error
+    default: info
+tokens:
+  bg: color.text
+  text: color.bg
+  radius: radius.sm
+variants:
+  level:
+    error:
+      bg: color.danger
+sample:
+  text: Saved

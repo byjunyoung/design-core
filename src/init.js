@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, copyFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,7 +66,7 @@ const PROJECT_README = (base) => `# design
 
 Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens/\` (DTCG files: primitives, semantic, light, dark, and the resolver).
 
-Component base: **${base}**${base === 'none' ? ' — the component set is in `components/kinds.js` and is yours to edit.' : ' — kinds map to that library through `maps_to` in conventions.yaml.'}
+Component base: **${base}**${base === 'none' ? ' — the component set is in `components/kinds.js` and is yours to edit.' : ' — kinds map to that library through `maps_to` in `components/<kind>.yaml`.'}
 
 \`\`\`bash
 npx doan lint .          # what is missing
@@ -89,18 +89,24 @@ export async function initProject(dir, { base = 'none' } = {}) {
   // conventions: the example, with the render section set and, for self-built, no maps_to.
   const doc = parseDocument(await readFile(here('../conventions.example.yaml'), 'utf8'));
   doc.setIn(['render', 'base'], base);
-  if (base === 'none') {
-    doc.setIn(['render', 'components'], './components/kinds.js');
-    const kinds = doc.get('kinds');
-    for (const pair of kinds.items) if (pair.value?.has?.('maps_to')) pair.value.delete('maps_to');
-  } else {
-    doc.setIn(['render', 'components'], null);
-    for (const pair of doc.get('kinds').items) {
-      const m = pair.value?.get?.('maps_to');
-      if (m && typeof m.get === 'function') for (const k of [...m.items.map((i) => i.key.value)]) if (k !== base) m.delete(k);
-    }
-  }
+  doc.setIn(['render', 'components'], base === 'none' ? './components/kinds.js' : null);
+  if (doc.has('kinds')) doc.delete('kinds'); // kinds are files now (components/<kind>.yaml); the block is read only as legacy
   await writeFile(join(dir, 'conventions.yaml'), doc.toString({ lineWidth: 0 }));
+
+  // components/: every bundled contract, its maps_to trimmed to the chosen base. From here on
+  // the registry is the team's — a kind is a file they edit, not a row the tool owns.
+  await mkdir(join(dir, 'components'), { recursive: true });
+  for (const name of (await readdir(here('./contracts/'))).filter((n) => n.endsWith('.yaml')).sort()) {
+    const cdoc = parseDocument(await readFile(here(`./contracts/${name}`), 'utf8'));
+    const m = cdoc.get('maps_to');
+    if (base === 'none') cdoc.delete('maps_to');
+    else if (m && typeof m.get === 'function') {
+      for (const k of [...m.items.map((i) => i.key.value)]) if (k !== base && k !== 'figma') m.delete(k);
+      if (!m.items.length) cdoc.delete('maps_to');
+    }
+    await writeFile(join(dir, 'components', name), cdoc.toString({ lineWidth: 0 }));
+  }
+  created.push('components/<kind>.yaml');
   created.push('conventions.yaml');
 
   await writeFile(join(dir, 'sections.yaml'), '- "00. Sample - delete me"\n');

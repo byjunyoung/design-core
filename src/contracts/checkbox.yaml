@@ -1,0 +1,19 @@
+kind: checkbox
+description: On or off, with a label.
+maps_to:
+  antd: Checkbox
+  mui: Checkbox
+props:
+  label:
+    type: string
+  text:
+    type: string
+  checked:
+    type: boolean
+    default: false
+tokens:
+  border: color.border
+  accent: color.primary
+sample:
+  label: Remember me
+  checked: true

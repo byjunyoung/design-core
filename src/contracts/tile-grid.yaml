@@ -1,0 +1,19 @@
+kind: tile-grid
+description: A grid of status tiles.
+anchors:
+  - tile
+props:
+  columns:
+    type: number
+    default: 10
+  per_page:
+    type: number
+    default: 25
+  tile:
+    type: element
+    description: the tile each cell is drawn as
+tokens:
+  border: color.border
+sample:
+  columns: 8
+  per_page: 16

@@ -1,0 +1,31 @@
+kind: list-cell
+description: "One row of a mobile list: thumbnail, title, subtitle, a value on the right."
+anchors:
+  - cell
+props:
+  title:
+    type: string
+    required: true
+  subtitle:
+    type: string
+  value:
+    type: string
+  thumbnail:
+    type: boolean
+    default: false
+  chevron:
+    type: boolean
+    default: true
+  trailing:
+    type: any
+    description: "what sits at the right edge: a value, a chevron, an element"
+tokens:
+  bg: color.bg
+  text: color.text
+  muted: color.muted
+  border: color.border
+sample:
+  title: Americano
+  subtitle: Iced · Tall
+  value: 4,500
+  thumbnail: true

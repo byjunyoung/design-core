@@ -28,7 +28,7 @@ test('init --base none copies the component set into the project so the team own
   const conv = parse(readFileSync(join(dir, 'conventions.yaml'), 'utf8'));
   assert.equal(conv.render.base, 'none');
   assert.equal(conv.render.components, './components/kinds.js');
-  assert.ok(!Object.values(conv.kinds).some((k) => k?.maps_to), 'self-built has no maps_to');
+  assert.ok(!parse(readFileSync(join(dir, 'components', 'table.yaml'), 'utf8')).maps_to, 'self-built has no maps_to');
   assert.ok(r.created.length >= 4);
 });
 
@@ -50,8 +50,8 @@ test('init --base antd fills maps_to for the shipped kinds and names the base', 
   await initProject(dir, { base: 'antd' });
   const conv = parse(readFileSync(join(dir, 'conventions.yaml'), 'utf8'));
   assert.equal(conv.render.base, 'antd');
-  assert.equal(conv.kinds.table.maps_to.antd, 'Table');
-  assert.ok(!existsSync(join(dir, 'components')));
+  assert.equal(parse(readFileSync(join(dir, 'components', 'table.yaml'), 'utf8')).maps_to.antd, 'Table');
+  assert.ok(!existsSync(join(dir, 'components', 'kinds.js')), 'a library base ships no self-built drawing set');
 });
 
 test('init refuses a base it does not know, and refuses to overwrite an existing project', async () => {
@@ -82,8 +82,8 @@ test('mui is a ready base and shadcn says why it is not one', async () => {
   const { parse } = await import('yaml');
   const { readFileSync } = await import('node:fs');
   const conv = parse(readFileSync(join(dir, 'conventions.yaml'), 'utf8'));
-  assert.equal(conv.kinds.table.maps_to.mui, 'Table');
-  assert.equal(conv.kinds.table.maps_to.antd, undefined);
+  assert.equal(parse(readFileSync(join(dir, 'components', 'table.yaml'), 'utf8')).maps_to.mui, 'Table');
+  assert.equal(parse(readFileSync(join(dir, 'components', 'table.yaml'), 'utf8')).maps_to.antd, undefined);
   await assert.rejects(initProject(fresh(), { base: 'shadcn' }), /copied source/);
 });
 

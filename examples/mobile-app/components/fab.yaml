@@ -1,0 +1,13 @@
+kind: fab
+description: The floating action button.
+props:
+  label:
+    type: string
+  icon:
+    type: string
+    default: +
+tokens:
+  bg: color.primary
+  text: color.primary-text
+sample:
+  label: Add

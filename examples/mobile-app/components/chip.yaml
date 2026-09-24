@@ -1,0 +1,26 @@
+kind: chip
+description: A small pill; selected marks the chosen one.
+maps_to:
+  antd: Tag
+  mui: Chip
+props:
+  label:
+    type: string
+  text:
+    type: string
+  selected:
+    type: boolean
+    default: false
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+variants:
+  selected:
+    "true":
+      bg: color.text
+      text: color.bg
+      border: color.text
+sample:
+  label: Coffee
+  selected: true

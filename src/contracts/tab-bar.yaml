@@ -1,0 +1,19 @@
+kind: tab-bar
+description: The bar at the bottom of a mobile screen; one tab is active.
+anchors:
+  - tab
+props:
+  tabs:
+    type: list
+  active:
+    type: string
+tokens:
+  bg: color.bg
+  border: color.border
+  muted: color.muted
+  accent: color.primary
+sample:
+  tabs:
+    - Home
+    - Search
+    - Me

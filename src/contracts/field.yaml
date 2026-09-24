@@ -1,0 +1,29 @@
+kind: field
+description: A label and a control. control is an element (input, select…); error and caption are lines around it.
+props:
+  label:
+    type: string
+    required: true
+  control:
+    type: element
+  caption:
+    type: string
+  error:
+    type: string
+  reveals:
+    type: any
+  tooltip:
+    type: any
+    description: items shown on a ⓘ after the label
+  preview:
+    type: element
+    description: what the control shows after a choice — a thumbnail, a summary
+tokens:
+  text: color.text
+  muted: color.muted
+  accent: color.danger
+sample:
+  label: Email
+  control:
+    kind: input
+    placeholder: you@example.com

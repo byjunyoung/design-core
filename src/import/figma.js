@@ -79,9 +79,9 @@ function layoutOf(node, tokens) {
   return rule;
 }
 
-function makeResolver(file, conventions) {
+function makeResolver(file, registry) {
   const byFigma = {};
-  for (const [kind, def] of Object.entries(conventions.kinds ?? {}))
+  for (const [kind, def] of Object.entries(registry ?? {}))
     for (const name of [].concat(def?.maps_to?.figma ?? [])) byFigma[name] = kind;
   const masterName = (node) => {
     const c = file.components?.[node.componentId];
@@ -228,10 +228,10 @@ function framePattern(conventions) {
   return new RegExp(FRAME_PRESETS[raw] ?? raw, 'u');
 }
 
-export function importFigmaTree(file, { page, conventions, tokens = {}, fileKey = '' }) {
+export function importFigmaTree(file, { page, conventions, components = null, tokens = {}, fileKey = '' }) {
   const canvas = (file.document?.children ?? []).find((c) => c.type === 'CANVAS' && (!page || c.name === page));
   if (!canvas) throw new Error(`no page named "${page}" in the file (have: ${(file.document?.children ?? []).map((c) => c.name).join(', ')})`);
-  const resolve = makeResolver(file, conventions);
+  const resolve = makeResolver(file, components ?? conventions.kinds ?? {});
   const pattern = framePattern(conventions);
   const groups = {};
   const sections = [];

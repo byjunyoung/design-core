@@ -1,0 +1,8 @@
+kind: group
+description: A bare container — a button row, a pair of fields. Layout decides how it sits.
+props:
+  disabled:
+    type: boolean
+    default: false
+    description: every control inside is disabled
+sample: {}

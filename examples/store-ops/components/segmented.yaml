@@ -1,0 +1,18 @@
+kind: segmented
+description: One choice from a few, side by side.
+maps_to:
+  antd: Segmented
+  mui: ToggleButtonGroup
+props:
+  options:
+    type: list
+tokens:
+  bg: color.primary
+  text: color.primary-text
+  border: color.border
+  radius: radius.sm
+sample:
+  options:
+    - All
+    - Open
+    - Done

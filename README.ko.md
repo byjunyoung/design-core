@@ -135,7 +135,7 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 
 <img src="docs/img/antd-modal.png" alt="antd 어댑터: 수정 모달의 Default·Validation·Submitting을 진짜 antd 컴포넌트로" width="100%">
 
-`--base antd`나 `--base mui`는 kind를 그 라이브러리의 컴포넌트에 짝지어 서버에서 그리고, `tokens/`로 테마를 입힙니다. `--base none`은 기본 세트를 `design/components/`에 복사합니다 — 그때부터 그건 팀의 컴포넌트 라이브러리이고 도구는 그걸 소유하지 않습니다. shadcn/ui나 자체 디자인 시스템도 이 길입니다. 뷰어 자체의 말은 conventions의 `meta.language`(`en`, `ko`)를 따르고, 화면 내용은 절대 번역하지 않습니다.
+`--base antd`나 `--base mui`는 kind를 그 라이브러리의 컴포넌트에 짝지어 서버에서 그리고, `tokens/`로 테마를 입힙니다. `--base none`은 기본 세트를 `design/components/`에 복사합니다 — 그때부터 그건 팀의 컴포넌트 라이브러리이고 도구는 그걸 소유하지 않습니다. shadcn/ui나 자체 디자인 시스템도 이 길입니다. 뷰어 자체의 말은 conventions의 `meta.language`(`en`, `ko`)를 따르고, 화면 내용은 절대 번역하지 않습니다. kind 하나가 파일 하나입니다 — `components/<kind>.yaml`에 props·슬롯·바인딩된 토큰이 있고, 뷰어의 컴포넌트 페이지가 그 파일들로 전부 그립니다.
 
 ## 왜 파일과 명령줄인가
 
@@ -152,6 +152,8 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 | `init <dir> [--base none\|antd\|mui]` | 프로젝트 시작. `none`은 컴포넌트 세트를 복사해 내 것으로, 라이브러리 기반은 kind를 그 라이브러리에 대응 |
 | `bases` | 컴포넌트 기반 목록과 준비 여부 |
 | `tokens <dir>` | 토큰 전부 — 값, 테마별 값, 파일, 계층(primitive · semantic · bundled) |
+| `components <dir>` | kind 마다의 계약 — props, 슬롯, 토큰 바인딩, 복합 여부 |
+| `migrate kinds <dir>` | `conventions.kinds`의 행을 `components/<kind>.yaml`로 옮김 (0.4 이전 프로젝트) |
 | `lint <dir>` | 스키마 검사 + 규칙 L01–L20. 지적마다 파일·YAML 경로·줄. 차단이 있으면 exit 1 |
 | `prep <file>` | 유형이 요구하는데 없는 상태를 `$tbd` 자리표시로 채움 |
 | `diff <a> <b>` · `diff <file> --from <ref>` | 두 판의 AS-IS / TO-BE. 요소는 id로 비교 |
@@ -159,7 +161,7 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 | `serve <dir> [--port] [--components …]` | 살아있는 뷰어: 코멘트, 적용/반려, `/api/lint` |
 | `propose <dir> <screen> --with <new.yaml>` | 새 판을 diff·lint 전후·tier와 함께 대기열에 |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | 루프의 나머지 |
-| `map figma <dir> <key> --page "…" [--write]` | 피그마 페이지의 컴포넌트 마스터를 kind에 짝지음(`maps_to.figma`) |
+| `map figma <dir> <key> --page "…" [--write]` | 피그마 페이지의 컴포넌트 마스터를 kind에 짝지음(`components/<kind>.yaml`의 `maps_to.figma`) |
 | `import figma <dir> <key> --page "…"` | 프레임 묶음마다 화면 파일 하나. 상태는 패치. 못 푼 건 `$tbd` |
 | `mcp <dir>` | stdio 위 MCP 서버 |
 
@@ -167,10 +169,10 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 
 ```
 design/
-├── conventions.yaml     이름 규칙 · 플랫폼 · 화면 유형과 필수 상태 · kind 와 대응 · 배치 어휘 · 흐름 어휘 · 수명주기 · meta.language
+├── conventions.yaml     이름 규칙 · 플랫폼 · 화면 유형과 필수 상태 · 배치 어휘 · 흐름 어휘 · 수명주기 · meta.language
 ├── sections.yaml        기능 묶음, 순서대로
 ├── tokens/              DTCG 2025.10 — primitive · semantic · light · dark · theme.resolver.json. 예전 평평한 tokens.json 도 읽음
-├── components/          --base none 일 때만: 컴포넌트 세트의 내 사본
+├── components/          kind 마다 계약 하나(<kind>.yaml): props · 슬롯 · 토큰 바인딩 · 복합 부품이면 그 elements. --base none 이면 kinds.js(그리기 세트의 내 사본)도
 ├── screens/*.yaml       화면마다 파일 하나
 ├── .proposals/          편집 루프의 대기열
 └── .comments/           화면별 코멘트 (브랜치를 따라감)

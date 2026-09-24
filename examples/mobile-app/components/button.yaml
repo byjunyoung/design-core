@@ -1,0 +1,27 @@
+kind: button
+description: One action. The label says what happens; the variant says how much it matters.
+maps_to: { antd: Button, mui: Button }
+
+props:
+  label: { type: string, required: true }
+  variant: { type: enum, options: [default, primary, secondary, soft-primary, danger, icon], default: default }
+  size: { type: enum, options: [sm, md, full], default: md }
+  disabled: { type: boolean, default: false }
+  icon: { type: string, description: a glyph or icon name drawn before the label }
+  note: { type: string, description: a line of small print next to the button — what pressing it costs or needs }
+
+# what the picture reads: slot → semantic token. A variant overrides slots for its option.
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+variants:
+  variant:
+    primary: { bg: color.primary, text: color.primary-text, border: color.primary }
+    secondary: { bg: color.surface }
+    soft-primary: { text: color.primary, border: color.primary }
+    danger: { text: color.danger, border: color.danger }
+    icon: { text: color.primary }
+
+sample: { label: Save, variant: primary }

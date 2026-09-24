@@ -1,7 +1,8 @@
 import { mergeState } from './merge.js';
 import { resolveFlowTarget } from './flows.js';
 import { walkElements, findElement, elementIds } from './elements.js';
-import { basename } from 'node:path';
+import { basename, join } from 'node:path';
+import { elementProps, RESERVED_KEYS } from './components.js';
 import { hasToken } from './tokens.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 
@@ -11,6 +12,25 @@ import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 
 const BARE_UNIT = /^-?\d+(\.\d+)?(px|rem|em|%|pt)?$/;
 const isTbd = (x) => x && typeof x === 'object' && '$tbd' in x;
+
+// The component registry: components/*.yaml, or — for a project loaded without one, and for
+// the rows a conventions.yaml still carries — conventions.kinds read as legacy contracts.
+const registryOf = (ctx) => ctx.components ?? Object.fromEntries(Object.entries(ctx.conventions.kinds ?? {}).map(([k, d]) => [k, { kind: k, ...(d ?? {}), legacy: true, file: null }]));
+const describe = (c) => (c.file ? `components/${basename(c.file)}` : `conventions.kinds.${c.kind}`);
+// A finding on a file that is not a screen: a token file, a component file, conventions.yaml.
+const fileFinding = (id, severity, file, path, message) => ({ id, severity, screen: null, file, path, line: null, message });
+// Every token binding a contract declares, with its YAML path: tokens.<slot> and variants.<prop>.<option>.<slot>.
+function* bindingsOf(c) {
+  for (const [slot, token] of Object.entries(c.tokens ?? {})) yield { path: ['tokens', slot], token };
+  for (const [prop, options] of Object.entries(c.variants ?? {}))
+    for (const [opt, b] of Object.entries(options ?? {})) for (const [slot, token] of Object.entries(b ?? {})) yield { path: ['variants', prop, opt, slot], token };
+}
+// Every patch in a screen — states and variant options — with the base path of the patch.
+function* patchesOf(s) {
+  for (const [state, patches] of Object.entries(s.doc.states ?? {})) for (let i = 0; i < (patches ?? []).length; i++) yield { patch: patches[i], base: ['states', state, i] };
+  for (const [axis, options] of Object.entries(s.doc.variants ?? {}))
+    for (const [opt, patches] of Object.entries(options ?? {})) for (let i = 0; i < (patches ?? []).length; i++) yield { patch: patches[i], base: ['variants', axis, opt, i] };
+}
 
 function finding(id, severity, s, path, message) {
   return { id, severity, screen: s.doc.screen, file: s.file, path, line: s.lineOf(path), message };
@@ -74,7 +94,7 @@ const rules = {
     return out;
   },
   L06(ctx) {
-    const kinds = ctx.conventions.kinds ?? {};
+    const kinds = registryOf(ctx);
     const out = [];
     for (const s of ctx.screens)
       (s.doc.flows ?? []).forEach((flow, i) => {
@@ -123,12 +143,12 @@ const rules = {
     return out;
   },
   L10(ctx) {
-    const kinds = ctx.conventions.kinds;
-    if (!kinds || !Object.keys(kinds).length) return [];
+    const kinds = registryOf(ctx);
+    if (!Object.keys(kinds).length) return [];
     const out = [];
     const check = (s, kind, path) => {
       if (kind === 'placeholder') return; // what prep leaves behind; counted by L08, not a vocabulary miss
-      if (!(kind in kinds)) out.push(finding('L10', 'warning', s, path, `kind "${kind}" is not in conventions.kinds`));
+      if (!(kind in kinds)) out.push(finding('L10', 'warning', s, path, `kind "${kind}" has no components/${kind}.yaml`));
     };
     for (const s of ctx.screens) {
       for (const { el, path } of walkElements(s.doc.elements ?? [], ['elements'])) check(s, el.kind, [...path, 'kind']);
@@ -251,6 +271,9 @@ const rules = {
       for (const [state, patches] of Object.entries(s.doc.states ?? {}))
         patches.forEach((p, i) => p.layout && check(s, p.layout, ['states', state, i, 'layout']));
     }
+    // a contract's bindings name tokens too
+    for (const c of Object.values(registryOf(ctx)))
+      if (c.file) for (const { path, token } of bindingsOf(c)) if (!hasToken(tokens, token)) out.push(fileFinding('L18', 'warning', c.file, path, `${path.join('.')} "${token}" names no token`));
     return out;
   },
   L19(ctx) {
@@ -271,6 +294,8 @@ const rules = {
       for (const [state, patches] of Object.entries(s.doc.states ?? {}))
         patches.forEach((p, i) => p.layout && check(s, p.layout, ['states', state, i, 'layout']));
     }
+    for (const c of Object.values(registryOf(ctx)))
+      if (c.file) for (const { path, token } of bindingsOf(c)) if (primitive(token)) out.push(fileFinding('L19', 'blocking', c.file, path, `${path.join('.')} "${token}" is a primitive token; bind the semantic token that uses it`));
     return out;
   },
   L20(ctx) {
@@ -283,6 +308,57 @@ const rules = {
       line: null,
       message: p.context ? `${p.message} (${p.context})` : p.message,
     }));
+  },
+  // --- components ---------------------------------------------------------------------------
+  // An instance may set only what its contract declares (the owner's rule, 2026-09-24: props
+  // and slots, nothing inside). L21 is a warning because a contract that forgot a prop should
+  // not stop a handoff; L22 is blocking because a missing required prop or an option the kind
+  // does not have draws the wrong thing. L23 is one line per project: the rows still in
+  // conventions.kinds, which `doan migrate kinds` moves into files.
+  L21(ctx) {
+    const registry = registryOf(ctx);
+    const out = [];
+    const check = (s, el, path, props) => {
+      const c = registry[el.kind];
+      if (!c?.props) return;
+      for (const key of Object.keys(props)) if (!(key in c.props)) out.push(finding('L21', 'warning', s, [...path, key], `prop "${key}" is not declared by ${describe(c)}`));
+    };
+    for (const s of ctx.screens) {
+      for (const { el, path } of walkElements(s.doc.elements ?? [], ['elements'])) check(s, el, path, elementProps(el));
+      for (const { patch, base } of patchesOf(s)) {
+        if (patch.replace) check(s, { id: patch.target, ...patch.replace }, [...base, 'replace'], elementProps(patch.replace));
+        if (patch.set) {
+          const hit = findElement(s.doc.elements ?? [], patch.target);
+          if (hit) check(s, hit.el, [...base, 'set'], Object.fromEntries(Object.entries(patch.set).filter(([k]) => !RESERVED_KEYS.has(k))));
+        }
+      }
+    }
+    return out;
+  },
+  L22(ctx) {
+    const registry = registryOf(ctx);
+    const out = [];
+    const check = (s, el, path) => {
+      const c = registry[el.kind];
+      if (!c) return;
+      for (const [name, def] of Object.entries(c.props ?? {})) {
+        const value = el[name];
+        if (def?.required && value === undefined) out.push(finding('L22', 'blocking', s, path, `${el.kind} "${el.id}" is missing the required prop "${name}"`));
+        if (def?.type === 'enum' && value !== undefined && !isTbd(value) && !(def.options ?? []).includes(String(value)))
+          out.push(finding('L22', 'blocking', s, [...path, name], `${name} "${value}" is not one of ${(def.options ?? []).join(', ')}`));
+      }
+      for (const slot of Object.keys(el.slots ?? {})) if (!(c.slots ?? []).includes(slot)) out.push(finding('L22', 'blocking', s, [...path, 'slots', slot], `${el.kind} declares no slot "${slot}"`));
+    };
+    for (const s of ctx.screens) {
+      for (const { el, path } of walkElements(s.doc.elements ?? [], ['elements'])) check(s, el, path);
+      for (const { patch, base } of patchesOf(s)) if (patch.replace) check(s, { id: patch.target, ...patch.replace }, [...base, 'replace']);
+    }
+    return out;
+  },
+  L23(ctx) {
+    const legacy = ctx.componentSet?.legacy ?? [];
+    if (!legacy.length || !ctx.dir) return [];
+    return [fileFinding('L23', 'warning', join(ctx.dir, 'conventions.yaml'), ['kinds'], `${legacy.length} kind(s) still live in conventions.kinds — move them to components/<kind>.yaml (doan migrate kinds)`)];
   },
 };
 

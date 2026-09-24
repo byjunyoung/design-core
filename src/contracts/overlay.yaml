@@ -1,0 +1,13 @@
+kind: overlay
+description: A veil over a block that is busy, with a line of text.
+maps_to:
+  antd: Spin
+  mui: CircularProgress
+props:
+  text:
+    type: string
+tokens:
+  bg: color.bg
+  text: color.text
+sample:
+  text: Saving…

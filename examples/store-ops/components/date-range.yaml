@@ -1,0 +1,15 @@
+kind: date-range
+description: A start and an end date.
+maps_to:
+  antd: DatePicker.RangePicker
+  mui: TextField
+props:
+  format:
+    type: string
+    default: YYYY.MM.DD
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample: {}

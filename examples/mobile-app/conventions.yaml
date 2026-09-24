@@ -7,45 +7,23 @@ naming:
 platforms:
   default: ios
 states:
-  known: [Default, Empty, Loading, Error, Validation, Selected, Refreshing]
+  known: [ Default, Empty, Loading, Error, Validation, Selected, Refreshing ]
   required:
-    feed:   [Default, Empty, Loading, Error]
-    detail: [Default, Loading, Error]
-    sheet:  [Default]
-kinds:
-  app-bar:         { anchors: [back, action] }
-  tab-bar:         { anchors: [tab] }
-  list-cell:       { anchors: [cell] }
-  bottom-sheet:    { anchors: [handle] }
-  fab:             { }
-  snackbar:        { }
-  chip:            { }
-  search-bar:      { }
-  segment:         { anchors: [option] }
-  stepper:         { anchors: [plus, minus] }
-  pull-to-refresh: { }
-  image:           { }
-  button:          { }
-  caption:         { }
-  empty-notice:    { }
-  error-notice:    { }
-  skeleton:        { }
-  group:           { }
-  card:            { }
-  kv-table:        { }
-  placeholder:     { }
+    feed: [ Default, Empty, Loading, Error ]
+    detail: [ Default, Loading, Error ]
+    sheet: [ Default ]
 layout:
-  containers: [stack, grid, columns, row]
+  containers: [ stack, grid, columns, row ]
   spacing_tokens: 'space.'
-  size_classes: [sm, md, lg, full]
+  size_classes: [ sm, md, lg, full ]
 flows:
-  gestures: [tap, swipe-left, swipe-right, swipe-down, long-press, back, pull]
-  navs: [push, modal, sheet, tab, replace, dismiss]
+  gestures: [ tap, swipe-left, swipe-right, swipe-down, long-press, back, pull ]
+  navs: [ push, modal, sheet, tab, replace, dismiss ]
 refs:
   required: []
-  schemes: [notion, github, figma, file, https]
+  schemes: [ notion, github, figma, file, https ]
 lifecycle:
   canonical_branch: main
-  handoff_requires: ['lint:blocking=0']
+  handoff_requires: [ 'lint:blocking=0' ]
 edit:
-  auto_apply: [text]
+  auto_apply: [ text ]

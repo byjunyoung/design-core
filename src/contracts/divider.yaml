@@ -1,0 +1,9 @@
+kind: divider
+description: A line between blocks.
+maps_to:
+  antd: Divider
+  mui: Divider
+props: {}
+tokens:
+  border: color.border
+sample: {}

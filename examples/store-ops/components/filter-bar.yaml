@@ -1,0 +1,7 @@
+kind: filter-bar
+description: A row of filter controls.
+props:
+  fields:
+    type: list
+    description: field names when the bar is written as a list rather than children
+sample: {}

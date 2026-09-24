@@ -32,62 +32,8 @@ states:
     form:   [Default, Validation]
     search: [Default, Empty]
 
-kinds:                                 # the bundled set; a kind not listed here still renders, as a labeled box
-  page-header:  { anchors: [action, tab] }
-  group:        { }                    # a bare container, e.g. a button row; layout decides how it sits
-  card:         { }
-  section:      { }
-  fieldset:     { }
-  button:       { maps_to: { antd: Button, mui: Button } }
-  filter-bar:   { }
-  filter-form:  { maps_to: { antd: Form } }
-  segmented:    { maps_to: { antd: Segmented, mui: ToggleButtonGroup } }
-  table:        { anchors: [row, header], maps_to: { antd: Table, mui: Table } }
-  pagination:   { maps_to: { antd: Pagination, mui: Pagination } }
-  detail-card:  { maps_to: { antd: Descriptions, mui: Table } }
-  kv-table:     { maps_to: { antd: Descriptions, mui: Table } }
-  empty-notice: { maps_to: { antd: Empty, mui: Alert } }
-  error-notice: { maps_to: { antd: Result, mui: Alert } }
-  skeleton:     { maps_to: { antd: Skeleton, mui: Skeleton } }
-  overlay:      { maps_to: { antd: Spin, mui: CircularProgress } }
-  toast:        { maps_to: { antd: message, mui: Alert } }
-  modal:        { maps_to: { antd: Modal, mui: Card } }
-  confirm:      { maps_to: { antd: Modal.confirm, mui: Card } }
-  field:        { }
-  input:        { maps_to: { antd: Input, mui: TextField } }
-  number:       { maps_to: { antd: InputNumber, mui: TextField } }
-  textarea:     { maps_to: { antd: Input.TextArea, mui: TextField } }
-  select:       { maps_to: { antd: Select, mui: TextField } }
-  radio:        { maps_to: { antd: Radio.Group, mui: RadioGroup } }
-  date:         { maps_to: { antd: DatePicker, mui: TextField } }
-  date-range:   { maps_to: { antd: DatePicker.RangePicker, mui: TextField } }
-  upload:       { maps_to: { antd: Upload, mui: Button } }
-  tabs:         { anchors: [tab] }
-  nav:          { anchors: [item] }
-  checkbox:     { maps_to: { antd: Checkbox, mui: Checkbox } }
-  switch:       { maps_to: { antd: Switch, mui: Switch } }
-  tag:          { maps_to: { antd: Tag, mui: Chip } }
-  caption:      { }
-  hint:         { }
-  divider:      { maps_to: { antd: Divider, mui: Divider } }
-  stat-strip:   { maps_to: { antd: Statistic } }
-  tooltip:      { maps_to: { antd: Tooltip, mui: Tooltip } }
-  image:        { }
-  tile:         { }                    # one status tile; an import writes repeat: N for a run of them
-  tile-grid:    { anchors: [tile] }
-  # mobile — present in both iOS HIG and Material, so they ship by name
-  app-bar:      { anchors: [back, action] }
-  tab-bar:      { anchors: [tab] }
-  list-cell:    { anchors: [cell] }
-  bottom-sheet: { anchors: [handle] }
-  fab:          { }
-  snackbar:     { maps_to: { mui: Alert } }
-  chip:         { maps_to: { antd: Tag, mui: Chip } }
-  search-bar:   { maps_to: { antd: Input, mui: TextField } }
-  segment:      { anchors: [option], maps_to: { antd: Segmented, mui: ToggleButtonGroup } }
-  stepper:      { anchors: [plus, minus] }
-  pull-to-refresh: { }
-  sheet-handle: { }
+# kinds are files: components/<kind>.yaml (props, slots, token bindings, and for a compound part its
+# elements). A `kinds:` block here is still read, as legacy, and L23 asks to move it (doan migrate kinds).
 
 render:
   base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `doan bases`)

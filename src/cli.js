@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens, migrateKinds, listComponents } from './verbs.js';
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
@@ -17,6 +17,8 @@ usage: doan <verb> …
         start a project: conventions, sections, tokens, screens/. --base none (default) copies the
         component set into <project-dir>/components so it is yours; a library base maps kinds to it.
   bases  list the component bases and whether each is ready
+  components <project-dir> [--json]
+        every kind in the registry (components/<kind>.yaml) — props, slots, token bindings, compound or not.
   tokens <project-dir> [--json]
         every token the project resolves — name, value, per-theme values, file, tier (primitive · semantic · bundled).
         tokens/ holds DTCG 2025.10 files and a resolver; a flat tokens.json from before 0.3 still reads.
@@ -38,6 +40,9 @@ usage: doan <verb> …
   import figma <project-dir> <file-key> --page "<page name>" [--force]
         one screen file per {screen}-{state} frame group on that page; other states become patches;
         kinds by maps_to.figma on the master name, then by node name; unresolved → $tbd. Needs FIGMA_TOKEN.
+  migrate kinds <project-dir>
+        move every row of conventions.kinds into components/<kind>.yaml — the bundled contract where one
+        exists, the row's anchors and maps_to laid over it — and drop the block. A project from before 0.4.
   map figma <project-dir> <file-key> --page "<page name>" [--write]
         pair the page's component masters with kinds by name and (with --write) put them into
         conventions.yaml as maps_to.figma. Run this before import figma; it is what makes kinds resolve.
@@ -150,6 +155,15 @@ async function initCommand(opts) {
   process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  npx doan serve ${dir}     # open http://127.0.0.1:4870/\n  npx doan lint ${dir}\n  add the MCP server to your agent — see README\n`);
   return 0;
 }
+async function componentsCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await listComponents(dir);
+  if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
+  process.stdout.write(`${r.count} components${r.legacy.length ? ` (${r.legacy.length} still in conventions.kinds — doan migrate kinds)` : ''}\n`);
+  for (const c of r.components) process.stdout.write(`${c.kind.padEnd(18)} ${Object.keys(c.props).join(', ').padEnd(52)} ${c.compound ? 'compound ' : ''}${c.legacy ? 'legacy ' : ''}${c.file ?? ''}\n`);
+  return 0;
+}
 async function tokensCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
@@ -173,6 +187,15 @@ async function importCommand(opts) {
   if (source !== 'figma' || !dir || !fileKey || !opts.page) throw Object.assign(new Error(USAGE), { exit: 2 });
   const r = await importFigma(dir, { fileKey, page: opts.page, force: opts.force === 'true' || opts.force === true });
   process.stdout.write(`page "${r.page}": ${r.screens.length} screen(s) → ${r.files.map((f) => relative(process.cwd(), f)).join(', ')}\n${r.tbd} $tbd left for a person; run lint to see them\n`);
+  return 0;
+}
+
+async function migrateCommand(opts) {
+  const [what, dir] = opts._;
+  if (what !== 'kinds' || !dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await migrateKinds(dir);
+  if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
+  process.stdout.write(`${r.removed} kind(s) left conventions.kinds → components/: ${r.written.length} from the bundled contracts, ${r.updated.length} merged into files already there, ${r.minimal.length} minimal (${r.minimal.join(', ') || 'none'})\n`);
   return 0;
 }
 
@@ -210,7 +233,7 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, tokens: tokensCommand, import: importCommand, map: mapCommand, serve: serveCommand,
+  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

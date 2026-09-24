@@ -17,7 +17,7 @@ elements:
         kind: section
         title: Basic info
         children:
-          - { id: background, kind: field, label: Background image, tooltip: size, format and filename rules, control: { kind: radio, options: [Default image, Upload] }, reveals: { Upload: { kind: upload, label: Choose file } }, preview: { kind: image, size: md } }
+          - { id: background, kind: field, label: Background image, tooltip: "size, format and filename rules", control: { kind: radio, options: [Default image, Upload] }, reveals: { Upload: { kind: upload, label: Choose file } }, preview: { kind: image, size: md } }
           - { id: message, kind: field, label: Manager message, control: { kind: select, options: preset messages + Enter manually }, reveals: { Enter manually: { kind: input, max: 30 } } }
           - { id: care-date, kind: field, label: Care service date, control: { kind: radio, options: [Auto update (daily at midnight), Pick date] }, reveals: { Pick date: { kind: date } } }
           - { id: notice, kind: field, label: Notice, control: { kind: input, placeholder: up to 40 characters } }

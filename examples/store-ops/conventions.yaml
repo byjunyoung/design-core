@@ -4,61 +4,22 @@ naming:
   screen_pattern: '^[a-z0-9-]+$'
   section_pattern: '^\d{2}\. .+$'
 states:
-  known: [Default, Empty, NoMatch, Loading, Error, Validation, Selected, Submitting, Viewer, Custom]   # Create/Edit and item types are variants, not states
+  known: [ Default, Empty, NoMatch, Loading, Error, Validation, Selected, Submitting, Viewer, Custom ] # Create/Edit and item types are variants, not states
   required:
-    list:   [Default, Empty, Loading, Error]
-    form:   [Default, Validation]
-    modal:  [Default]
-    dashboard: [Default, Loading]
-    settings: [Default, Loading]
-kinds:
-  page-header:   { anchors: [action, tab] }
-  tabs:          { anchors: [tab] }
-  card:          { }
-  filter-bar:    { }
-  segmented:     { maps_to: { antd: Segmented } }
-  button:        { maps_to: { antd: Button } }
-  caption:       { }
-  table:         { anchors: [row, header, checkbox], maps_to: { antd: Table } }
-  progress:      { maps_to: { antd: Progress } }
-  pagination:    { maps_to: { antd: Pagination } }
-  empty-notice:  { maps_to: { antd: Empty } }
-  error-notice:  { maps_to: { antd: Result } }
-  skeleton:      { maps_to: { antd: Skeleton } }
-  overlay:       { maps_to: { antd: Spin } }
-  toast:         { maps_to: { antd: message } }
-  modal:         { maps_to: { antd: Modal } }
-  confirm:       { maps_to: { antd: Modal.confirm } }
-  section:       { }
-  fieldset:      { }
-  field:         { }
-  select:        { maps_to: { antd: Select } }
-  input:         { maps_to: { antd: Input } }
-  number:        { maps_to: { antd: InputNumber } }
-  textarea:      { maps_to: { antd: Input.TextArea } }
-  radio:         { maps_to: { antd: Radio.Group } }
-  date:          { maps_to: { antd: DatePicker } }
-  date-range:    { maps_to: { antd: DatePicker.RangePicker } }
-  upload:        { maps_to: { antd: Upload } }
-  image:         { }
-  hint:          { }
-  kv-table:      { maps_to: { antd: Descriptions } }
-  stat-strip:    { maps_to: { antd: Statistic } }
-  tile-grid:     { anchors: [tile] }
-  tooltip:       { maps_to: { antd: Tooltip } }
-  button-group:  { anchors: [option] }
-  sortable-list: { anchors: [item] }
-  divider:       { maps_to: { antd: Divider } }
-  group:         { }                     # a bare container for buttons and the like; layout says how it sits
+    list: [ Default, Empty, Loading, Error ]
+    form: [ Default, Validation ]
+    modal: [ Default ]
+    dashboard: [ Default, Loading ]
+    settings: [ Default, Loading ]
 layout:
-  containers: [stack, grid, columns, row]
+  containers: [ stack, grid, columns, row ]
   spacing_tokens: 'space.'
-  size_classes: [sm, md, lg, full]
+  size_classes: [ sm, md, lg, full ]
 refs:
   required: []
-  schemes: [notion, github, figma, file, https]
+  schemes: [ notion, github, figma, file, https ]
 lifecycle:
   canonical_branch: main
-  handoff_requires: ['lint:blocking=0']
+  handoff_requires: [ 'lint:blocking=0' ]
 edit:
-  auto_apply: [text]
+  auto_apply: [ text ]

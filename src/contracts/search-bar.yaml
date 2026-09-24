@@ -1,0 +1,15 @@
+kind: search-bar
+description: A search field with its icon.
+maps_to:
+  antd: Input
+  mui: TextField
+props:
+  placeholder:
+    type: string
+tokens:
+  bg: color.surface
+  text: color.text
+  muted: color.muted
+  radius: radius.md
+sample:
+  placeholder: Search menu

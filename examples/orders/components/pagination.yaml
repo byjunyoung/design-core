@@ -1,0 +1,15 @@
+kind: pagination
+description: Page controls under a table.
+maps_to:
+  antd: Pagination
+  mui: Pagination
+props:
+  page_size:
+    type: number
+  compact:
+    type: boolean
+    default: false
+tokens:
+  text: color.primary
+sample:
+  page_size: 10

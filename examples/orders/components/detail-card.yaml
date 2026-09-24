@@ -1,0 +1,15 @@
+kind: detail-card
+description: One record as label · value rows.
+maps_to:
+  antd: Descriptions
+props:
+  fields:
+    type: list
+tokens:
+  border: color.border
+  muted: color.muted
+sample:
+  fields:
+    - order_no
+    - store
+    - amount

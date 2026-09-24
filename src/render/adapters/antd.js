@@ -78,7 +78,7 @@ export function create(project) {
   const cache = createCache();
   const theme = themeFrom(project.tokens);
   const mapped = {};
-  for (const [kind, def] of Object.entries(project.conventions.kinds ?? {})) {
+  for (const [kind, def] of Object.entries(project.components ?? project.conventions.kinds ?? {})) {
     const name = def?.maps_to?.antd;
     if (name && components[name]) mapped[kind] = name;
   }

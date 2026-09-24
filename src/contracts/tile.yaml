@@ -1,0 +1,12 @@
+kind: tile
+description: "One status tile; a run of them is repeat: N."
+props:
+  status:
+    type: string
+  label:
+    type: string
+tokens:
+  border: color.border
+sample:
+  status: ok
+  label: Kiosk 1

@@ -1,0 +1,20 @@
+kind: textarea
+description: Several lines of text; counter is the limit shown under it.
+maps_to:
+  antd: Input.TextArea
+  mui: TextField
+props:
+  placeholder:
+    type: string
+  counter:
+    type: string
+  rows:
+    type: number
+tokens:
+  bg: color.bg
+  text: color.text
+  border: color.border
+  radius: radius.sm
+sample:
+  placeholder: Notes
+  counter: 0 / 200

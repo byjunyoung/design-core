@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, existsSync } from "node:fs";
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'yaml';
@@ -10,10 +10,11 @@ import { lintProject } from '../src/verbs.js';
 
 const file = JSON.parse(readFileSync(new URL('./fixtures/figma-file.json', import.meta.url), 'utf8'));
 const conventions = parse(readFileSync(new URL('../conventions.example.yaml', import.meta.url), 'utf8'));
-conventions.kinds.table.maps_to.figma = 'Table / default';
-conventions.kinds.button.maps_to.figma = 'Button / Primary';
+const components = Object.fromEntries(readdirSync(new URL(`../src/contracts`, import.meta.url)).map((f) => [f.replace(`.yaml`, ``), parse(readFileSync(new URL(`../src/contracts/${f}`, import.meta.url), `utf8`))]));
+components.table.maps_to = { ...components.table.maps_to, figma: "Table / default" };
+components.button.maps_to = { ...components.button.maps_to, figma: "Button / Primary" };
 const tokens = { space: { xs: '4px', sm: '8px', md: '16px', lg: '24px', xl: '32px' } };
-const run = () => importFigmaTree(file, { page: '[UI] Orders', conventions, tokens, fileKey: 'ABC' });
+const run = () => importFigmaTree(file, { page: "[UI] Orders", conventions, components, tokens, fileKey: "ABC" });
 
 test('frames named {screen}-{state} become one file per screen with the states as patches', () => {
   const { screens } = run();
@@ -93,8 +94,9 @@ test('an instance of a variant resolves through its component set name, not the 
   f.componentSets = { 'set-btn': { name: 'button' } };
   f.components['c-btn'] = { name: 'type=primary, size=L', componentSetId: 'set-btn' };
   const conv = structuredClone(conventions);
-  conv.kinds.button.maps_to.figma = 'button';
-  const list = importFigmaTree(f, { page: '[UI] Orders', conventions: conv, tokens, fileKey: 'ABC' }).screens.find((s) => s.doc.screen === 'order-list').doc;
+  const comps = structuredClone(components);
+  comps.button.maps_to.figma = "button";
+  const list = importFigmaTree(f, { page: "[UI] Orders", conventions: conv, components: comps, tokens, fileKey: "ABC" }).screens.find((s) => s.doc.screen === 'order-list').doc;
   assert.equal(list.elements.find((e) => e.id === 'header').children.find((c) => c.id === 'export').kind, 'button');
 });
 
