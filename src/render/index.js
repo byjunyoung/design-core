@@ -9,6 +9,7 @@ import { CSS, INSPECTOR_JS } from './page.js';
 import { parseScreenText } from '../project.js';
 import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
+import { layoutFlows } from '../flowmap.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -153,7 +154,7 @@ function sidebar(project, { current = null, findings = null, comments = [], prop
     })
     .join('');
   const nComponents = Object.keys(project.components ?? {}).length;
-  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a><a class="side-link${current === 'components' ? ' current' : ''}" href="components.html"><span class="name">${D.library}</span><span class="hint">${nComponents}</span></a></div>`;
+  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a><a class="side-link${current === 'components' ? ' current' : ''}" href="components.html"><span class="name">${D.library}</span><span class="hint">${nComponents}</span></a><a class="side-link${current === 'flows' ? ' current' : ''}" href="flows.html"><span class="name">${D.flowMap}</span></a></div>`;
   return `<nav class="side"><div class="brand">${D.screens} <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
 }
 
@@ -357,6 +358,59 @@ ${sections || `<div class="hint">${D.noneOfKind}</div>`}
   return page({ title: D.library, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 const basenameOf = (p) => String(p).split('/').pop();
+
+// The flow map (src/flowmap.js): sections as boxes, screens as nodes — a scaled Default with a
+// row per state — and flows as right-angle paths that land on the row of the state they name.
+// Nodes are HTML so the thumbnails are the same drawing the screen page shows; edges are one
+// SVG on top. Async because ELK is.
+export async function renderFlows(project, { branch = null, adapter = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const maps = mapsFor(project);
+  const map = await layoutFlows(project);
+  const r1 = (n) => Math.round(n * 10) / 10;
+  const thumbOf = (n) => {
+    const screen = project.screens.find((s) => s.doc.screen === n.screen);
+    const html = renderView(project, screen, mergeState(screen.doc, 'Default'), maps, adapter).replace('<div class="stage', '<div class="thumb-stage');
+    return `<div class="thumb" style="width:${n.thumb.w}px;height:${n.thumb.h}px"><div class="thumb-scale" style="transform:scale(${n.thumb.scale})">${html}</div></div>`;
+  };
+  const lists = `
+${map.dead.length ? `<div class="section-title">${D.deadFlows}</div><ul class="list flow-dead">${map.dead.map((d) => `<li><code>${h(d.screen)}</code> ${h(d.from)} → <span class="bad">${h(d.to)}</span></li>`).join('')}</ul>` : ''}
+${map.orphans.length ? `<div class="section-title">${D.orphanScreens}</div><ul class="list flow-orphans">${map.orphans.map((o) => `<li><a href="${h(o)}.html"><u>${h(o)}</u></a></li>`).join('')}</ul>` : ''}`;
+  let picture;
+  if (!map.ok) picture = `<div class="hint">${h(map.reason)}</div>`;
+  else {
+    const secs = map.sections.map((s) => `<div class="flow-sec" style="left:${r1(s.x)}px;top:${r1(s.y)}px;width:${r1(s.w)}px;height:${r1(s.h)}px"><div class="flow-sec-title">${h(s.title)}</div></div>`).join('');
+    const nodes = map.nodes
+      .map(
+        (n) =>
+          // a div, not a link: a thumbnail drawn by a library adapter may hold <a> of its own (antd's pagination does), and a link inside a link closes the outer one
+          `<div class="flow-node" style="left:${r1(n.x)}px;top:${r1(n.y)}px;width:${n.w}px;height:${n.h}px"><a class="flow-head" href="${h(n.screen)}.html"><b>${h(n.screen)}</b> <span class="hint">${h(n.type ?? '')} · ${h(n.platform)}</span></a>${thumbOf(n)}${n.rows.map((row) => `<div class="flow-state" style="top:${row.y}px">${h(row.name)}</div>`).join('')}</div>`,
+      )
+      .join('');
+    const edges = map.edges
+      .map((e) => {
+        const d = 'M' + e.points.map((p) => `${r1(p.x)} ${r1(p.y)}`).join(' L');
+        const label = e.labelAt ? `<text class="flow-label" x="${r1(e.labelAt.x)}" y="${r1(e.labelAt.y + 11)}">${h(e.label)}</text>` : '';
+        return `<path class="flow-edge${e.style === 'conditional' ? ' conditional' : ''}" d="${d}" marker-end="url(#flow-arrow)"><title>${h(e.screen)} · ${h(e.label)} → ${h(e.to)}</title></path>${label}`;
+      })
+      .join('');
+    const svg = `<svg class="flow-edges" width="${Math.ceil(map.width)}" height="${Math.ceil(map.height)}"><defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>${edges}</svg>`;
+    picture = `<div class="flow-scroll"><div class="flowmap" style="width:${Math.ceil(map.width)}px;height:${Math.ceil(map.height)}px">${secs}${nodes}${svg}</div></div>`;
+  }
+  const body = `<div class="shell">
+${sidebar(project, { current: 'flows', proposals: [] })}
+<main class="main">
+<header class="top"><h1>${D.flowMap}</h1><span class="meta">${project.screens.length} ${D.screens} · ${map.edges.length} ${D.flows.toLowerCase()}${map.dead.length ? ` · <span class="bad">${map.dead.length} ${D.deadFlows.toLowerCase()}</span>` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}</header>
+${picture}
+${lists}
+</main>
+<aside id="inspector" class="drawer"></aside>
+</div>`;
+  return page({ title: D.flowMap, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+}
 
 export function renderProposal(project, proposal, { branch = null, adapter = null, api = false } = {}) {
   const lang = languageOf(project);

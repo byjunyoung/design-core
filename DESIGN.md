@@ -2,7 +2,7 @@
 
 Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
 
-What runs: `lint` (schema + L01–L23), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L24), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -283,6 +283,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L21 prop-undeclared | warning | an element, a replace patch or a set patch carries a prop its contract does not declare | component residue by property |
 | L22 prop-invalid | blocking | a required prop is missing; an enum value is not an option; a slot is not declared | — (new) |
 | L23 kinds-legacy | warning, one per project | rows still in `conventions.kinds` — `doan migrate kinds` | — (new) |
+| L24 flow-orphan | warning | a screen no flow reaches or leaves, once the project has flows and more than one screen | coverage orphans |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -311,6 +312,21 @@ Shipped 2026-09-23, later: the first adapter, `antd`. `--components antd` resolv
 Decided 2026-09-23 after the antd adapter: **the tool never owns a team's components, and no library is required.** `init` asks for a base — `none` copies the bundled set into `design/components/kinds.js`, which is then the team's own component library, editable, 100% theirs; `antd` maps kinds to a library (others are listed as planned and refused until an adapter exists). `render` resolves the choice from `conventions.render`, a project-owned module first, then a library, then the bundled set. The bundled set is a starting point a team copies, not a dependency a team keeps.
 
 What render will not offer, on purpose: drag, resize, nudge. The moment a hand can move a box, the file and the picture can disagree, the diff stops being readable, and the product becomes one more canvas competing with three funded ones. The cost is real and named: a spacing change that would take one drag takes one sentence (§7).
+
+### 6.4 The flow map
+
+Shipped 2026-09-24 (0.5.0). The page Figma's flow page was: every screen of the product on one canvas, arrows between them, sections around them — except that nothing is placed by hand and nothing is stored. The files hold `flows:`; the layout is computed when the page is drawn.
+
+| Decision | Chosen | Why |
+|---|---|---|
+| Engine | ELK (`elkjs`, the layered algorithm), an optional dependency | the owner compared it with dagre. dagre is 1.4 MB and gives a spline through a few points; ELK is 8 MB and gives **ports** and **orthogonal routing** — a flow to `kiosk-menu.Selected` lands on the "Selected" row of that node, bends at right angles, and enters from the left, which is exactly the arrow discipline `fig:arrows` drew and `fig:lint` checked. The 8 MB is install cost only: layout runs in node at render time and the page carries the result. Without it the page says so and everything else works |
+| A node | a screen: its name, type and platform; Default drawn small in the platform's proportions; one row per state | the thumbnail is the same drawing the screen page shows, scaled; a state is a row so an arrow has somewhere to land |
+| An edge | one per resolving flow, from the screen's right edge to the target's row; label `from.via · gesture · nav · when`; `style: conditional` dashed | the label is the flow as written; the person reads the file's words, not a paraphrase |
+| Grouping | a box per section, in `sections.yaml` order; ELK places boxes as compound nodes and routes across them | sections are the product's own grouping; no second grouping to keep in sync |
+| Coordinates | none stored, none adjustable | the owner chose auto-layout over saved positions: a map that re-draws from the files cannot drift from them |
+| Dead ends and orphans | listed under the map; L24 warns on a screen no flow reaches or leaves | `fig:lint`'s coverage-orphan check, moved from the canvas to the graph |
+
+Nodes are HTML (so an adapter's thumbnail is the real thing) and the edges are one SVG on top. A thumbnail may itself contain links (antd's pagination does), so a node is a `div` with a link in its head, not a link. `list_flows` (verb and MCP tool) is the same graph as JSON — edges, dead ends, orphans — for an agent that wants the structure without the picture.
 
 ## 7. The edit loop — "by conversation only"
 
@@ -365,7 +381,7 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `import figma <key> --page` | on-ramp for a team already drawing, over the REST API: `{screen}-{state}` frames → files, other states as patches by diffing element trees; `kind` by `maps_to.figma` on the master name, then by node-name hints; `layout` from auto-layout in token names; flows from prototype links; scaffold frames (`[label]`, `-->`) skipped; unresolved → `$tbd` owned by `import`; required states nobody drew → placeholders; no convention at all → one screen per top-level frame, flagged | new files, sections.yaml |
 | `export <adapter>` | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
 
-MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view), `list_missing()` (L03/L08 only), `list_tokens()` and `list_components()`, because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
+MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view), `list_missing()` (L03/L08 only), `list_tokens()`, `list_components()` and `list_flows()`, because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
 
 ## 10. The service
 
@@ -426,7 +442,8 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
 | Adapter reads the contract | design | antd and MUI pieces draw from the props their own code reads; a contract's enum options and bindings do not reach them (§4.5). An adapter could take `sample`, options and bindings from the registry |
 | Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
-| Flow map | next | the whole product's flows on one page, auto-laid-out (ELK) and grouped by section; no coordinates in the files. Then a click-through prototype on top of it |
+| Click-through prototype | next | on top of the flow map (§6.4): press the `from` element on a screen and land on the flow's target state, in one static page |
+| Flow map label placement | design | ELK places a label anywhere along its edge; a long self-loop label can sit far from the node. `elk.edgeLabels.placement` and inline labels are the knobs to try |
 | Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
 | Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer |

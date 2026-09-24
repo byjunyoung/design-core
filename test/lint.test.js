@@ -262,3 +262,11 @@ test('L20 relays token loader problems as findings on the token file, keeping th
   assert.equal(f[0].screen, null);
   assert.equal(f[1].severity, 'warning');
 });
+
+test('L24 warns on a screen no flow reaches or leaves, only once the project has flows and more than one screen', () => {
+  const p = project({ screens: [screen(), detail(), screen({ id: 'scr_Z', screen: 'settings', flows: [] })] });
+  const f = lint(p).filter((x) => x.id === 'L24');
+  assert.deepEqual(f.map((x) => x.screen), ['settings']);
+  assert.equal(f[0].severity, 'warning');
+  assert.equal(lint(project({ screens: [screen({ flows: [] }), detail()] })).filter((x) => x.id === 'L24').length, 0, 'no flows at all: nothing to say');
+});

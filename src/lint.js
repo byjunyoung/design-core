@@ -360,6 +360,24 @@ const rules = {
     if (!legacy.length || !ctx.dir) return [];
     return [fileFinding('L23', 'warning', join(ctx.dir, 'conventions.yaml'), ['kinds'], `${legacy.length} kind(s) still live in conventions.kinds — move them to components/<kind>.yaml (doan migrate kinds)`)];
   },
+  // --- flows ----------------------------------------------------------------------------------
+  // A screen no flow reaches and no flow leaves is either the entry point or forgotten; in a
+  // product with flows at all, say so. One warning per screen; nothing in a project that has
+  // not drawn a single flow yet, or has one screen.
+  L24(ctx) {
+    if (ctx.screens.length < 2) return [];
+    const touched = new Set();
+    let any = false;
+    for (const s of ctx.screens)
+      for (const flow of s.doc.flows ?? []) {
+        any = true;
+        const target = resolveFlowTarget(flow.to, ctx.screens);
+        touched.add(s.doc.screen);
+        if (target) touched.add(target.screen);
+      }
+    if (!any) return [];
+    return ctx.screens.filter((s) => !touched.has(s.doc.screen)).map((s) => finding('L24', 'warning', s, ['flows'], `no flow reaches or leaves "${s.doc.screen}" — an entry point, or a screen the map forgot`));
+  },
 };
 
 export const RULES = Object.keys(rules);

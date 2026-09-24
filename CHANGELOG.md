@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-09-24
+
+The flow map: the whole product on one page, drawn from the files.
+
+- **`flows.html`** in the viewer (static and served): a box per section, a node per screen — Default scaled to the platform's proportions, one row per state — and a right-angle arrow per flow that lands on the row of the state it names; `style: conditional` dashed; the label is the flow as written. Dead ends and screens no flow reaches are listed under it (DESIGN.md §6.4).
+- **Layout by ELK** (`elkjs`, optional dependency). Ports and orthogonal routing are why: the arrows follow the discipline `fig:arrows` drew by hand. Without it the page says so; nothing else needs it.
+- **`list_flows`** MCP tool and **L24**: a screen no flow reaches or leaves, once the project has flows.
+- Nodes are `div`s with a link in the head, because a thumbnail drawn by a library adapter may hold links of its own.
+
 ## 0.4.0 — 2026-09-24
 
 Kinds are files. The component library lives next to the screens, as text.

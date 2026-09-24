@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listFlows } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -54,6 +54,15 @@ server.registerTool(
     inputSchema: {},
   },
   guard(() => listComponents(dir)),
+);
+
+server.registerTool(
+  'list_flows',
+  {
+    description: 'Every flow in the product as one graph: edges that resolve (source screen, element, target screen and state, gesture, nav, condition), flows to nowhere, and screens no flow reaches. The flow map page draws the same graph.',
+    inputSchema: {},
+  },
+  guard(() => listFlows(dir)),
 );
 
 server.registerTool(

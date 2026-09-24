@@ -11,6 +11,7 @@ const EN = {
   apply: 'Apply', reject: 'Reject', yourName: 'your name', toAccept: 'to accept', toDecline: 'to decline', noSummary: '(no summary)',
   item: 'item', decision: 'decision', why: 'why', blocking: 'blocking', warning: 'warning', clean: 'clean', states: 'states', openComments: 'open comments',
   comment: 'comment', commentsN: 'comments', tbd: '$tbd', components: 'components', on: 'on',
+  flowMap: 'Flow map', deadFlows: 'Flows to nowhere', orphanScreens: 'Screens no flow reaches',
   library: 'Components', propsLabel: 'props', slotsLabel: 'slots', bindingsLabel: 'token bindings', compound: 'compound — drawn from its own elements', legacyKind: 'still in conventions.kinds', noneOfKind: 'no components yet — doan migrate kinds, or add components/<kind>.yaml', requiredMark: 'required',
   // drawer (sent to the page as JSON)
   clickToInspect: 'Click an element to inspect it.', component: 'component', bundled: 'bundled default', samplesNote: 'values shown in the picture are samples unless the file sets them',
@@ -32,6 +33,7 @@ const KO = {
   apply: '적용', reject: '반려', yourName: '이름', toAccept: '적용하려면', toDecline: '반려하려면', noSummary: '(요약 없음)',
   item: '항목', decision: '결정', why: '이유', blocking: '차단', warning: '경고', clean: '이상 없음', states: '상태', openComments: '열린 코멘트',
   comment: '코멘트', commentsN: '코멘트', components: '컴포넌트', on: '·',
+  flowMap: '흐름도', deadFlows: '갈 곳 없는 흐름', orphanScreens: '흐름이 닿지 않는 화면',
   library: '컴포넌트', propsLabel: '속성', slotsLabel: '슬롯', bindingsLabel: '토큰 바인딩', compound: '복합 — 자기 elements로 그림', legacyKind: '아직 conventions.kinds에 있음', noneOfKind: '컴포넌트 없음 — doan migrate kinds 또는 components/<kind>.yaml 추가', requiredMark: '필수',
   clickToInspect: '요소를 누르면 여기에 나옵니다.', component: '컴포넌트', bundled: '기본 세트', samplesNote: '그림의 값은 파일에 없으면 샘플입니다',
   file: '파일', path: '경로', line: '줄', copy: '경로:줄 복사', copied: '복사됨', noneOnElement: '이 요소에는 없음',
