@@ -129,6 +129,8 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .generic-head { font-size: 11px; color: var(--color-muted); text-transform: uppercase; }
 .prop { display: flex; gap: var(--space-sm); font-size: 12px; } .prop .k { color: var(--color-muted); min-width: 80px; }
 .stats { display: flex; gap: var(--space-lg); flex-wrap: wrap; } .stat-v { font-size: 20px; font-weight: 600; } .stat-l { font-size: 11px; color: var(--color-muted); }
+.repeat { display: flex; flex-wrap: wrap; gap: var(--space-xs); } .rep { flex: 0 0 auto; }
+.el-tile .tile { width: 36px; height: 36px; display: inline-block; }
 .tiles { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: var(--space-xs); }
 .tile { aspect-ratio: 1; border-radius: 2px; background: var(--color-border); } .t1 { background: #9bd1a5; } .t2 { background: #5aa86b; } .t3 { background: #e0b64a; } .t4 { background: #d1434b; }
 .sortable { display: flex; flex-direction: column; gap: var(--space-xs); } .sort-item { padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }

@@ -59,6 +59,8 @@ kinds:                                 # the bundled set; a kind not listed here
   stat-strip:   { maps_to: { antd: Statistic } }
   tooltip:      { maps_to: { antd: Tooltip } }
   image:        { }
+  tile:         { }                    # one status tile; an import writes repeat: N for a run of them
+  tile-grid:    { anchors: [tile] }
 
 render:
   base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `design-core bases`)

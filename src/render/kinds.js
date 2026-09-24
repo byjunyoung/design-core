@@ -197,6 +197,9 @@ export const kinds = {
   tag(el) {
     return `<span class="tag">${v(el.text ?? el.label ?? el.id)}</span>`;
   },
+  tile(el) {
+    return `<span class="tile t${(String(el.status ?? el.id).length) % 5}" title="${h(el.label ?? el.id)}"></span>`;
+  },
   progress() {
     return `<div class="bar"><span style="width:62%"></span></div>`;
   },
