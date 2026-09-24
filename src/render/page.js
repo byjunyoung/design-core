@@ -165,6 +165,8 @@ export const INSPECTOR_JS = `
   var file = document.body.getAttribute('data-file') || '';
   var api = window.DESIGN_CORE_API === true;
   var comments = window.DESIGN_CORE_COMMENTS || [];
+  var T = window.DESIGN_CORE_I18N || {};
+  function t(k, d) { return T[k] || d; }
   var selected = null;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -220,20 +222,20 @@ export const INSPECTOR_JS = `
     var mine = comments.filter(function (c) { return c.path === path; });
     panel.innerHTML =
       '<h4>' + esc(el.getAttribute('data-id')) + ' <span class="hint">' + esc(el.getAttribute('data-kind')) + '</span><span class="close" id="close">×</span></h4>' +
-      '<div class="hint">' + (maps ? 'component: ' + esc(maps) : 'component: bundled default') + '</div>' +
+      '<div class="hint">' + t('component', 'component') + ': ' + (maps ? esc(maps) : t('bundled', 'bundled default')) + '</div>' +
       (conds.length ? '<ul>' + conds.map(function (c) { return '<li class="cond-line">' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
       '<table>' + rows + '</table>' +
-      '<p class="hint">values shown in the picture are samples unless the file sets them</p>' +
-      '<p><span class="k">file</span> <code>' + esc(file) + '</code><br><span class="k">path</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">line</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
-      '<p><button class="btn" id="copy">copy path:line</button></p>' +
-      '<h4>Comments</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">none on this element</div>') +
-      (api ? '<textarea id="ctext" rows="3" placeholder="say what should change"></textarea><input id="cwho" placeholder="your name"><button class="btn btn-primary" id="csend">Comment</button> <span class="hint" id="cstate"></span>' : '<div class="hint">open the live viewer (design-core serve) to comment</div>');
+      '<p class="hint">' + t('samplesNote', 'values shown in the picture are samples unless the file sets them') + '</p>' +
+      '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(file) + '</code><br><span class="k">' + t('path', 'path') + '</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">' + t('line', 'line') + '</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
+      '<p><button class="btn" id="copy">' + t('copy', 'copy path:line') + '</button></p>' +
+      '<h4>' + t('comments', 'Comments') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('noneOnElement', 'none on this element') + '</div>') +
+      (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><input id="cwho" placeholder="' + t('yourName', 'your name') + '"><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (design-core serve) to comment') + '</div>');
     shell.classList.add('drawer-open');
     document.getElementById('close').addEventListener('click', function () { shell.classList.remove('drawer-open'); if (selected) selected.classList.remove('selected'); selected = null; fit(); });
     document.getElementById('copy').addEventListener('click', function () {
       var text = file + (line ? ':' + line : '') + '  ' + path;
       if (navigator.clipboard) navigator.clipboard.writeText(text);
-      document.getElementById('copy').textContent = 'copied';
+      document.getElementById('copy').textContent = t('copied', 'copied');
     });
     var send = document.getElementById('csend');
     if (send) send.addEventListener('click', function () {
@@ -259,7 +261,7 @@ export const INSPECTOR_JS = `
   function verdict(kind) {
     var by = (document.getElementById('by') || {}).value || '';
     var id = (approve || reject).getAttribute('data-id');
-    if (kind === 'apply' && !by.trim()) { document.getElementById('verdict').textContent = 'your name first'; return; }
+    if (kind === 'apply' && !by.trim()) { document.getElementById('verdict').textContent = t('nameFirst', 'your name first'); return; }
     fetch('/api/proposals/' + id + '/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(kind === 'apply' ? { by: by } : { reason: by }) })
       .then(function (r) { return r.json(); }).then(function (j) { document.getElementById('verdict').textContent = j.error ? j.error : j.status; if (!j.error) setTimeout(function () { location.href = '/'; }, 600); });
   }

@@ -119,3 +119,16 @@ test('a run of instances of one master collapses into one element with repeat, a
   assert.equal(wrapper.children[0].repeat, 12);
   assert.equal(wrapper.children[0].resolve.$tbd.owner, 'import', 'the master itself is still unresolved');
 });
+
+test('frame_pattern accepts a preset name: "screen/state" splits "Orders / Empty"', () => {
+  const f = { components: {}, document: { children: [{ id: 'p', type: 'CANVAS', name: 'P', children: [
+    { id: 'a', type: 'FRAME', name: 'Orders / Default', children: [] },
+    { id: 'b', type: 'FRAME', name: 'Orders / Empty', children: [] },
+  ] }] } };
+  const conv = structuredClone(conventions);
+  conv.naming.frame_pattern = 'screen/state';
+  const { screens, fallback } = importFigmaTree(f, { page: 'P', conventions: conv, tokens, fileKey: 'K' });
+  assert.equal(fallback, false);
+  assert.deepEqual(screens.map((s) => s.doc.screen), ['Orders']);
+  assert.ok(screens[0].doc.states.Empty);
+});

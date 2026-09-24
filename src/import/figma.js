@@ -215,8 +215,17 @@ function typeFor(states, conventions) {
   return best && best.overlap > 0 ? best.type : 'unknown';
 }
 
+// How a frame name splits into screen and state. A team writes a regex with two groups, or
+// names one of these presets.
+const FRAME_PRESETS = {
+  'screen-state': '^(.+)-([^-\\s]+)$', // order-list-Empty
+  'screen/state': '^(.+?)\\s*/\\s*([^/]+?)\\s*$', // Orders / Empty
+  'screen state': '^(.+)\\s+(\\S+)$', // Orders Empty
+  'screen=state': '^(.+?)\\s*=\\s*(.+)$', // Orders=Empty
+};
 function framePattern(conventions) {
-  return new RegExp(conventions.naming?.frame_pattern ?? '^(.+)-([^-\\s]+)$', 'u');
+  const raw = conventions.naming?.frame_pattern ?? 'screen-state';
+  return new RegExp(FRAME_PRESETS[raw] ?? raw, 'u');
 }
 
 export function importFigmaTree(file, { page, conventions, tokens = {}, fileKey = '' }) {

@@ -15,7 +15,7 @@ test('the list of component bases says which are ready and which are planned', (
   const bases = componentBases();
   assert.deepEqual(bases.find((b) => b.id === 'none'), { id: 'none', label: 'Self-built (100% yours)', status: 'ready', note: 'the bundled set is copied into your project and becomes your component library' });
   assert.equal(bases.find((b) => b.id === 'antd').status, 'ready');
-  assert.ok(bases.some((b) => b.status === 'planned'));
+  assert.ok(bases.every((b) => ['ready', 'planned', 'n/a'].includes(b.status)));
 });
 
 test('init --base none copies the component set into the project so the team owns it', async () => {
@@ -54,9 +54,9 @@ test('init --base antd fills maps_to for the shipped kinds and names the base', 
   assert.ok(!existsSync(join(dir, 'components')));
 });
 
-test('init refuses a base that is only planned, and refuses to overwrite an existing project', async () => {
+test('init refuses a base it does not know, and refuses to overwrite an existing project', async () => {
   const dir = fresh();
-  await assert.rejects(initProject(dir, { base: 'mui' }), /planned/);
+  await assert.rejects(initProject(dir, { base: 'chakra' }), /unknown base/);
   await initProject(dir, { base: 'none' });
   await assert.rejects(initProject(dir, { base: 'none' }), /already/);
 });
@@ -71,4 +71,18 @@ test('init leaves a starter screen that lints clean on a feature branch, and a p
   const { summary } = await lintProject(dir, { branch: 'feature/start', today: '2026-09-24' });
   assert.equal(summary.blocking, 0);
   assert.equal(summary.screens, 1);
+});
+
+test('mui is a ready base and shadcn says why it is not one', async () => {
+  const bases = componentBases();
+  assert.equal(bases.find((b) => b.id === 'mui').status, 'ready');
+  assert.equal(bases.find((b) => b.id === 'shadcn').status, 'n/a');
+  const dir = fresh();
+  await initProject(dir, { base: 'mui' });
+  const { parse } = await import('yaml');
+  const { readFileSync } = await import('node:fs');
+  const conv = parse(readFileSync(join(dir, 'conventions.yaml'), 'utf8'));
+  assert.equal(conv.kinds.table.maps_to.mui, 'Table');
+  assert.equal(conv.kinds.table.maps_to.antd, undefined);
+  await assert.rejects(initProject(fresh(), { base: 'shadcn' }), /copied source/);
 });

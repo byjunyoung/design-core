@@ -2,7 +2,8 @@ import { mergeState } from '../merge.js';
 import { walkElements } from '../elements.js';
 import { lint, summarize } from '../lint.js';
 import { resolveFlowTarget } from '../flows.js';
-import { kinds, h, v, isTbd } from './kinds.js';
+import { kinds, h, v, isTbd, setLanguage } from './kinds.js';
+import { dictionary, languageOf, pageStrings } from './i18n.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
 import { CSS, INSPECTOR_JS } from './page.js';
 import { parseScreenText } from '../project.js';
@@ -106,6 +107,7 @@ function flowLink(project, screen, flow) {
 // The sidebar every page shares: sections → screens, each with what a reviewer wants to
 // know before opening it — blocking findings, undecided values, open comments.
 function sidebar(project, { current = null, findings = null, comments = [], proposals = [] } = {}) {
+  const D = dictionary(languageOf(project));
   const found = findings ?? lint(project, { branch: null });
   const bySection = {};
   for (const s of project.screens) (bySection[s.doc.section] ??= []).push(s);
@@ -125,23 +127,26 @@ function sidebar(project, { current = null, findings = null, comments = [], prop
       return `<div class="sec">${h(section)}</div>${items}`;
     })
     .join('');
-  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">Overview</span>${proposals.length ? `<span class="pill cm">${proposals.length} waiting</span>` : ''}</a></div>`;
-  return `<nav class="side"><div class="brand">screens <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
+  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a></div>`;
+  return `<nav class="side"><div class="brand">${D.screens} <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
 }
 
-function page({ title, tokens, extraCss = '', file = '', body, api = false, screen = '', comments = [] }) {
+function page({ title, tokens, extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>${h(title)}</title>
+<html lang="${h(lang)}"><head><meta charset="utf-8"><title>${h(title)}</title>
 <style>${tokensToCss(tokens)}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
-<script>window.DESIGN_CORE_API = ${api ? 'true' : 'false'}; window.DESIGN_CORE_SCREEN = ${JSON.stringify(screen)}; window.DESIGN_CORE_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))};</script>
+<script>window.DESIGN_CORE_API = ${api ? 'true' : 'false'}; window.DESIGN_CORE_SCREEN = ${JSON.stringify(screen)}; window.DESIGN_CORE_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))}; window.DESIGN_CORE_I18N = ${JSON.stringify(pageStrings(lang))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
 
 export function renderScreen(project, screen, { branch = null, adapter = null, api = false, comments = [] } = {}) {
   const doc = screen.doc;
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
   const findings = lint(project, { branch });
@@ -168,20 +173,23 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
   const body = `<div class="shell">
 ${sidebar(project, { current: doc.screen, findings, comments: api ? comments : [], proposals: [] })}
 <main class="main">
-<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)}${adapter ? ` · ${h(adapter.name)} components` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="compare"> compare states</label><label class="toggle"><input type="checkbox" id="dev"> paths</label></header>
-<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">variants</span>${variantTabs}` : ''}</div>
+<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
+<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
 <div class="states">${statePanels}${variantPanels}</div>
-<div class="section-title">Flows</div><ul class="list">${flows || '<li class="hint">none</li>'}</ul>
-<div class="section-title">Notes</div><ul class="list">${notes || '<li class="hint">none</li>'}</ul>
-<div class="section-title">Comments <span class="hint">${comments.length} open</span></div><ul class="list" id="comments">${commentList || '<li class="hint">none</li>'}</ul>
-${refs ? `<div class="section-title">References</div><div class="hint" style="font-size:12px">${refs}</div>` : ''}
+<div class="section-title">${D.flows}</div><ul class="list">${flows || `<li class="hint">${D.none}</li>`}</ul>
+<div class="section-title">${D.notes}</div><ul class="list">${notes || `<li class="hint">${D.none}</li>`}</ul>
+<div class="section-title">${D.comments} <span class="hint">${comments.length} ${D.open}</span></div><ul class="list" id="comments">${commentList || `<li class="hint">${D.none}</li>`}</ul>
+${refs ? `<div class="section-title">${D.references}</div><div class="hint" style="font-size:12px">${refs}</div>` : ''}
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: doc.screen, tokens, extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments });
+  return page({ title: doc.screen, tokens, extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
 }
 
 export function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
   const findings = lint(project, { branch, today });
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const total = summarize(findings);
@@ -197,39 +205,42 @@ export function renderIndex(project, { branch = null, today, proposals = [], com
           const tbd = mine.filter((f) => f.id === 'L08').length;
           const open = comments.filter((c) => c.screen === s.doc.screen).length;
           const pills = [
-            sum.blocking ? `<span class="pill block">${sum.blocking} blocking</span>` : `<span class="pill ok">clean</span>`,
-            sum.warning ? `<span class="pill ok">${sum.warning} warning</span>` : '',
-            tbd ? `<span class="pill tbd">${tbd} $tbd</span>` : '',
-            open ? `<span class="pill cm">${open} comment${open > 1 ? 's' : ''}</span>` : '',
+            sum.blocking ? `<span class="pill block">${sum.blocking} ${D.blocking}</span>` : `<span class="pill ok">${D.clean}</span>`,
+            sum.warning ? `<span class="pill ok">${sum.warning} ${D.warning}</span>` : '',
+            tbd ? `<span class="pill tbd">${tbd} ${D.tbd}</span>` : '',
+            open ? `<span class="pill cm">${open} ${open > 1 ? D.commentsN : D.comment}</span>` : '',
           ].join('');
           const states = ['Default', ...Object.keys(s.doc.states ?? {})];
-          return `<a class="scard" href="${h(s.doc.screen)}.html"><div class="t">${h(s.doc.screen)}</div><div class="m">${h(s.doc.type)} · ${states.length} states: ${h(states.join(', '))}</div><div class="pills">${pills}</div></a>`;
+          return `<a class="scard" href="${h(s.doc.screen)}.html"><div class="t">${h(s.doc.screen)}</div><div class="m">${h(s.doc.type)} · ${states.length} ${D.states}: ${h(states.join(', '))}</div><div class="pills">${pills}</div></a>`;
         })
         .join('');
       return `<div class="section-title">${h(section)}</div><div class="card-grid">${items}</div>`;
     })
     .join('');
   const waiting = proposals.length
-    ? `<div class="section-title">Waiting for a person</div><table class="index"><thead><tr><th>proposal</th><th>screen</th><th>tier</th><th>summary</th><th>lint after</th></tr></thead><tbody>${proposals
-        .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html"><u>${h(p.id)}</u></a></td><td>${h(p.screen)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} blocking, ${p.lint?.after?.warning ?? 0} warning</td></tr>`)
+    ? `<div class="section-title">${D.waitingForPerson}</div><table class="index"><thead><tr><th>${D.proposal}</th><th>${D.screen}</th><th>${D.tier}</th><th>${D.summary}</th><th>${D.lintAfter}</th></tr></thead><tbody>${proposals
+        .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html"><u>${h(p.id)}</u></a></td><td>${h(p.screen)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} ${D.blocking}, ${p.lint?.after?.warning ?? 0} ${D.warning}</td></tr>`)
         .join('')}</tbody></table>`
     : '';
   const body = `<div class="shell">
 ${sidebar(project, { current: null, findings, comments, proposals })}
 <main class="main">
-<header class="top"><h1>Overview</h1><span class="meta">${project.screens.length} screens${branch ? ` on ${h(branch)}` : ''} — ${total.blocking} blocking, ${total.warning} warning${comments.length ? `, ${comments.length} open comments` : ''}</span></header>
+<header class="top"><h1>${D.overview}</h1><span class="meta">${project.screens.length} ${D.screens}${branch ? ` ${D.on} ${h(branch)}` : ''} — ${total.blocking} ${D.blocking}, ${total.warning} ${D.warning}${comments.length ? `, ${comments.length} ${D.openComments}` : ''}</span></header>
 ${waiting}
 ${cards}
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: 'screens', tokens, body, api, screen: '', comments: [] });
+  return page({ title: D.screens, tokens, body, api, screen: '', comments: [], lang });
 }
 
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
 // state AS-IS beside TO-BE. This is the sketch step of DESIGN.md §7 — nothing is written
 // until a person has seen the screen it would produce.
 export function renderProposal(project, proposal, { branch = null, adapter = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
   const before = parseScreenText(proposal.before, proposal.file);
@@ -241,41 +252,41 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const tabs = states.map((s, i) => `<button class="tab${i === 0 ? ' active' : ''}" data-state="${h(s)}" data-target="pair-${h(s)}">${h(s)}</button>`).join('');
   const panels = states
     .map((state, i) => {
-      const a = before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter) : '<div class="hint">not in AS-IS</div>';
-      const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps, adapter) : '<div class="hint">removed in TO-BE</div>';
-      return `<section class="state${i === 0 ? ' active' : ''}" id="pair-${h(state)}"><div class="states compare"><div class="state active" id="asis-${h(state)}" style="display:block"><h3 style="display:block">AS-IS</h3>${a}</div><div class="state active" id="tobe-${h(state)}" style="display:block"><h3 style="display:block">TO-BE</h3>${b}</div></div></section>`;
+      const a = before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter) : `<div class="hint">${D.notInAsis}</div>`;
+      const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps, adapter) : `<div class="hint">${D.removedInTobe}</div>`;
+      return `<section class="state${i === 0 ? ' active' : ''}" id="pair-${h(state)}"><div class="states compare"><div class="state active" id="asis-${h(state)}" style="display:block"><h3 style="display:block">${D.asis}</h3>${a}</div><div class="state active" id="tobe-${h(state)}" style="display:block"><h3 style="display:block">${D.tobe}</h3>${b}</div></div></section>`;
     })
     .join('');
 
   const decisions = (proposal.decisions ?? []).length
-    ? `<table class="index"><thead><tr><th>item</th><th>decision</th><th>why</th></tr></thead><tbody>${proposal.decisions.map((d) => `<tr><td>${h(d.item)}</td><td>${h(d.decision)}</td><td>${h(d.why ?? '')}</td></tr>`).join('')}</tbody></table>`
-    : '<div class="hint">no decisions recorded — the agent proposed without the interview</div>';
+    ? `<table class="index"><thead><tr><th>${D.item}</th><th>${D.decision}</th><th>${D.why}</th></tr></thead><tbody>${proposal.decisions.map((d) => `<tr><td>${h(d.item)}</td><td>${h(d.decision)}</td><td>${h(d.why ?? '')}</td></tr>`).join('')}</tbody></table>`
+    : `<div class="hint">${D.noDecisions}</div>`;
   const cell = (x) => (x === undefined ? '' : `<code>${h(JSON.stringify(x))}</code>`);
   const rows = [
     ...proposal.diff.changed.map((e) => [e.path.join('.'), e.before, e.after]),
     ...proposal.diff.added.map((e) => [e.path.join('.'), undefined, e.after]),
     ...proposal.diff.removed.map((e) => [e.path.join('.'), e.before, undefined]),
   ];
-  const diff = `<table class="index"><thead><tr><th>where</th><th>AS-IS</th><th>TO-BE</th></tr></thead><tbody>${rows.map(([w, a, b]) => `<tr><td>${h(w)}</td><td>${cell(a)}</td><td>${cell(b)}</td></tr>`).join('')}</tbody></table>`;
-  const lintLine = `lint ${proposal.lint.before.blocking}→${proposal.lint.after.blocking} blocking, ${proposal.lint.before.warning}→${proposal.lint.after.warning} warning`;
+  const diff = `<table class="index"><thead><tr><th>${D.where}</th><th>${D.asis}</th><th>${D.tobe}</th></tr></thead><tbody>${rows.map(([w, a, b]) => `<tr><td>${h(w)}</td><td>${cell(a)}</td><td>${cell(b)}</td></tr>`).join('')}</tbody></table>`;
+  const lintLine = `lint ${proposal.lint.before.blocking}→${proposal.lint.after.blocking} ${D.blocking}, ${proposal.lint.before.warning}→${proposal.lint.after.warning} ${D.warning}`;
   const verdict =
     api && proposal.status === 'pending'
-      ? `<p><input id="by" placeholder="your name" style="width:160px;display:inline-block"> <button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">Apply</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">Reject</button> <span class="hint" id="verdict"></span></p>`
-      : `<p class="hint">to accept: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · to decline: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
+      ? `<p><input id="by" placeholder="${D.yourName}" style="width:160px;display:inline-block"> <button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">${D.apply}</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">${D.reject}</button> <span class="hint" id="verdict"></span></p>`
+      : `<p class="hint">${D.toAccept}: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · ${D.toDecline}: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
 
   const body = `<div class="shell">
 ${sidebar(project, { current: proposal.screen })}
 <main class="main">
-<header class="top"><h1>${h(proposal.screen)} <span class="hint">proposal</span></h1><span class="meta">${h(proposal.status)} · tier ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="dev"> paths</label></header>
-<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || '(no summary)')}</p>
-<div class="section-title">Decided before this version</div>${decisions}
-<div class="section-title">What changes</div>${diff}
+<header class="top"><h1>${h(proposal.screen)} <span class="hint">${D.proposal}</span></h1><span class="meta">${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
+<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>
+<div class="section-title">${D.decided}</div>${decisions}
+<div class="section-title">${D.whatChanges}</div>${diff}
 ${verdict}
-<div class="section-title">AS-IS · TO-BE</div>
+<div class="section-title">${D.asisTobe}</div>
 <div class="tabs-row">${tabs}</div>
 <div class="states">${panels}</div>
 </main>
 <aside id="inspector" class="drawer"></aside>
 </div>`;
-  return page({ title: `proposal ${proposal.id}`, tokens, extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [] });
+  return page({ title: `${D.proposal} ${proposal.id}`, tokens, extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
 }

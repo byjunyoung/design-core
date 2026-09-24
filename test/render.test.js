@@ -185,3 +185,29 @@ test('the index is the same shell: sections in the sidebar, cards per section in
   assert.match(html, /class="card-grid"/);
   assert.match(html, /02\. Inventory/);
 });
+
+test('with the mui adapter, mapped kinds render as MUI components and unmapped kinds fall back', async () => {
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const project = await loadProject(ops);
+  for (const [kind, mui] of Object.entries({ table: 'Table', button: 'Button', segmented: 'ToggleButtonGroup', pagination: 'Pagination' })) project.conventions.kinds[kind].maps_to = { ...(project.conventions.kinds[kind].maps_to ?? {}), mui };
+  const adapter = await createAdapter('mui', project);
+  const screen = project.screens.find((s) => s.doc.screen === 'inventory-list');
+  const html = renderScreen(project, screen, { adapter });
+  assert.match(html, /MuiTable/);
+  assert.match(html, /MuiButton/);
+  assert.match(html, /MuiPagination/);
+  assert.match(html, /class="el el-filter-bar/);
+  assert.match(html, /data-emotion/);
+});
+
+test('the viewer speaks the language conventions.meta.language names, samples included', async () => {
+  const project = await loadProject(ops);
+  project.conventions.meta = { language: 'ko' };
+  const screen = project.screens.find((s) => s.doc.screen === 'payment-list');
+  const html = renderScreen(project, screen);
+  assert.match(html, /상태 비교/);
+  assert.match(html, /흐름/);
+  assert.match(html, /<td>항목 1<\/td>/);
+  const index = renderIndex(project, { branch: 'x', today: '2026-09-24' });
+  assert.match(index, /개요/);
+});

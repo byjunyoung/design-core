@@ -3,6 +3,15 @@
 // A kind with no entry falls back to `generic`, which shows the kind and its props —
 // the renderer never refuses a kind, the same way lint only warns on one (L10).
 
+import { dictionary } from './i18n.js';
+
+// The language the bundled set speaks. Set once per render by renderScreen/renderIndex;
+// module state is fine because a render is synchronous.
+let D = dictionary('en');
+export function setLanguage(lang) {
+  D = dictionary(lang);
+}
+
 export const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export const isTbd = (x) => x && typeof x === 'object' && !Array.isArray(x) && '$tbd' in x;
@@ -35,16 +44,16 @@ export function sample(key, i = 0) {
   if (/\b(date|time|created|updated|paid|ordered)\b|_at$|\bat\b/.test(k)) return ['2026-09-24 10:12', '2026-09-23 18:40', '2026-09-21 09:05'][i % 3];
   if (/amount|price|total|sales|revenue|cost|sum|value|avg|average/.test(k)) return ['12,400', '8,900', '31,250'][i % 3];
   if (/_no$|\bno\b|number|order_no|\bid$/.test(k)) return `ORD-${1040 + n}`;
-  if (/status|state/.test(k)) return ['Paid', 'Pending', 'Refunded'][i % 3];
+  if (/status|state/.test(k)) return D.s_status[i % 3];
   if (/count|qty|quantity|orders|visitors|units|rank/.test(k)) return String([128, 64, 12][i % 3]);
-  if (/name|title|item|product/.test(k)) return `Item ${n}`;
-  if (/store|branch|shop/.test(k)) return ['Gangnam', 'Seongsu', 'Pangyo'][i % 3];
-  if (/method|type|kind/.test(k)) return ['Card', 'Mobile', 'Cash'][i % 3];
+  if (/name|title|item|product/.test(k)) return D.s_item(n);
+  if (/store|branch|shop/.test(k)) return D.s_stores[i % 3];
+  if (/method|type|kind/.test(k)) return D.s_method[i % 3];
   if (/email/.test(k)) return `user${n}@example.com`;
   if (/phone/.test(k)) return '010-1234-5678';
   if (/version/.test(k)) return `v2.${n}.0`;
   if (/duration|fulfil|elapsed/.test(k)) return ['4m 12s', '3m 48s', '6m 01s'][i % 3];
-  return `Sample ${n}`;
+  return D.s_sample(n);
 }
 
 export const kinds = {
@@ -106,25 +115,25 @@ export const kinds = {
     return `<table><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>${el.row_action ? `<div class="hint">row → ${v(el.row_action)}</div>` : ''}`;
   },
   pagination(el) {
-    return `<div class="pager">‹ <span class="on">1</span> 2 3 ›${el.page_size ? ` <span class="hint">${h(el.page_size)}/page</span>` : ''}</div>`;
+    return `<div class="pager">‹ <span class="on">1</span> 2 3 ›${el.page_size ? ` <span class="hint">${h(el.page_size)}${D.perPage}</span>` : ''}</div>`;
   },
   'empty-notice'(el) {
-    return `<div class="notice"><div class="notice-icon">○</div><div class="notice-title">${v(el.title ?? 'Nothing here')}</div><div class="notice-text">${v(el.text)}</div></div>`;
+    return `<div class="notice"><div class="notice-icon">○</div><div class="notice-title">${v(el.title ?? D.nothingHere)}</div><div class="notice-text">${v(el.text)}</div></div>`;
   },
   'error-notice'(el) {
-    return `<div class="notice error"><div class="notice-icon">!</div><div class="notice-title">${v(el.title ?? 'Something went wrong')}</div><div class="notice-text">${v(el.text)}</div></div>`;
+    return `<div class="notice error"><div class="notice-icon">!</div><div class="notice-title">${v(el.title ?? D.wentWrong)}</div><div class="notice-text">${v(el.text)}</div></div>`;
   },
   skeleton(el) {
     return Array.from({ length: Math.min(Number(el.rows) || 3, 6) }, () => `<div class="skel"></div>`).join('');
   },
   overlay(el) {
-    return `<div class="overlay-box">${v(el.text ?? 'Loading…')}</div>`;
+    return `<div class="overlay-box">${v(el.text ?? D.loading)}</div>`;
   },
   toast(el) {
     return `<div class="toast ${h(el.level ?? 'info')}">${v(el.text)}</div>`;
   },
   placeholder(el) {
-    return `<div class="ph-label">undesigned</div><div class="ph-text">${v(el.text)}</div>`;
+    return `<div class="ph-label">${D.undesigned}</div><div class="ph-text">${v(el.text)}</div>`;
   },
   modal(el, r) {
     return `<div class="modal-title">${v(el.title)}</div><div class="modal-body">${r.children(el)}</div>${el.notice ? `<div class="notice-inline">${v(el.notice.title ?? el.notice)}</div>` : ''}`;
@@ -147,7 +156,7 @@ export const kinds = {
     return `<textarea readonly rows="2" placeholder="${h(el.placeholder ?? '')}"></textarea>${el.counter ? `<div class="hint">${v(el.counter)}</div>` : ''}`;
   },
   select(el) {
-    return `<div class="select">${v(Array.isArray(el.options) ? el.options[0] : el.options ?? 'Select')} ▾</div>`;
+    return `<div class="select">${v(Array.isArray(el.options) ? el.options[0] : el.options ?? D.select)} ▾</div>`;
   },
   radio(el) {
     return `<div class="radio">${list(el.options).map((o, i) => `<label><span class="dot-r${i === 0 ? ' on' : ''}"></span>${v(o)}</label>`).join('')}</div>`;
@@ -159,10 +168,10 @@ export const kinds = {
     return `<div class="row"><div class="select">${h(el.format ?? 'YYYY.MM.DD')}</div> ~ <div class="select">${h(el.format ?? 'YYYY.MM.DD')}</div></div>`;
   },
   upload(el) {
-    return `<button class="btn">${v(el.label ?? 'Choose file')}</button>`;
+    return `<button class="btn">${v(el.label ?? D.chooseFile)}</button>`;
   },
   image(el) {
-    return `<div class="img size-${h(el.size ?? 'md')}">image</div>`;
+    return `<div class="img size-${h(el.size ?? 'md')}">${D.image}</div>`;
   },
   'kv-table'(el) {
     const rows = Array.isArray(el.rows) ? el.rows : [];
@@ -186,7 +195,7 @@ export const kinds = {
     return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">⋮⋮ ${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;
   },
   nav(el) {
-    return `<div class="nav">${list(el.items).map((i, k) => `<div class="nav-item${k === 0 ? ' on' : ''}">${v(label(i))}</div>`).join('') || '<div class="nav-item on">menu</div>'}</div>`;
+    return `<div class="nav">${list(el.items).map((i, k) => `<div class="nav-item${k === 0 ? ' on' : ''}">${v(label(i))}</div>`).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
   },
   checkbox(el) {
     return `<label class="chk-line"><span class="box${el.checked ? ' on' : ''}"></span>${v(el.label ?? el.text ?? el.id)}</label>`;

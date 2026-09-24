@@ -16,8 +16,8 @@ export function componentBases() {
   return [
     { id: 'none', label: 'Self-built (100% yours)', status: 'ready', note: 'the bundled set is copied into your project and becomes your component library' },
     { id: 'antd', label: 'Ant Design', status: 'ready', note: 'kinds map to antd components, drawn server-side and themed from tokens.json' },
-    { id: 'mui', label: 'MUI', status: 'planned', note: 'adapter not written yet; the antd adapter is the model' },
-    { id: 'shadcn', label: 'shadcn/ui', status: 'planned', note: 'adapter not written yet' },
+    { id: 'mui', label: 'MUI', status: 'ready', note: 'kinds map to MUI components, drawn server-side through emotion and themed from tokens.json' },
+    { id: 'shadcn', label: 'shadcn/ui', status: 'n/a', note: 'shadcn is copied source in your repo, not a package: start with --base none and point render.components at your own module' },
   ];
 }
 
@@ -80,7 +80,7 @@ npx design-core mcp .           # the same verbs for an agent (see the project r
 export async function initProject(dir, { base = 'none' } = {}) {
   const chosen = componentBases().find((b) => b.id === base);
   if (!chosen) throw new Error(`unknown base "${base}"; choose one of ${componentBases().map((b) => b.id).join(', ')}`);
-  if (chosen.status !== 'ready') throw new Error(`base "${base}" is planned, not ready — choose "none" (self-built) or "antd"`);
+  if (chosen.status !== 'ready') throw new Error(`base "${base}": ${chosen.note}`);
   if (existsSync(join(dir, 'conventions.yaml'))) throw new Error(`${dir} already has a conventions.yaml; init writes only into an empty project`);
 
   await mkdir(join(dir, 'screens'), { recursive: true });
@@ -117,6 +117,7 @@ export async function initProject(dir, { base = 'none' } = {}) {
   if (base === 'none') {
     await mkdir(join(dir, 'components'), { recursive: true });
     await copyFile(here('./render/kinds.js'), join(dir, 'components', 'kinds.js'));
+    await copyFile(here('./render/i18n.js'), join(dir, 'components', 'i18n.js')); // kinds.js imports it; the copy stays self-contained
     created.push('components/kinds.js');
   }
   return { dir, base, created };

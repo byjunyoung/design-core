@@ -188,6 +188,15 @@
           }
         }
       }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string"
+        }
+      }
     }
   }
 }

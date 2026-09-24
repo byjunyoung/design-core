@@ -101,7 +101,7 @@ All of them: `npx design-core <verb>`. Every one prints JSON with `--json`; the 
 
 | verb | what it does |
 |---|---|
-| `init <dir> [--base none\|antd]` | start a project; `none` copies the component set into it, a library base maps kinds to that library |
+| `init <dir> [--base none\|antd\|mui]` | start a project; `none` copies the component set into it, a library base maps kinds to that library |
 | `bases` | the component bases and whether each is ready |
 | `lint <dir>` | schema check + rules L01–L15; every finding has file, YAML path and line; exit 1 on blocking |
 | `prep <file>` | stub the states the screen type requires and the file lacks, as `$tbd` placeholders |
@@ -111,7 +111,7 @@ All of them: `npx design-core <verb>`. Every one prints JSON with `--json`; the 
 | `propose <dir> <screen> --with <new.yaml>` | queue a new version with diff, lint delta and tier |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | the rest of the loop |
 | `map figma <dir> <key> --page "…" [--write]` | pair a Figma page's component masters with kinds (`maps_to.figma`) |
-| `import figma <dir> <key> --page "…"` | one screen file per `{screen}-{state}` frame group; states as patches; unresolved → `$tbd` |
+| `import figma <dir> <key> --page "…"` | one screen file per frame group named by `naming.frame_pattern` (a regex or a preset: `screen-state`, `screen/state`, `screen state`, `screen=state`); states as patches; unresolved → `$tbd` |
 | `mcp <dir>` | the MCP server on stdio |
 
 Bringing in what you already drew (`<file-key>` is the part of the Figma URL after `/design/`): run `map figma` first (it reads the masters the page uses and pairs them with kinds by name), then `import figma`. On a real page the difference was 468 undecided values without the map and 16 with it and one hand-written mapping. `FIGMA_TOKEN` (a personal access token, read scope) must be set.
@@ -120,7 +120,9 @@ Bringing in what you already drew (`<file-key>` is the part of the Figma URL aft
 
 ![The antd adapter: real components, themed from tokens](docs/img/antd-modal.png)
 
-`render` and `serve` draw each kind with the bundled component set unless `conventions.yaml` says otherwise. `--base antd` (or `render.base: antd`) maps kinds to antd components and draws them server-side, themed from your `tokens.json` (primary, danger, text, border, radius, font). `--base none` copies the bundled set into `design/components/kinds.js`: from then on it is your component library, and the tool never owns it. Other libraries are one adapter file each, modelled on `src/render/adapters/antd.js`.
+`render` and `serve` draw each kind with the bundled component set unless `conventions.yaml` says otherwise. `--base antd` or `--base mui` (or `render.base` in conventions) maps kinds to that library's components and draws them server-side, themed from your `tokens.json` (primary, danger, text, border, radius, font). `--base none` copies the bundled set into `design/components/`: from then on it is your component library, and the tool never owns it — this is also the road for shadcn/ui and any in-house system, since those are source in your repo rather than a package. Other libraries are one adapter file each, modelled on `src/render/adapters/antd.js` and `mui.js`.
+
+The viewer's own words — labels, buttons, hints, sample values — follow `meta.language` in `conventions.yaml` (`en`, `ko`). Screen content is never translated.
 
 ## Project layout
 
@@ -154,6 +156,6 @@ npm test          # 110 tests, node:test, no framework
 npm run check     # tests + lint both examples + render one — what CI runs on Node 20 and 22
 ```
 
-Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`. `antd`, `react`, `react-dom` and `@ant-design/cssinjs` are optional and only loaded by the antd adapter.
+Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`. `react`, `react-dom`, `antd`, `@ant-design/cssinjs`, `@mui/material` and `@emotion/*` are optional and only loaded by the adapter that needs them.
 
 MIT.

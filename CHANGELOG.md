@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2 — 2026-09-24
+
+Generality, ahead of the first outside user.
+
+- **MUI adapter** — `--base mui` draws mapped kinds with MUI components through emotion, themed from tokens. `bases` now says `antd` and `mui` are ready; `shadcn` is listed as not applicable with the reason (it is copied source, so `--base none` is its road).
+- **Language** — `meta.language` in `conventions.yaml` (`en`, `ko`) switches the viewer's own words and the sample values. Screen content is never translated.
+- **Frame name presets** for `import figma` — `naming.frame_pattern` takes a regex or `screen-state`, `screen/state`, `screen state`, `screen=state`.
+- A self-built project's `components/` is self-contained again (its `kinds.js` brings `i18n.js` along).
+
 ## 0.1.1 — 2026-09-24
 
 For anyone, not just the author's machine.

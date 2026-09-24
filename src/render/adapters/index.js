@@ -5,6 +5,7 @@
 // asks for it never pays for it.
 const REGISTRY = {
   antd: () => import('./antd.js'),
+  mui: () => import('./mui.js'),
 };
 
 export async function createAdapter(name, project) {
