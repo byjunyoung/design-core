@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+ .lanes{display:grid;grid-template-columns:150px 1fr;row-gap:16px;margin-bottom:34px}
+ .lane{font-size:17px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#9AA3AF;padding-top:26px}
+ .lane.p{color:#B8742A}.lane.a{color:#5B6FA8}.lane.t{color:#3C8F5A}
+ .steps{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+ .step{border:1px solid #E7EAEE;border-radius:13px;padding:18px 18px 16px;min-height:118px;background:#fff}
+ .step.p{background:#FFF9F1;border-color:#F0DFC4}.step.a{background:#F7F9FF;border-color:#DCE3F2}.step.t{background:#F4FBF6;border-color:#CFE8D7}
+ .step .n{font-size:15px;font-weight:600;color:#9AA3AF;margin-bottom:6px}
+ .step .h{font-size:21px;font-weight:600;line-height:1.25}
+ .step .d{font-size:17px;line-height:1.4;color:#6B7480;margin-top:6px}
+ .step .c{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;color:#39404B;margin-top:8px}
+ .empty{border:1px dashed #EDEFF3;border-radius:13px;min-height:118px}
+ .arrow{grid-column:2;display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:-6px}
+ .arrow span{text-align:center;color:#C3C9D2;font-size:24px}
+ .gate{border:2px solid #1F2430;border-radius:13px;padding:22px 28px;display:flex;gap:40px;align-items:center}
+ .gate .t2{font-size:23px;font-weight:600;flex:none}
+ .gate .g{font-size:19px;color:#6B7480;line-height:1.45}
+ .gate code{font-size:18px;color:#1F2430}
+</style>
+<div class="wrap">
+<h1>The loop — a screen from request to canonical</h1>
+<div class="sub">Three lanes. The person never drags anything; the agent never writes a file without a proposal; the tool never lets an undecided value reach <code>main</code>.</div>
+
+<div class="lanes">
+  <div class="lane p">person</div>
+  <div class="steps">
+    <div class="step p"><div class="n">1</div><div class="h">asks</div><div class="d">"an order list with filters, and a detail when you tap a row"</div></div>
+    <div class="empty"></div>
+    <div class="step p"><div class="n">3</div><div class="h">answers, one at a time</div><div class="d">which columns, what the empty copy says, what is out of scope</div></div>
+    <div class="empty"></div>
+    <div class="step p"><div class="n">6</div><div class="h">looks, comments, applies</div><div class="d">every state side by side, a comment on the element, <b>Apply</b> with a name</div></div>
+    <div class="empty"></div>
+  </div>
+
+  <div class="lane a">agent</div>
+  <div class="steps">
+    <div class="empty"></div>
+    <div class="step a"><div class="n">2</div><div class="h">anchors, lists decisions</div><div class="d">reads the sibling screens and the rules; numbers what has to be decided</div><div class="c">list_screens · get_screen</div></div>
+    <div class="empty"></div>
+    <div class="step a"><div class="n">4</div><div class="h">writes the file, proposes</div><div class="d">the whole screen, every required state, undecided values as <code>$tbd</code></div><div class="c">propose(+decisions)</div></div>
+    <div class="empty"></div>
+    <div class="step a"><div class="n">7</div><div class="h">closes the loop</div><div class="d">resolves the comment naming the proposal; next request starts at 2</div><div class="c">resolve_comment</div></div>
+  </div>
+
+  <div class="lane t">doan</div>
+  <div class="steps">
+    <div class="empty"></div>
+    <div class="empty"></div>
+    <div class="empty"></div>
+    <div class="step t"><div class="n">5</div><div class="h">checks and draws</div><div class="d">lint before/after, the diff, AS-IS beside TO-BE in the viewer — nothing written yet</div><div class="c">lint · render --proposal</div></div>
+    <div class="step t"><div class="n">6′</div><div class="h">writes on Apply</div><div class="d">refuses if the file moved since; text-only changes apply at once with undo</div><div class="c">apply · undo</div></div>
+    <div class="step t"><div class="n">8</div><div class="h">guards the branch</div><div class="d">a <code>$tbd</code> on <code>main</code> blocks; the PR gets the preview and the lint summary</div><div class="c">lint --branch main</div></div>
+  </div>
+</div>
+
+<div class="gate">
+  <div class="t2">Where things live</div>
+  <div class="g">The screen is a YAML file in your repo. The proposal is a file in <code>.proposals/</code>. The comment is a file in <code>.comments/</code>. Versions are git branches: working = branch, review = PR, canonical = <code>main</code>. Nothing is stored anywhere else.</div>
+</div>
+</div>

@@ -1,0 +1,42 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+ .flow{display:flex;align-items:stretch;gap:14px;margin-bottom:30px}
+ .st{flex:1;border:1px solid #E7EAEE;border-radius:13px;padding:20px 20px 18px;background:#fff}
+ .st .h{font-size:22px;font-weight:600;margin-bottom:6px}
+ .st .c{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;color:#39404B;margin-bottom:8px}
+ .st .d{font-size:17px;line-height:1.45;color:#6B7480}
+ .sep{align-self:center;font-size:26px;color:#C3C9D2;flex:none}
+ .num{display:flex;gap:16px;margin-bottom:30px}
+ .n{flex:1;border-radius:13px;padding:18px 22px;text-align:center}
+ .n.a{background:#FFF1F0;border:1px solid #F5C6C2}.n.b{background:#FFF9EC;border:1px solid #F0DFA8}.n.c{background:#F0FAF3;border:1px solid #C6E6CF}
+ .n .v{font-size:40px;font-weight:700;letter-spacing:-1px}
+ .n .l{font-size:17px;color:#6B7480;margin-top:2px}
+ .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 28px}
+ .r{display:flex;gap:14px;align-items:flex-start;font-size:18px;line-height:1.45}
+ .r .k{flex:none;width:210px;font-weight:600}
+ .r .d{color:#6B7480}
+</style>
+<div class="wrap">
+<h1>Already drew it in Figma? Bring it in.</h1>
+<div class="sub">One page over the REST API. Whatever the importer cannot resolve becomes a <code>$tbd</code> owned by <code>import</code> — so the first lint after an import is an honest to-do list, not a guess.</div>
+<div class="flow">
+  <div class="st"><div class="h">1 · map</div><div class="c">doan map figma design &lt;key&gt; --page "…" --write</div><div class="d">reads the component masters the page uses and pairs them with kinds by name — <code>button</code>, <code>table</code>, <code>dropdown → select</code></div></div>
+  <div class="sep">→</div>
+  <div class="st"><div class="h">2 · import</div><div class="c">doan import figma design &lt;key&gt; --page "…"</div><div class="d">frames named <code>{screen}-{state}</code> become one file per screen; the other states become patches; auto-layout becomes layout in token names; prototype links become flows</div></div>
+  <div class="sep">→</div>
+  <div class="st"><div class="h">3 · lint, then people</div><div class="c">doan lint design</div><div class="d">what is left is named, owned and counted. The agent walks the list with a person; each answer is one <code>propose</code></div></div>
+</div>
+<div class="num">
+  <div class="n a"><div class="v">468</div><div class="l">$tbd — import with no map</div></div>
+  <div class="n b"><div class="v">80</div><div class="l">after <code>map figma</code> paired 16 kinds by name</div></div>
+  <div class="n c"><div class="v">16</div><div class="l">after one hand-written mapping (a dashboard tile)</div></div>
+</div>
+<div class="rules">
+  <div class="r"><div class="k">variants</div><div class="d">an instance named <code>type=primary</code> is read through its component set — <code>button</code></div></div>
+  <div class="r"><div class="k">repeats</div><div class="d">100 identical tiles become one element with <code>repeat: 100</code></div></div>
+  <div class="r"><div class="k">wrappers</div><div class="d"><code>wrapper</code>, <code>contents</code>, <code>Frame 483913</code> are groups, not questions</div></div>
+  <div class="r"><div class="k">scaffolding</div><div class="d">arrow labels and state chains a flow tool left on the page are skipped</div></div>
+  <div class="r"><div class="k">no convention</div><div class="d">a page with no naming still imports, one screen per frame, each flagged as named by the importer</div></div>
+  <div class="r"><div class="k">your naming</div><div class="d"><code>frame_pattern</code>: a two-group regex, or a preset — <code>screen-state</code>, <code>screen/state</code>, <code>screen state</code></div></div>
+</div>
+</div>

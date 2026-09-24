@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+ .two{display:grid;grid-template-columns:640px 1fr;gap:34px;align-items:start}
+ pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18.5px;line-height:1.5;background:#FAFBFC;border:1px solid #E7EAEE;border-radius:13px;padding:22px 24px;color:#1F2430;white-space:pre}
+ pre .k{color:#5B6FA8}pre .s{color:#3C8F5A}pre .t{background:#FFF4D6;border:1px dashed #E0B64A;border-radius:4px;padding:0 4px}
+ pre .cm{color:#A6ADB8}
+ .notes{display:flex;flex-direction:column;gap:14px}
+ .note{border:1px solid #E7EAEE;border-radius:13px;padding:16px 20px}
+ .note .h{font-size:20px;font-weight:600;margin-bottom:4px}
+ .note .h code{color:#5B6FA8;font-size:19px}
+ .note .d{font-size:18px;line-height:1.45;color:#6B7480}
+</style>
+<div class="wrap">
+<h1>What one screen file says</h1>
+<div class="sub">Short enough to read in a pull request. Everything a reviewer asks about is a key, and everything nobody decided is marked as such.</div>
+<div class="two">
+<pre><span class="k">screen:</span> order-list
+<span class="k">section:</span> "03. Orders - Order list"
+<span class="k">type:</span> list            <span class="cm"># must have Empty · Loading · Error</span>
+<span class="k">platform:</span> web
+
+<span class="k">elements:</span>
+  - id: filter
+    kind: filter-form
+    fields: [period, branch, status]
+  - id: table
+    kind: table
+    columns: [order_no, branch, amount, status]
+  - id: paging
+    kind: pagination
+
+<span class="k">layout:</span>
+  root: { kind: stack, gap: <span class="s">space.lg</span>, padding: <span class="s">space.xl</span> }
+
+<span class="k">states:</span>
+  Empty:
+    - { target: table, replace: { kind: empty-notice,
+                                  text: "No orders match." } }
+    - { target: paging, hide: true }
+  Loading:
+    - { target: table, replace: { kind: skeleton, rows: 10 } }
+  Error:
+    - { target: table, replace: { kind: error-notice,
+        text: <span class="t">{ $tbd: { owner: pm, due: 2026-10-02 } }</span> } }
+
+<span class="k">flows:</span>
+  - { from: table, via: row, to: order-detail, nav: push }
+
+<span class="k">refs:</span>
+  prd: notion:2a1f0d…
+  task: github:acme/tasks#4155</pre>
+<div class="notes">
+  <div class="note"><div class="h"><code>type</code> decides what must exist</div><div class="d">A list screen without an Empty state is a lint failure, not an oversight found in QA.</div></div>
+  <div class="note"><div class="h"><code>elements</code> are shallow</div><div class="d">A kind and a few props. How a table looks is the component library's business, not the file's.</div></div>
+  <div class="note"><div class="h"><code>layout</code> speaks in tokens</div><div class="d">Never <code>16px</code>. A design-system change re-themes every screen; a diff stays readable.</div></div>
+  <div class="note"><div class="h"><code>states</code> are patches</div><div class="d">Empty says what is different, which is exactly the reviewer's question. Variants (Create vs Edit) use the same shape.</div></div>
+  <div class="note"><div class="h"><code>$tbd</code> is a value</div><div class="d">Not an empty string. It has an owner, shows as a yellow dot in the picture, and blocks the canonical branch.</div></div>
+  <div class="note"><div class="h"><code>flows</code> and <code>refs</code> are machine-readable</div><div class="d">An arrow to a screen that does not exist fails lint. The spec and the ticket are one click away.</div></div>
+</div>
+</div>
+</div>

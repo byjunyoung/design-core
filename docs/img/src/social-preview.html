@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+ body{width:1400px;height:700px;background:#0f1218;color:#fff;font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo",Arial,sans-serif}
+ .wrap{padding:64px 72px;height:700px;display:flex;flex-direction:column;justify-content:space-between}
+ .name{font-size:96px;font-weight:700;letter-spacing:-2px;line-height:1}
+ .name .ko{font-size:40px;font-weight:500;color:#9AA3AF;margin-left:22px;letter-spacing:0;vertical-align:middle}
+ .tag{font-size:38px;font-weight:600;margin-top:26px;line-height:1.25;max-width:1100px}
+ .tag .dim{color:#9AA3AF;font-weight:500}
+ .row{display:flex;gap:18px;align-items:stretch}
+ .pill{border:1.5px solid #2A313D;border-radius:14px;padding:18px 24px;font-size:22px;line-height:1.35;color:#C9D0DA;flex:1}
+ .pill b{display:block;color:#fff;font-size:24px;margin-bottom:6px}
+ .pill code{font-size:21px;color:#9BD1FF}
+ .foot{font-size:20px;color:#6B7480;margin-top:0}
+</style>
+<div class="wrap">
+  <div>
+    <div class="name">doan <span class="ko">도안 · a design drawing</span></div>
+    <div class="tag">Screens as files. <span class="dim">The agent draws; you say what to change.</span></div>
+  </div>
+  <div class="row">
+    <div class="pill"><b>One YAML per screen</b>elements · layout by tokens · states as patches · flows · <code>$tbd</code></div>
+    <div class="pill"><b>Lint finds what is missing</b>an Empty state nobody drew, an arrow to nowhere, a value nobody decided</div>
+    <div class="pill"><b>Change by conversation</b>the agent proposes, you press Apply, git keeps the versions</div>
+    <div class="pill"><b>Web, app, kiosk</b>phone frames, tab bars, sheets — antd, MUI, or your own components</div>
+  </div>
+  <div class="foot">npx @junyoung735/doan init design &nbsp;·&nbsp; MIT &nbsp;·&nbsp; github.com/byjunyoung/doan</div>
+</div>

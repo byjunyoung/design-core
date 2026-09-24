@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+ .doors{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:26px}
+ .door{border:1px solid #E7EAEE;border-radius:13px;padding:22px 24px 20px}
+ .door .who{font-size:16px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#9AA3AF;margin-bottom:8px}
+ .door .h{font-size:24px;font-weight:600;margin-bottom:10px}
+ .door pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;line-height:1.5;background:#FAFBFC;border:1px solid #EDEFF3;border-radius:9px;padding:12px 14px;color:#39404B;white-space:pre;margin-bottom:10px}
+ .door .d{font-size:18px;line-height:1.45;color:#6B7480}
+ .engine{border:2px solid #1F2430;border-radius:13px;padding:20px 28px;display:flex;align-items:center;gap:30px;margin-bottom:26px}
+ .engine .t{font-size:23px;font-weight:600;flex:none}
+ .engine .g{font-size:19px;color:#6B7480;line-height:1.45}
+ .engine code{color:#1F2430}
+ .why{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+ .w{border:1px solid #E7EAEE;border-radius:13px;padding:16px 18px;background:#FAFBFC}
+ .w .h{font-size:19px;font-weight:600;margin-bottom:4px}
+ .w .d{font-size:17px;color:#6B7480;line-height:1.4}
+</style>
+<div class="wrap">
+<h1>One engine, three doors</h1>
+<div class="sub">The same verbs, the same JSON, whichever door you come in by. That is why it fits a terminal, an agent and a browser without three products.</div>
+<div class="doors">
+  <div class="door"><div class="who">CI · scripts · you</div><div class="h">Command line</div>
+<pre>doan lint design --branch main
+doan diff screens/order-list.yaml --from main
+doan render design --components antd</pre>
+    <div class="d">Exit codes a pipeline reads. <code>--json</code> for anything else. Works on a clone with Node 20 and nothing installed.</div></div>
+  <div class="door"><div class="who">Claude Code · Cursor · Codex</div><div class="h">MCP server</div>
+<pre>list_screens · get_screen · list_missing
+propose · apply · reject · undo
+list_comments · resolve_comment · import_figma</pre>
+    <div class="d">Plus a <code>draw</code> prompt: how to decide before proposing. Any agent that speaks MCP gets the same discipline.</div></div>
+  <div class="door"><div class="who">designers · PMs · engineers</div><div class="h">Viewer</div>
+<pre>doan serve design
+→ http://127.0.0.1:4870/</pre>
+    <div class="d">Screens by section, states as tabs, a drawer that knows the file and line, comments on elements, Apply / Reject on a proposal.</div></div>
+</div>
+<div class="engine"><div class="t">Under all three</div><div class="g"><code>src/verbs.js</code> — one implementation per verb, returning plain JSON. The CLI prints it, the MCP server returns it, the viewer draws it. A rule added once is enforced everywhere at once.</div></div>
+<div class="why">
+  <div class="w"><div class="h">Files, so git</div><div class="d">Branch, PR, history, blame — versioning you already have, not a feature to build.</div></div>
+  <div class="w"><div class="h">CLI, so CI</div><div class="d">A pull request that adds a screen without its Empty state goes red like a failing test.</div></div>
+  <div class="w"><div class="h">MCP, so any agent</div><div class="d">Bring the agent you already pay for. The tool does not run a model.</div></div>
+  <div class="w"><div class="h">Local, so no account</div><div class="d">Day one is a folder and two commands. Hosting is the next layer, not a prerequisite.</div></div>
+</div>
+</div>

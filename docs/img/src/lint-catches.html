@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+ .term{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:19px;line-height:1.6;background:#0f1218;color:#E6E9EF;border-radius:13px;padding:24px 28px;margin-bottom:30px}
+ .term .b{color:#FF7B72;font-weight:700}.term .w{color:#E0B64A;font-weight:700}.term .f{color:#9BD1FF}.term .p{color:#A6ADB8}.term .sum{color:#fff;font-weight:600}
+ .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+ .c{border:1px solid #E7EAEE;border-radius:13px;padding:18px 20px}
+ .c .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;color:#9AA3AF;margin-bottom:6px}
+ .c .h{font-size:20px;font-weight:600;line-height:1.3}
+ .c .d{font-size:17px;color:#6B7480;line-height:1.45;margin-top:6px}
+</style>
+<div class="wrap">
+<h1>What lint catches — before anyone asks</h1>
+<div class="sub">Fifteen rules, each with a file, a YAML path and a line. Blocking stops handoff; warning is counted. On <code>main</code>, an undecided value is blocking.</div>
+<div class="term">
+<span class="b">BLOCK</span>  L03  <span class="f">screens/order-list.yaml:12</span>  <span class="p">states</span>  list screen is missing the Empty state
+<span class="b">BLOCK</span>  L05  <span class="f">screens/order-list.yaml:31</span>  <span class="p">flows.0.to</span>  flow target "order-detial" is not a screen or screen.state
+<span class="b">BLOCK</span>  L13  <span class="f">screens/order-list.yaml:19</span>  <span class="p">layout.root.gap</span>  gap "16px" is a bare unit; use a token name
+<span class="w">warn </span>  L08  <span class="f">screens/order-list.yaml:27</span>  <span class="p">states.Error.0.replace.text</span>  $tbd (pm, due 2026-10-02)
+<span class="w">warn </span>  L10  <span class="f">screens/order-list.yaml:9</span>   <span class="p">elements.1.kind</span>  kind "hologram" is not in conventions.kinds
+<span class="sum">6 screens on feature/orders — 3 blocking, 2 warning</span></div>
+<div class="grid">
+  <div class="c"><div class="id">L03 · required-states</div><div class="h">The screen nobody drew</div><div class="d">A list needs Empty, Loading and Error. A form needs Validation. Your team writes the table; lint enforces it.</div></div>
+  <div class="c"><div class="id">L05 · flow-target</div><div class="h">The arrow to nowhere</div><div class="d">A typo in a screen name, a screen renamed without its flows — caught at the line, not at handoff.</div></div>
+  <div class="c"><div class="id">L13 · layout-vocabulary</div><div class="h">The pixel that escaped</div><div class="d">Spacing is a token name or it is a failure. That is what keeps a design-system change from becoming a migration.</div></div>
+  <div class="c"><div class="id">L08 · tbd</div><div class="h">The value nobody decided</div><div class="d">Counted per owner, blocking when overdue or on <code>main</code>. The to-do list writes itself.</div></div>
+  <div class="c"><div class="id">L07 · patch-target</div><div class="h">The state that patches a ghost</div><div class="d">An Empty state that hides an element which no longer exists — the kind of drift a canvas never notices.</div></div>
+  <div class="c"><div class="id">L15 · variant-shape</div><div class="h">The variant that is really a state</div><div class="d">An axis with one option, or an option named like a state, is asked about instead of quietly accepted.</div></div>
+</div>
+</div>

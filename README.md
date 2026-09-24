@@ -1,35 +1,79 @@
+<img src="docs/img/social-preview.png" alt="doan — 도안, a design drawing. Screens as files. The agent draws; you say what to change." width="100%">
+
 # doan
 
 **도안** — the Korean word for a design drawing, the plan a thing is made from.
 
-**Screens as files. The agent draws; you say what to change.**
+Imagine every screen of your product is a short text file. It says what is on the screen, what it looks like when it is empty or loading or broken, where each button goes, and which spec it came from. An AI agent writes those files. You open a page in your browser, point at an element, and say "drop that column" or "the empty message should be warmer." The agent proposes a new version — with the diff, the lint result and the decisions it was based on — and you press **Apply**. Versions are git. No canvas, no dragging, no design file drifting away from the code.
 
-Every screen of your product is a short YAML file: what is on it, how it looks when it is empty or loading or broken, where each button goes, which spec it came from. An AI agent writes those files. You open the viewer, point at an element, and say what should change. The agent proposes a new version — with a diff, a lint result and the decisions it was based on — and you press Apply. Versions are git. No canvas, no dragging, no design file drifting away from the code.
+It replaces Figma for product screens — web, app and kiosk. Decks, diagrams, vectors and marketing stay wherever they are.
 
-It replaces Figma for product screens. Decks, diagrams, vectors and marketing stay wherever they are.
+**You do not write code to use it.** You talk to the agent you already have (Claude Code, Cursor, Codex) and look at a web page. The command line is there for the people and machines that want it: CI, scripts, a quick check.
 
-> Everything here runs locally; the hosted service (a viewer per branch, a lint bot on pull requests) is the next layer, not this one.
+[What it solves](#what-it-solves) · [Who it's for](#who-its-for) · [The whole loop](#the-whole-loop) · [Your first five minutes](#your-first-five-minutes) · [What a screen file says](#what-a-screen-file-says) · [The viewer](#the-viewer) · [What lint catches](#what-lint-catches) · [Already drew it in Figma?](#already-drew-it-in-figma) · [Web, app, kiosk](#web-app-kiosk) · [Why files and a command line](#why-files-and-a-command-line) · [Commands](#commands) · [Configuration](#configuration)
 
-![Overview: every screen by section, with what needs attention](docs/img/overview.jpg)
+<details>
+<summary>If any of the words below are new — ten of them, one line each</summary>
 
-## Quick start
+| Word | What it means here |
+|---|---|
+| **screen file** | One YAML text file per screen. The whole design of that screen, in words a person and a machine both read |
+| **state** | What a screen looks like in a moment: Empty, Loading, Error. Written as *what changes* from the default, not as a second copy |
+| **variant** | What a screen *is* for a record or mode — an edit dialog in Create mode vs Edit mode. Same shape as a state |
+| **`$tbd`** | A value nobody has decided yet. It is a real value with an owner, not an empty string — so it can be counted, shown and blocked |
+| **lint** | A check that reads every screen file and says what is missing or wrong, with the file and line. Like a spell-checker for screens |
+| **proposal** | A new version of one screen the agent wants to write, waiting for a person to apply or reject it |
+| **viewer** | The web page that draws the files: every screen, every state, an inspector, comments, Apply / Reject |
+| **MCP** | The standard by which agents call tools. doan is one such tool; any agent that speaks MCP can use it |
+| **conventions** | Your team's rules, in one file: how screens are named, which states each type needs, what a kind maps to |
+| **component base** | What the picture is drawn with: a library (antd, MUI) or your own copy of the bundled set |
 
-No clone needed — Node 20 or newer is the only requirement:
+</details>
+
+## What it solves
+
+A design file rarely breaks when one person owns it. It breaks when there are several people, dozens of screens, an agent writing some of them, and a few months of history.
+
+- **The screen nobody drew.** "What shows when the list is empty?" You find out that screen does not exist when engineering asks. doan knows a list screen needs an Empty state and says so before anyone asks.
+- **The value nobody decided.** A placeholder string that looked fine in review ships. In doan an undecided value is `$tbd` — counted, owned, visible as a yellow dot, and blocking on `main`.
+- **The design that drifted from the code.** Figma has one truth, the repo another. Here the screen *is* a file in the repo: branch, PR, diff, blame — the same tools, the same history.
+- **The agent that edits behind your back.** An agent that can write files will. In doan it can only *propose*; a person applies, and `apply` refuses if the file moved since.
+- **The arrow to nowhere, the pixel that escaped, the state that patches a ghost.** Fifteen checks, each with a line number.
+
+## Who it's for
+
+- **A designer or PM who plans and builds with an agent** and wants the design to be a record, not a chat transcript. You look, comment and approve; you never drag.
+- **An engineer** who wants the design next to the code, reviewable in a PR, checkable in CI, with real component names in the handoff.
+- **A team on Figma today** that wants to try the other side of the bet without redrawing: `import figma` brings a page in.
+
+Not for: decks, illustration, marketing pages, or anyone who wants to move boxes by hand. That is what Figma is for, and doan does not pretend otherwise.
+
+## The whole loop
+
+<img src="docs/img/workflow.png" alt="The loop in three lanes — person asks, agent anchors and proposes, doan checks, draws, writes on Apply and guards the branch" width="100%">
+
+Read it left to right. The person speaks twice (what they want, then answers) and acts once (Apply). The agent reads before it writes and never writes without a proposal. doan sits under both: it checks, draws the proposal side by side with the current screen, writes only on Apply, and keeps `main` clean.
+
+The agent gets this discipline from the tool itself — the MCP server ships a `draw` prompt: anchor to the nearest screen, list what has to be decided, ask one thing at a time with a recommendation, table the answers, propose with the decisions attached, render, wait. Any agent that connects draws the same way.
+
+## Your first five minutes
+
+Node 20 or newer is the only requirement. No clone, no account.
 
 ```bash
 npx @junyoung735/doan init design --base antd   # or --base none: the component set is copied into design/ and is yours
 npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ```
 
-`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json`, a starter screen and its own README. (The package is scoped because npm refuses bare `doan` as too close to `dot`/`docz`; `npm i -g @junyoung735/doan` gives you a plain `doan` command.) To see the tool with real screens in it first, clone and `npm run demo` — six admin screens under generic names, drawn with antd.
+`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json`, a starter screen and its own README. Open the viewer and click the starter screen: state tabs, a picture, a drawer that says which file and line each element came from.
 
-To let an agent in, add the MCP server to your client. Claude Code — `.mcp.json` in the project:
+Let an agent in. Claude Code — `.mcp.json` in the project:
 
 ```json
 { "mcpServers": { "doan": { "command": "npx", "args": ["-y", "@junyoung735/doan", "mcp", "design"] } } }
 ```
 
-Cursor uses the same JSON in `.cursor/mcp.json`; Codex takes it in `~/.codex/config.toml`:
+Cursor takes the same JSON in `.cursor/mcp.json`; Codex takes it in `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.doan]
@@ -37,133 +81,112 @@ command = "npx"
 args = ["-y", "@junyoung735/doan", "mcp", "design"]
 ```
 
-Then ask the agent for a screen. It will use the `draw` prompt: anchor to the nearest screen, list what has to be decided, ask one thing at a time, propose with the decisions attached, render, and wait for you.
+Then ask the agent for a screen — "an order list with filters, and a detail when you tap a row." It will ask you a few things, propose, and tell you where to look. Press Apply. That is the loop.
 
-## What a screen file looks like
+To see doan with real screens in it first, clone and `npm run demo` — six admin screens under generic names, drawn with antd.
 
-```yaml
-screen: order-list
-section: "03. Orders - Order list"
-type: list                         # a list screen must have Empty, Loading and Error states
+## What a screen file says
 
-elements:
-  - id: filter
-    kind: filter-form
-    fields: [period, branch, status]
-  - id: table
-    kind: table
-    columns: [order_no, branch, amount, status, ordered_at]
-  - id: paging
-    kind: pagination
+<img src="docs/img/screen-anatomy.png" alt="A screen file with six callouts: type decides what must exist, elements are shallow, layout speaks in tokens, states are patches, $tbd is a value, flows and refs are machine-readable" width="100%">
 
-layout:                            # structure and token names, never pixels
-  root: { kind: stack, direction: column, gap: space.lg, padding: space.xl }
+Two things make the file worth reading in a pull request. **States are patches** — `Empty` says what is different, which is exactly the reviewer's question — and **nothing is silently missing**: a required state that is not there fails lint, and a value nobody decided is `$tbd` with an owner. The file also knows where it came from: `refs` point at the spec entry and the ticket as typed URIs, so nobody has to ask.
 
-states:                            # what changes, and nothing else
-  Empty:
-    - { target: table, replace: { kind: empty-notice, text: "No orders match." } }
-    - { target: paging, hide: true }
-  Loading:
-    - { target: table, replace: { kind: skeleton, rows: 10 } }
-  Error:
-    - { target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm } } } }   # undecided — and it says so
-
-flows:
-  - { from: table, via: row, to: order-detail }
-
-refs:
-  prd: notion:2a1f0d…
-  task: github:acme/task-management#4155
-```
-
-- **States are patches.** `Empty` says what is different, which is also what a reviewer wants to know.
-- **Variants** (`variants:`) are what a screen *is* for a record or mode — an edit dialog in Create or Edit mode — and use the same patch shape. States are what it is *doing*.
-- **`$tbd` is a value.** An undecided text is not an empty string; it carries an owner, shows as a yellow dot in the drawing and a line in the to-do list, and blocks the canonical branch.
-- **`refs` point at the spec and the ticket** as typed URIs, so nobody has to ask where a screen came from.
+`variants:` uses the same patch shape for what a screen *is* — an edit dialog for a counted item vs a cup, a form in Create vs Edit mode — as opposed to what it is *doing* (Empty, Loading). The distinction came out of transcribing six real screens; it is in `DESIGN.md` §12.
 
 ## The viewer
 
-![A screen: state tabs, the picture scaled to fit, flows and notes below](docs/img/screen.jpg)
+<img src="docs/img/overview.jpg" alt="Overview: every screen by section, with pills for what needs attention" width="100%">
 
-A sidebar lists every screen by section with pills for blocking findings, undecided values and open comments. A screen page shows one state at a time as tabs — variants too — or every state side by side with **compare states**. On the picture, meta information is only a dot: grey for a condition (`show_when`), yellow for an undecided value, blue for a comment. Empty cells carry sample values so a screen reads as a screen.
+A sidebar lists every screen by section with pills for blocking findings, undecided values and open comments. A screen page shows one state at a time as tabs — variants too — or every state side by side with **compare states**, scaled to fit.
 
-![The drawer: kind, mapped component, props, file · path · line, comments](docs/img/inspector.jpg)
+<img src="docs/img/screen.jpg" alt="A screen page: state tabs, the picture scaled to fit, flows and notes below" width="100%">
 
-Click any element and the drawer says what it is, which component it maps to, its conditions and props, and the file, YAML path and line it came from. In the live viewer the drawer also takes a comment, anchored to that path.
+On the picture, meta information is only a dot: grey for a condition (`show_when`), yellow for an undecided value, blue for a comment. Empty cells carry sample values made from the column name, so a screen reads as a screen; the drawer says they are samples.
 
-## The edit loop
+<img src="docs/img/inspector.jpg" alt="The drawer: kind, mapped component, props, file · path · line, and a comment box" width="100%">
 
-![A proposal: decisions, what changes, AS-IS beside TO-BE, Apply / Reject](docs/img/proposal.jpg)
+Click any element and the drawer says what it is, which design-system component it maps to, its conditions and props, and the file, YAML path and line it came from. In the live viewer (`serve`) the drawer also takes a comment, anchored to that path — which is what the agent reads next.
 
-The agent never edits your files behind your back. It calls `propose` with a whole new version of one screen. The proposal carries the diff, lint before and after, a tier, and the decisions agreed before it was written. A text-only change that keeps lint clean applies at once, with `undo`. Anything structural waits until a person presses **Apply** with their name (or runs `apply --by`) or **Reject**. `apply` refuses if the file changed since the proposal was made. Comments left on the viewer are what the agent reads (`list_comments`) and resolves once the proposal that answers them is applied.
+<img src="docs/img/proposal.jpg" alt="A proposal page: the decisions agreed, what changes, AS-IS beside TO-BE, Apply / Reject" width="100%">
+
+A proposal is its own page: the decisions agreed before it was written, what changes, and every state AS-IS beside TO-BE. Apply with your name, or Reject. Text-only changes that keep lint clean apply at once, with undo; anything structural waits here.
+
+## What lint catches
+
+<img src="docs/img/lint-catches.png" alt="A lint run with three blocking and two warning findings, and six of the rules explained" width="100%">
+
+Every finding names the file, the YAML path and the line, so an agent can edit the exact spot and a person can click through from the viewer. Exit code 1 on blocking, which is what makes a pull request go red like a failing test. The rules a team writes for itself — which states each screen type needs, which words a layout may use, which gestures a flow may name — live in `conventions.yaml`; a key left empty switches that check off rather than firing wrongly.
+
+## Already drew it in Figma?
+
+<img src="docs/img/import-path.png" alt="Map, then import, then lint: 468 undecided values without a map, 80 with it, 16 after one hand-written mapping" width="100%">
+
+Two commands and a personal access token (`FIGMA_TOKEN`, read scope). Run `map figma` first — it pairs the page's component masters with kinds by name — then `import figma`. Frames named `{screen}-{state}` become one file per screen with the other states as patches; auto-layout becomes layout in token names; prototype links become flows. Whatever cannot be resolved is a `$tbd` owned by `import`, so the first lint after an import is an honest to-do list. `<file-key>` is the part of the Figma URL after `/design/`.
+
+## Web, app, kiosk
+
+<img src="docs/img/mobile-compare.jpg" alt="Three states of an iOS feed, side by side in phone frames" width="100%">
+
+The format is platform-neutral; the picture is not. A screen says `platform: ios` (or `android`, `tablet`, `kiosk`, `web`), the project sets a default, and `render` draws it at that platform's width inside its frame — a phone with status bar and home indicator, a portrait kiosk, a bare web canvas. Twelve mobile kinds ship by name because iOS HIG and Material both have them (`app-bar`, `tab-bar`, `list-cell`, `bottom-sheet`, `fab`, `snackbar`, …). Flows carry a `gesture` and a `nav` (push, modal, sheet, tab, dismiss). `examples/mobile-app` is a three-screen consumer app.
+
+### Drawing with your own components
+
+<img src="docs/img/antd-modal.png" alt="The antd adapter: an edit modal in Default, Validation and Submitting, drawn with real antd components" width="100%">
+
+`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens.json`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated.
+
+## Why files and a command line
+
+<img src="docs/img/three-doors.png" alt="One engine, three doors: command line for CI and scripts, MCP for agents, the viewer for people — and why files, CLI, MCP and local matter" width="100%">
+
+This is the part that is easy to mistake for a developer-only choice. It is the opposite: because the engine is a set of verbs over files, every door gets the same behaviour for free. A designer in the viewer, an agent over MCP and a CI job on a pull request are all running `lint` — the same fifteen rules, the same JSON. A rule added once is enforced everywhere at once. And because it is files, the versioning, the review flow and the history are git's, not a feature to build and trust.
 
 ## Commands
 
-All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after a global install). Every one prints JSON with `--json`; the MCP server exposes the same verbs with the same output.
+All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @junyoung735/doan`). Every one prints JSON with `--json`; the MCP server exposes the same verbs with the same output.
 
 | verb | what it does |
 |---|---|
 | `init <dir> [--base none\|antd\|mui]` | start a project; `none` copies the component set into it, a library base maps kinds to that library |
 | `bases` | the component bases and whether each is ready |
-| `lint <dir>` | schema check + rules L01–L15; every finding has file, YAML path and line; exit 1 on blocking |
+| `lint <dir>` | schema check + rules L01–L17; every finding has file, YAML path and line; exit 1 on blocking |
 | `prep <file>` | stub the states the screen type requires and the file lacks, as `$tbd` placeholders |
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS / TO-BE between two versions; elements compared by id |
-| `render <dir> [--components antd] [--proposal <id>]` | static HTML: index, one page per screen, one per pending proposal |
-| `serve <dir> [--port] [--components antd]` | the live viewer: comments, Apply / Reject, `/api/lint` |
+| `render <dir> [--components antd\|mui] [--proposal <id>]` | static HTML: index, one page per screen, one per pending proposal |
+| `serve <dir> [--port] [--components …]` | the live viewer: comments, Apply / Reject, `/api/lint` |
 | `propose <dir> <screen> --with <new.yaml>` | queue a new version with diff, lint delta and tier |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | the rest of the loop |
 | `map figma <dir> <key> --page "…" [--write]` | pair a Figma page's component masters with kinds (`maps_to.figma`) |
-| `import figma <dir> <key> --page "…"` | one screen file per frame group named by `naming.frame_pattern` (a regex or a preset: `screen-state`, `screen/state`, `screen state`, `screen=state`); states as patches; unresolved → `$tbd` |
+| `import figma <dir> <key> --page "…"` | one screen file per frame group; states as patches; unresolved → `$tbd` |
 | `mcp <dir>` | the MCP server on stdio |
 
-Bringing in what you already drew (`<file-key>` is the part of the Figma URL after `/design/`): run `map figma` first (it reads the masters the page uses and pairs them with kinds by name), then `import figma`. On a real page the difference was 468 undecided values without the map and 16 with it and one hand-written mapping. `FIGMA_TOKEN` (a personal access token, read scope) must be set.
-
-## Web, app, kiosk
-
-![Three states of an iOS feed, side by side in phone frames](docs/img/mobile-compare.jpg)
-
-The format is platform-neutral; the picture is not. A screen says `platform: ios` (or `android`, `tablet`, `kiosk`, `web`), the project sets a default in `conventions.platforms`, and `render` draws it at that platform's width inside its frame — a phone with status bar and home indicator, a portrait kiosk, a bare web canvas. Twelve mobile kinds ship by name because iOS HIG and Material both have them: `app-bar`, `tab-bar`, `list-cell`, `bottom-sheet`, `fab`, `snackbar`, `chip`, `search-bar`, `segment`, `stepper`, `pull-to-refresh`, `sheet-handle`. Flows carry `gesture` (tap, swipe-left, long-press, back, pull, …) and `nav` (push, modal, sheet, tab, replace, dismiss); `conventions.flows` is the vocabulary and lint warns outside it. `examples/mobile-app` is a three-screen consumer app: a feed, a detail pushed from a cell, a cart sheet.
-
-## Drawing with your own components
-
-![The antd adapter: real components, themed from tokens](docs/img/antd-modal.png)
-
-`render` and `serve` draw each kind with the bundled component set unless `conventions.yaml` says otherwise. `--base antd` or `--base mui` (or `render.base` in conventions) maps kinds to that library's components and draws them server-side, themed from your `tokens.json` (primary, danger, text, border, radius, font). `--base none` copies the bundled set into `design/components/`: from then on it is your component library, and the tool never owns it — this is also the road for shadcn/ui and any in-house system, since those are source in your repo rather than a package. Other libraries are one adapter file each, modelled on `src/render/adapters/antd.js` and `mui.js`.
-
-The viewer's own words — labels, buttons, hints, sample values — follow `meta.language` in `conventions.yaml` (`en`, `ko`). Screen content is never translated.
-
-## Project layout
+## Configuration
 
 ```
 design/
-├── conventions.yaml     naming · screen types and their required states · kinds and what they map to · layout vocabulary · lifecycle
+├── conventions.yaml     naming · platforms · screen types and their required states · kinds and what they map to · layout vocabulary · flow vocabulary · lifecycle · meta.language
 ├── sections.yaml        the feature groups, in order
 ├── tokens.json          colours, spacing, radius, font — what render themes with
 ├── components/          only with --base none: your copy of the component set
 ├── screens/*.yaml       one file per screen
-├── .proposals/          the edit loop's queue (ignored by git by default)
+├── .proposals/          the edit loop's queue
 └── .comments/           comments per screen (travel with the branch)
 ```
 
-`conventions.example.yaml` is the annotated schema of the rules file; every key a team might do differently ships `null` or empty, and a check whose key is empty is skipped rather than fired wrongly.
-
-## Why not Figma, Claude Design, or an agent canvas?
-
-They draw. This keeps. Figma has no idea that a list screen needs an Empty state, no lint, no `$tbd`, no git. Claude Design draws well from a prompt but is single-seat, has no versions and no per-screen states, and hands off as a bundle rather than as components a developer can inspect. Paper and pen.dev are agent-friendly canvases — still canvases, still dragging. This project takes the other side of the bet: the agent holds the pen, humans review and ask, and the design lives as a file of record with checks around it. Whatever draws the first version — Claude Code, Codex, a Figma page through `import` — can be the pen.
-
-The full argument, every decision with its reason, and what two field tests taught the format are in [DESIGN.md](DESIGN.md). What changed when is in [CHANGELOG.md](CHANGELOG.md); how to change things is in [CONTRIBUTING.md](CONTRIBUTING.md).
+`conventions.example.yaml` is the annotated schema of the rules file. Every value in it is an example, not a default: a key a team might do differently ships `null` or empty, and a check whose key is empty is skipped rather than fired wrongly.
 
 ## Where the rules come from
 
-The checks are lifted from the [`fig` plugin](https://github.com/byjunyoung/claude-product-skills), run on one company's Figma files across several products since mid-2026. What migrated is the rule set — required states per screen type, `A --> B` flows, blocking vs warning, canonical vs working — not the Figma-only code.
+The checks are lifted from the [`fig` plugin](https://github.com/byjunyoung/claude-product-skills), which has been run on one company's Figma files across several products since mid-2026. What migrated is the rule set — required states per screen type, `A --> B` flows, blocking vs warning, canonical vs working — not the Figma-only code. Six of that company's admin screens were transcribed under generic names into `examples/store-ops`; two of its Figma pages were the import field test. What each taught the format is in [DESIGN.md](DESIGN.md) §12, with every other decision and its reason. What changed when is in [CHANGELOG.md](CHANGELOG.md); how to change things is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development
 
 ```bash
-npm test          # 110 tests, node:test, no framework
+npm test          # 119 tests, node:test, no framework
 npm run check     # tests + lint both examples + render one — what CI runs on Node 20 and 22
+npm run demo      # the viewer on examples/store-ops with antd
 ```
 
-Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`. `react`, `react-dom`, `antd`, `@ant-design/cssinjs`, `@mui/material` and `@emotion/*` are optional and only loaded by the adapter that needs them.
+Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`. `react`, `react-dom`, `antd`, `@ant-design/cssinjs`, `@mui/material` and `@emotion/*` are optional and only loaded by the adapter that needs them. The illustrations are HTML in `docs/img/src`, rendered by `docs/img/src/render.sh`.
 
-MIT.
+MIT · [Junyoung Kim](https://github.com/byjunyoung)
