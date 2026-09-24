@@ -96,3 +96,43 @@ test('a proposal keeps the decisions agreed before it, and a decision without a 
   const [listed] = await listProposals(dir);
   assert.equal(listed.decisions.length, 2);
 });
+
+test('propose takes a screen the project does not have: pending, the file appears on apply, undo removes it', async () => {
+  const dir = sandbox();
+  const section = read(dir).match(/^section: (.*)$/m)[1];
+  const after = `schema: doan/0.2\nid: scr_NEWONE\nscreen: order-note\nsection: ${section}\ntype: detail\n\nelements:\n  - { id: title, kind: caption, style: title, text: Note }\n`;
+  const p = await propose(dir, { screen: 'order-note', after }, opts);
+  assert.equal(p.creates, true);
+  assert.equal(p.tier, 'structure');
+  assert.equal(p.status, 'pending');
+  assert.equal(p.before, '');
+  assert.match(p.file, /screens\/order-note\.yaml$/);
+  assert.equal(existsSync(join(dir, 'screens', 'order-note.yaml')), false);
+  assert.ok(p.diff.added.some((e) => e.path.join('.') === 'elements.title'), JSON.stringify(p.diff.added.map((e) => e.path)));
+  const a = await applyProposal(dir, { id: p.id, approved_by: 'me' });
+  assert.equal(a.status, 'applied');
+  assert.equal(readFileSync(join(dir, 'screens', 'order-note.yaml'), 'utf8'), after);
+  const u = await undoProposal(dir, { id: p.id });
+  assert.equal(u.status, 'undone');
+  assert.equal(existsSync(join(dir, 'screens', 'order-note.yaml')), false);
+});
+
+test('a new screen is refused when its name breaks naming.screen_pattern or the YAML names another screen', async () => {
+  const dir = sandbox();
+  const section = read(dir).match(/^section: (.*)$/m)[1];
+  const body = (name) => `schema: doan/0.2\nid: scr_NEWTWO\nscreen: ${name}\nsection: ${section}\ntype: detail\n\nelements:\n  - { id: title, kind: caption, text: Note }\n`;
+  await assert.rejects(propose(dir, { screen: 'Order Note', after: body('Order Note') }, opts), /screen_pattern/);
+  await assert.rejects(propose(dir, { screen: 'order-note', after: body('order-memo') }, opts), /names screen "order-memo"/);
+});
+
+test('the proposal page draws a new screen against an empty AS-IS instead of failing on it', async () => {
+  const dir = sandbox();
+  const section = read(dir).match(/^section: (.*)$/m)[1];
+  const after = `schema: doan/0.2\nid: scr_NEWTHREE\nscreen: order-note\nsection: ${section}\ntype: detail\n\nelements:\n  - { id: title, kind: caption, style: title, text: Note }\n`;
+  const p = await propose(dir, { screen: 'order-note', after }, opts);
+  const { loadProject } = await import('../src/index.js');
+  const { renderProposal } = await import('../src/render/index.js');
+  const html = renderProposal(await loadProject(dir), p, { branch: 'x' });
+  assert.match(html, /A new screen — there is no AS-IS to compare\./);
+  assert.match(html, /data-id="title"/);
+});

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.2 — 2026-09-25
+
+- **`propose` takes a new screen.** Name a screen the project does not have and the proposal creates `screens/<name>.yaml` — always pending, since a new file is never a text-only change; the name must pass `naming.screen_pattern` and the YAML must say the same `screen:`. `apply` writes it only while the file is still absent; `undo` removes the file. The proposal page shows the new screen against an empty AS-IS. Until now a new screen had to be written by hand outside the edit loop (the kiosk's done screen was).
+
 ## 0.9.1 — 2026-09-25
 
 - **The prototype selects nothing.** On `proto.html` a click used to do two things at once — follow the flow *and* select the element into the inspect panel — and an element with several flows opened a bare menu on top of that (the owner: "클릭이랑 컴포넌트 선택이랑 액션이 겹쳐서 혼란스럽네"). Now the page is interaction-only, the way Figma's present mode is: the inspector's click handler stands down, the panel says where the prototype is and lists the flows that leave this screen as buttons, and the chooser for an element with several flows carries a heading. Selecting elements is the canvas's job.

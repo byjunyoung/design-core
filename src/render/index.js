@@ -579,7 +579,10 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   setLanguage(lang);
   const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
   const maps = mapsFor(project);
-  const before = parseScreenText(proposal.before, proposal.file);
+  // a proposal that creates the screen has no AS-IS: an empty document stands in, and the
+  // AS-IS side says so instead of drawing nothing
+  const creates = !!proposal.creates || !proposal.before;
+  const before = creates ? { file: proposal.file, doc: { screen: proposal.screen, elements: [], layout: {}, states: {} }, lineOf: () => null, errors: [] } : parseScreenText(proposal.before, proposal.file);
   const after = parseScreenText(proposal.after, proposal.file);
   const known = project.conventions.states?.known ?? [];
   const present = [...new Set([...Object.keys(before.doc.states ?? {}), ...Object.keys(after.doc.states ?? {})])];
@@ -588,7 +591,7 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const tabs = states.map((s, i) => `<button class="tab${i === 0 ? ' active' : ''}" data-state="${h(s)}" data-target="pair-${h(s)}">${h(s)}</button>`).join('');
   const panels = states
     .map((state, i) => {
-      const a = before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter) : `<div class="hint">${D.notInAsis}</div>`;
+      const a = creates ? `<div class="hint">${D.newScreen}</div>` : before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter) : `<div class="hint">${D.notInAsis}</div>`;
       const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps, adapter) : `<div class="hint">${D.removedInTobe}</div>`;
       return `<section class="state${i === 0 ? ' active' : ''}" id="pair-${h(state)}"><div class="states compare"><div class="state active" id="asis-${h(state)}" style="display:block"><h3 style="display:block">${D.asis}</h3>${a}</div><div class="state active" id="tobe-${h(state)}" style="display:block"><h3 style="display:block">${D.tobe}</h3>${b}</div></div></section>`;
     })

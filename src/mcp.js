@@ -155,7 +155,7 @@ server.registerTool(
   'propose',
   {
     description:
-      'Propose a new version of one screen file (the whole YAML text). Returns the diff, lint before/after and a tier. ' +
+      'Propose a new version of one screen file (the whole YAML text), or a screen the project does not have yet — name it and the proposal creates screens/<name>.yaml, always pending. Returns the diff, lint before/after and a tier. ' +
       'A text-only change that keeps lint clean is applied at once (status "applied", undo available); anything else stays "pending" until a person applies or rejects it. ' +
       'Show the person the markdown and wait for their answer; do not call apply on your own.',
     inputSchema: {
