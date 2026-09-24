@@ -1,7 +1,7 @@
 {
-  "name": "design-core",
-  "version": "0.1.3",
-  "description": "A design tool for product screens where the agent holds the pen: screens as YAML, lint, states, proposals, a live viewer, MCP.",
+  "name": "doan",
+  "version": "0.2.0",
+  "description": "\ub3c4\uc548 \u2014 screens as files. The agent draws; you say what to change. Lint, states, proposals, a live viewer, MCP.",
   "type": "module",
   "license": "MIT",
   "author": {
@@ -10,11 +10,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/byjunyoung/design-core.git"
+    "url": "https://github.com/byjunyoung/doan.git"
   },
-  "homepage": "https://github.com/byjunyoung/design-core#readme",
+  "homepage": "https://github.com/byjunyoung/doan#readme",
   "bugs": {
-    "url": "https://github.com/byjunyoung/design-core/issues"
+    "url": "https://github.com/byjunyoung/doan/issues"
   },
   "keywords": [
     "design",
@@ -25,13 +25,14 @@
     "lint",
     "yaml",
     "ux",
-    "handoff"
+    "handoff",
+    "doan"
   ],
   "engines": {
     "node": ">=20"
   },
   "bin": {
-    "design-core": "./src/cli.js"
+    "doan": "./src/cli.js"
   },
   "exports": {
     ".": "./src/index.js"
@@ -47,7 +48,7 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "npm test && node src/cli.js lint examples/orders --branch feature/demo && node src/cli.js lint examples/store-ops --branch feature/demo && node src/cli.js render examples/store-ops --out /tmp/design-core-check --branch feature/demo",
+    "check": "npm test && node src/cli.js lint examples/orders --branch feature/demo && node src/cli.js lint examples/store-ops --branch feature/demo && node src/cli.js render examples/store-ops --out /tmp/doan-check --branch feature/demo",
     "demo": "node src/cli.js serve examples/store-ops --components antd --branch feature/demo",
     "start": "node src/cli.js serve design"
   },

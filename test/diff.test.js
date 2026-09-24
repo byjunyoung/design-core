@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { diffScreens, renderDiffMarkdown } from '../src/diff.js';
 
 const before = {
-  schema: 'design-core/0.2', id: 'scr_1', screen: 'order-list', section: 'Orders', type: 'list',
+  schema: 'doan/0.2', id: 'scr_1', screen: 'order-list', section: 'Orders', type: 'list',
   elements: [
     { id: 'filter', kind: 'filter-form', fields: ['period', 'branch'] },
     { id: 'table', kind: 'table', columns: ['a', 'b', 'c'] },

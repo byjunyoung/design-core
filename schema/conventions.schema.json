@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/byjunyoung/design-core/schema/conventions.schema.json",
+  "$id": "https://github.com/byjunyoung/doan/schema/conventions.schema.json",
   "title": "conventions.yaml",
   "type": "object",
   "additionalProperties": false,

@@ -14,7 +14,7 @@ const EN = {
   // drawer (sent to the page as JSON)
   clickToInspect: 'Click an element to inspect it.', component: 'component', bundled: 'bundled default', samplesNote: 'values shown in the picture are samples unless the file sets them',
   file: 'file', path: 'path', line: 'line', copy: 'copy path:line', copied: 'copied', noneOnElement: 'none on this element',
-  sayWhat: 'say what should change', send: 'Comment', liveOnly: 'open the live viewer (design-core serve) to comment', nameFirst: 'your name first', close: '×',
+  sayWhat: 'say what should change', send: 'Comment', liveOnly: 'open the live viewer (doan serve) to comment', nameFirst: 'your name first', close: '×',
   // bundled kinds
   undesigned: 'undesigned', nothingHere: 'Nothing here', wentWrong: 'Something went wrong', loading: 'Loading…', image: 'image', select: 'Select', chooseFile: 'Choose file', menu: 'menu', perPage: '/page',
   // samples
@@ -33,7 +33,7 @@ const KO = {
   comment: '코멘트', commentsN: '코멘트', components: '컴포넌트', on: '·',
   clickToInspect: '요소를 누르면 여기에 나옵니다.', component: '컴포넌트', bundled: '기본 세트', samplesNote: '그림의 값은 파일에 없으면 샘플입니다',
   file: '파일', path: '경로', line: '줄', copy: '경로:줄 복사', copied: '복사됨', noneOnElement: '이 요소에는 없음',
-  sayWhat: '무엇을 바꿀지 적어 주세요', send: '코멘트 남기기', liveOnly: '코멘트는 살아있는 뷰어(design-core serve)에서', nameFirst: '이름부터 적어 주세요',
+  sayWhat: '무엇을 바꿀지 적어 주세요', send: '코멘트 남기기', liveOnly: '코멘트는 살아있는 뷰어(doan serve)에서', nameFirst: '이름부터 적어 주세요',
   undesigned: '미설계', nothingHere: '비어 있음', wentWrong: '문제가 생겼습니다', loading: '불러오는 중…', image: '이미지', select: '선택', chooseFile: '파일 선택', menu: '메뉴', perPage: '/쪽',
   s_item: (n) => `항목 ${n}`, s_sample: (n) => `샘플 ${n}`, s_stores: ['강남', '성수', '판교'], s_status: ['결제완료', '대기', '환불'], s_method: ['카드', '모바일', '현금'],
 };

@@ -35,7 +35,7 @@ test('init --base none copies the component set into the project so the team own
 test('a project-owned component set is what render draws with, edits included', async () => {
   const dir = fresh();
   await initProject(dir, { base: 'none' });
-  writeFileSync(join(dir, 'screens', 'demo.yaml'), 'schema: design-core/0.2\nid: scr_D1\nscreen: demo\nsection: "01. Demo"\ntype: detail\nelements:\n  - id: b\n    kind: button\n    label: Go\n');
+  writeFileSync(join(dir, 'screens', 'demo.yaml'), 'schema: doan/0.2\nid: scr_D1\nscreen: demo\nsection: "01. Demo"\ntype: detail\nelements:\n  - id: b\n    kind: button\n    label: Go\n');
   writeFileSync(join(dir, 'sections.yaml'), '- "01. Demo"\n');
   const file = join(dir, 'components', 'kinds.js');
   writeFileSync(file, readFileSync(file, 'utf8').replace("return `<button class=\"btn btn-${h(variant)}\"", "return `<button class=\"btn our-own btn-${h(variant)}\""));

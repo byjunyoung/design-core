@@ -21,7 +21,7 @@ export function componentBases() {
   ];
 }
 
-const STARTER_SCREEN = `schema: design-core/0.2
+const STARTER_SCREEN = `schema: doan/0.2
 id: scr_SAMPLE1
 screen: sample-list             # a first screen so the viewer is not empty. Delete it when a real one exists.
 section: "00. Sample - delete me"
@@ -69,9 +69,9 @@ Screens as files. One YAML per screen under \`screens/\`; the rules in \`convent
 Component base: **${base}**${base === 'none' ? ' — the component set is in `components/kinds.js` and is yours to edit.' : ' — kinds map to that library through `maps_to` in conventions.yaml.'}
 
 \`\`\`bash
-npx design-core lint .          # what is missing
-npx design-core serve .         # the viewer at http://127.0.0.1:4870/
-npx design-core mcp .           # the same verbs for an agent (see the project root README for client config)
+npx doan lint .          # what is missing
+npx doan serve .         # the viewer at http://127.0.0.1:4870/
+npx doan mcp .           # the same verbs for an agent (see the project root README for client config)
 \`\`\`
 
 \`screens/sample-list.yaml\` is a starter; delete it when a real screen exists.

@@ -91,7 +91,7 @@ kinds:                                 # the bundled set; a kind not listed here
   sheet-handle: { }
 
 render:
-  base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `design-core bases`)
+  base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `doan bases`)
   components: null                     # self-built: a module exporting `kinds`, e.g. ./components/kinds.js (init copies the bundled set there)
 
 layout:

@@ -156,7 +156,7 @@ function page({ title, tokens, extraCss = '', file = '', body, api = false, scre
 <style>${tokensToCss(tokens)}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
-<script>window.DESIGN_CORE_API = ${api ? 'true' : 'false'}; window.DESIGN_CORE_SCREEN = ${JSON.stringify(screen)}; window.DESIGN_CORE_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))}; window.DESIGN_CORE_I18N = ${JSON.stringify(pageStrings(lang))};</script>
+<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
@@ -291,7 +291,7 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const verdict =
     api && proposal.status === 'pending'
       ? `<p><input id="by" placeholder="${D.yourName}" style="width:160px;display:inline-block"> <button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">${D.apply}</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">${D.reject}</button> <span class="hint" id="verdict"></span></p>`
-      : `<p class="hint">${D.toAccept}: <code>design-core apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · ${D.toDecline}: <code>design-core reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
+      : `<p class="hint">${D.toAccept}: <code>doan apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · ${D.toDecline}: <code>doan reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
 
   const body = `<div class="shell">
 ${sidebar(project, { current: proposal.screen })}

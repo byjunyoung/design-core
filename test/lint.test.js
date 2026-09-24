@@ -11,7 +11,7 @@ const conventions = parse(readFileSync(new URL('../conventions.example.yaml', im
 // A minimal in-memory project. Each rule test starts from this and breaks one thing.
 function screen(overrides = {}) {
   return {
-    schema: 'design-core/0.2',
+    schema: 'doan/0.2',
     id: 'scr_A1',
     screen: 'order-list',
     section: 'Orders',

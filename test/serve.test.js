@@ -19,7 +19,7 @@ test('the server renders the index and a screen page on request, with the commen
   assert.match(index, /inventory-list\.html/);
   const page = await (await fetch(`${base}/inventory-list.html`)).text();
   assert.match(page, /data-path="elements\.1\.children\.1"/);
-  assert.match(page, /DESIGN_CORE_API/);
+  assert.match(page, /DOAN_API/);
 });
 
 test('comments can be posted from the page and read back per screen', async () => {

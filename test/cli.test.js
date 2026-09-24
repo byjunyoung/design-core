@@ -39,7 +39,7 @@ test('prep via the CLI reports what it added and lint then counts the placeholde
   const dir = mkdtempSync(join(tmpdir(), 'dc-cli-'));
   cpSync(examples, dir, { recursive: true });
   const file = join(dir, 'screens', 'bare.yaml');
-  writeFileSync(file, 'schema: design-core/0.2\nid: scr_T9\nscreen: bare\nsection: "03. Orders - Order list"\ntype: list\nelements:\n  - id: table\n    kind: table\n');
+  writeFileSync(file, 'schema: doan/0.2\nid: scr_T9\nscreen: bare\nsection: "03. Orders - Order list"\ntype: list\nelements:\n  - id: table\n    kind: table\n');
   const { stdout } = await run('node', [cli, 'prep', file, '--owner', 'design']);
   assert.match(stdout, /Empty, Loading, Error/);
   const lint = await run('node', [cli, 'lint', dir, '--branch', 'x', '--today', '2026-09-23', '--json']);
@@ -66,8 +66,8 @@ test('diff via the CLI prints an AS-IS / TO-BE table between two files, and JSON
 
 test('help and version exit 0; an unknown verb names itself', async () => {
   const h = await run('node', [cli, '--help']);
-  assert.match(h.stdout, /usage: design-core/);
+  assert.match(h.stdout, /usage: doan/);
   const v = await run('node', [cli, '--version']);
-  assert.match(v.stdout, /^design-core \d+\.\d+\.\d+/);
+  assert.match(v.stdout, /^doan \d+\.\d+\.\d+/);
   await assert.rejects(run('node', [cli, 'draw']), (err) => err.code === 2 && /unknown verb "draw"/.test(err.stderr));
 });

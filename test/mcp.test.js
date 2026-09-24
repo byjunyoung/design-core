@@ -57,7 +57,7 @@ test('list_missing returns only the required-state and $tbd findings', async () 
 
 test('prep edits the file and reports what it added', async () => {
   const { writeFileSync } = await import('node:fs');
-  writeFileSync(join(dir, 'screens', 'bare.yaml'), 'schema: design-core/0.2\nid: scr_MCP1\nscreen: bare\nsection: "02. Inventory"\ntype: list\nelements:\n  - id: table\n    kind: table\n');
+  writeFileSync(join(dir, 'screens', 'bare.yaml'), 'schema: doan/0.2\nid: scr_MCP1\nscreen: bare\nsection: "02. Inventory"\ntype: list\nelements:\n  - id: table\n    kind: table\n');
   const { json } = await call('prep', { screen: 'bare', owner: 'design' });
   assert.deepEqual(json.added, ['Empty', 'Loading', 'Error']);
   assert.match(readFileSync(join(dir, 'screens', 'bare.yaml'), 'utf8'), /placeholder/);

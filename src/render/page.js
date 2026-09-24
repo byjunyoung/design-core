@@ -196,9 +196,9 @@ export const INSPECTOR_JS = `
   var shell = document.querySelector('.shell');
   var panel = document.getElementById('inspector');
   var file = document.body.getAttribute('data-file') || '';
-  var api = window.DESIGN_CORE_API === true;
-  var comments = window.DESIGN_CORE_COMMENTS || [];
-  var T = window.DESIGN_CORE_I18N || {};
+  var api = window.DOAN_API === true;
+  var comments = window.DOAN_COMMENTS || [];
+  var T = window.DOAN_I18N || {};
   function t(k, d) { return T[k] || d; }
   var selected = null;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -262,7 +262,7 @@ export const INSPECTOR_JS = `
       '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(file) + '</code><br><span class="k">' + t('path', 'path') + '</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">' + t('line', 'line') + '</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
       '<p><button class="btn" id="copy">' + t('copy', 'copy path:line') + '</button></p>' +
       '<h4>' + t('comments', 'Comments') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('noneOnElement', 'none on this element') + '</div>') +
-      (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><input id="cwho" placeholder="' + t('yourName', 'your name') + '"><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (design-core serve) to comment') + '</div>');
+      (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><input id="cwho" placeholder="' + t('yourName', 'your name') + '"><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (doan serve) to comment') + '</div>');
     shell.classList.add('drawer-open');
     document.getElementById('close').addEventListener('click', function () { shell.classList.remove('drawer-open'); if (selected) selected.classList.remove('selected'); selected = null; fit(); });
     document.getElementById('copy').addEventListener('click', function () {
@@ -274,7 +274,7 @@ export const INSPECTOR_JS = `
     if (send) send.addEventListener('click', function () {
       var text = document.getElementById('ctext').value.trim(); var who = document.getElementById('cwho').value.trim();
       if (!text) return;
-      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: window.DESIGN_CORE_SCREEN, path: path, line: Number(line) || null, text: text, author: who || 'anonymous' }) })
+      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: window.DOAN_SCREEN, path: path, line: Number(line) || null, text: text, author: who || 'anonymous' }) })
         .then(function (r) { return r.ok ? location.reload() : r.json().then(function (j) { document.getElementById('cstate').textContent = j.error; }); });
     });
     fit();

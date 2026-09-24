@@ -1,6 +1,6 @@
-# Design core — a design tool where the agent holds the pen
+# Doan — a design tool where the agent holds the pen
 
-Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/design-core · the name is provisional (§13).
+Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
 
 What runs: `lint` (schema + L01–L15), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
@@ -107,7 +107,7 @@ design/
 ### 4.1 A screen file
 
 ```yaml
-schema: design-core/0.2
+schema: doan/0.2
 id: scr_01J8K3                       # stable; only `diff` reads it
 screen: order-list                   # the name every reference uses
 section: "03. Orders - Order list"
@@ -359,7 +359,7 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 
 | Item | Owner | Note |
 |---|---|---|
-| Name | user | `design-core` undersells a product; GitHub redirects after a rename |
+| Name | user | `doan` undersells a product; GitHub redirects after a rename |
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |

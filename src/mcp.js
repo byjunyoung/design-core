@@ -10,7 +10,7 @@ import { addComment, listComments, resolveComment } from './comments.js';
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
 // for most: the merged view of one screen, and only the findings that mean "missing".
 //
-//   design-core mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
+//   doan mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
 //
 // Claude Code / Codex / any MCP client: { "command": "node", "args": ["src/mcp.js", "design"] }
 
@@ -28,7 +28,7 @@ const args = parseArgs(process.argv.slice(2));
 const dir = resolve(args._[0] ?? 'design');
 const common = { branch: args.branch, today: args.today, cwd: dir };
 
-const server = new McpServer({ name: 'design-core', version: '0.0.1' });
+const server = new McpServer({ name: 'doan', version: '0.0.1' });
 
 const reply = (json) => ({ content: [{ type: 'text', text: JSON.stringify(json, null, 2) }], structuredContent: json });
 const fail = (err) => ({ content: [{ type: 'text', text: `error: ${err.message}` }], isError: true });

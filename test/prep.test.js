@@ -15,7 +15,7 @@ function sandbox() {
   return dir;
 }
 
-const bare = `schema: design-core/0.2
+const bare = `schema: doan/0.2
 id: scr_T1
 screen: order-list   # keep this comment
 section: "03. Orders - Order list"

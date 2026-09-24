@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-09-24
+
+**design-core is now doan (도안).** 도안 is the Korean word for a design drawing — the plan a thing is made from. Same repository (GitHub redirects the old address), same files, same verbs.
+
+- The command is `doan`; the MCP server is `doan`; the package is `doan` on npm.
+- Screen files say `schema: doan/0.2`. `design-core/0.2` is still accepted, so nothing you wrote breaks.
+- The page's runtime globals are `DOAN_*`.
+
 ## 0.1.3 — 2026-09-24
 
 Not web-only.

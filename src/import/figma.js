@@ -309,7 +309,7 @@ export function importFigmaTree(file, { page, conventions, tokens = {}, fileKey 
     const dedup = flows.filter((f) => !seen.has(`${f.from}>${f.to}`) && seen.add(`${f.from}>${f.to}`));
 
     const doc = {
-      schema: 'design-core/0.2',
+      schema: 'doan/0.2',
       id: `scr_${defaultFrame.id.replace(/[^A-Za-z0-9]/g, '')}`,
       screen,
       section: group.section,

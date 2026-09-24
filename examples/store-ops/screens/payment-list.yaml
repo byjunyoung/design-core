@@ -1,4 +1,4 @@
-schema: design-core/0.2
+schema: doan/0.2
 id: scr_PAY01
 screen: payment-list
 section: "03. Payments"

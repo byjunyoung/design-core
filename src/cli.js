@@ -9,9 +9,9 @@ import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { readFileSync } from 'node:fs';
 
-const USAGE = `design-core — screens as files; the agent draws, you say what to change.
+const USAGE = `doan — screens as files; the agent draws, you say what to change.
 
-usage: design-core <verb> …
+usage: doan <verb> …
 
   init <project-dir> [--base none|antd]
         start a project: conventions, sections, tokens, screens/. --base none (default) copies the
@@ -144,7 +144,7 @@ async function initCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
   const r = await initProject(dir, { base: opts.base ?? 'none' });
-  process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  npx design-core serve ${dir}     # open http://127.0.0.1:4870/\n  npx design-core lint ${dir}\n  add the MCP server to your agent — see README\n`);
+  process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  npx doan serve ${dir}     # open http://127.0.0.1:4870/\n  npx doan lint ${dir}\n  add the MCP server to your agent — see README\n`);
   return 0;
 }
 function basesCommand() {
@@ -188,7 +188,7 @@ function helpCommand() {
 async function versionCommand() {
   const { readFileSync } = await import('node:fs');
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-  process.stdout.write(`design-core ${pkg.version}\n`);
+  process.stdout.write(`doan ${pkg.version}\n`);
   return 0;
 }
 

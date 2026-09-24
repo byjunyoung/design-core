@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/byjunyoung/design-core/schema/screen.schema.json",
+  "$id": "https://github.com/byjunyoung/doan/schema/screen.schema.json",
   "title": "Screen file",
   "type": "object",
   "required": [
@@ -14,7 +14,10 @@
   "additionalProperties": false,
   "properties": {
     "schema": {
-      "const": "design-core/0.2"
+      "enum": [
+        "doan/0.2",
+        "design-core/0.2"
+      ]
     },
     "id": {
       "type": "string",

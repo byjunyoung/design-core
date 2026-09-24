@@ -1,4 +1,6 @@
-# design-core
+# doan
+
+**도안** — the Korean word for a design drawing, the plan a thing is made from.
 
 **Screens as files. The agent draws; you say what to change.**
 
@@ -6,7 +8,7 @@ Every screen of your product is a short YAML file: what is on it, how it looks w
 
 It replaces Figma for product screens. Decks, diagrams, vectors and marketing stay wherever they are.
 
-> Provisional name. Everything here runs locally from a clone; the hosted service (a viewer per branch, a lint bot on pull requests) is the next layer, not this one.
+> Everything here runs locally; the hosted service (a viewer per branch, a lint bot on pull requests) is the next layer, not this one.
 
 ![Overview: every screen by section, with what needs attention](docs/img/overview.jpg)
 
@@ -15,24 +17,24 @@ It replaces Figma for product screens. Decks, diagrams, vectors and marketing st
 No clone needed — Node 20 or newer is the only requirement:
 
 ```bash
-npx -y github:byjunyoung/design-core init design --base antd   # or --base none: the component set is copied into design/ and is yours
-npx -y github:byjunyoung/design-core serve design              # http://127.0.0.1:4870/
+npx -y github:byjunyoung/doan init design --base antd   # or --base none: the component set is copied into design/ and is yours
+npx -y github:byjunyoung/doan serve design              # http://127.0.0.1:4870/
 ```
 
-`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json`, a starter screen and its own README. (Once the package is on npm the command shortens to `npx design-core …`.) To see the tool with real screens in it first, clone and `npm run demo` — six admin screens under generic names, drawn with antd.
+`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens.json`, a starter screen and its own README. (Once the package is on npm the command shortens to `npx doan …`.) To see the tool with real screens in it first, clone and `npm run demo` — six admin screens under generic names, drawn with antd.
 
 To let an agent in, add the MCP server to your client. Claude Code — `.mcp.json` in the project:
 
 ```json
-{ "mcpServers": { "design-core": { "command": "npx", "args": ["-y", "github:byjunyoung/design-core", "mcp", "design"] } } }
+{ "mcpServers": { "doan": { "command": "npx", "args": ["-y", "github:byjunyoung/doan", "mcp", "design"] } } }
 ```
 
 Cursor uses the same JSON in `.cursor/mcp.json`; Codex takes it in `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.design-core]
+[mcp_servers.doan]
 command = "npx"
-args = ["-y", "github:byjunyoung/design-core", "mcp", "design"]
+args = ["-y", "github:byjunyoung/doan", "mcp", "design"]
 ```
 
 Then ask the agent for a screen. It will use the `draw` prompt: anchor to the nearest screen, list what has to be decided, ask one thing at a time, propose with the decisions attached, render, and wait for you.
@@ -97,7 +99,7 @@ The agent never edits your files behind your back. It calls `propose` with a who
 
 ## Commands
 
-All of them: `npx design-core <verb>`. Every one prints JSON with `--json`; the MCP server exposes the same verbs with the same output.
+All of them: `npx doan <verb>`. Every one prints JSON with `--json`; the MCP server exposes the same verbs with the same output.
 
 | verb | what it does |
 |---|---|
