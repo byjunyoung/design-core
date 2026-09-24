@@ -72,13 +72,32 @@ function makeRenderer(screen, layout, maps, adapter = null) {
 
 // One drawn view of a screen: a stage (what the page gives it) holding a frame at the
 // reference width; the page scales the frame to fit.
+// Which platform a screen is drawn as: the screen's own `platform`, else the project default.
+const DEFAULT_PLATFORMS = {
+  web: { width: 1280, frame: 'none' },
+  ios: { width: 390, height: 844, frame: 'phone' },
+  android: { width: 412, height: 915, frame: 'phone' },
+  tablet: { width: 1024, height: 768, frame: 'tablet' },
+  kiosk: { width: 1080, height: 1920, frame: 'kiosk' },
+};
+export function platformOf(project, screen) {
+  const table = { ...DEFAULT_PLATFORMS, ...(project.conventions.platforms ?? {}) };
+  const name = screen.doc.platform ?? table.default ?? 'web';
+  const spec = table[name] ?? DEFAULT_PLATFORMS.web;
+  return { name, width: spec.width ?? 1280, height: spec.height ?? null, frame: spec.frame ?? 'none' };
+}
+
 function renderView(project, screen, view, maps, adapter = null) {
   const r = makeRenderer(screen, view.layout, maps, adapter);
   const body = view.elements.map((el) => r.element(el)).join('');
   const root = layoutStyle(view.layout.root);
   const inner = `<div class="view-root" style="${root}">${body}</div>`;
-  const frame = screen.doc.type === 'modal' ? `<div class="backdrop"><div class="modal-box">${inner}</div></div>` : inner;
-  return `<div class="stage"><div class="frame">${frame}</div></div>`;
+  const platform = platformOf(project, screen);
+  const content = screen.doc.type === 'modal' ? `<div class="backdrop"><div class="modal-box">${inner}</div></div>` : inner;
+  const device = platform.frame && platform.frame !== 'none';
+  const chrome = platform.frame === 'phone' ? { top: `<div class="status-bar"><span>9:41</span><span class="notch"></span><span>●●●</span></div>`, bottom: `<div class="home-indicator"><span></span></div>` } : { top: '', bottom: '' };
+  const style = `--ref-w:${platform.width}px${platform.height ? `;--ref-h:${platform.height}px` : ''}`;
+  return `<div class="stage${device ? ' stage-device' : ''}"><div class="frame device-${h(platform.frame === 'none' ? 'web' : platform.frame)}" style="${style}">${chrome.top}${content}${chrome.bottom}</div></div>`;
 }
 
 function mapsFor(project) {
@@ -164,7 +183,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
     .join('');
 
   const flows = (doc.flows ?? [])
-    .map((f) => `<li><code>${h(f.from)}${f.via ? `.${h(f.via)}` : ''}</code> → ${flowLink(project, screen, f)}${f.when ? ` <span class="hint">when ${v(f.when)}</span>` : ''}${f.style === 'conditional' ? ' <span class="hint">(conditional)</span>' : ''}</li>`)
+    .map((f) => `<li><code>${h(f.from)}${f.via ? `.${h(f.via)}` : ''}</code>${f.gesture ? ` <span class="gesture gesture-${h(f.gesture)}">${h(f.gesture)}</span>` : ''} → ${flowLink(project, screen, f)}${f.nav ? ` <span class="navkind nav-${h(f.nav)}">${h(f.nav)}</span>` : ''}${f.when ? ` <span class="hint">when ${v(f.when)}</span>` : ''}${f.style === 'conditional' ? ' <span class="hint">(conditional)</span>' : ''}</li>`)
     .join('');
   const notes = (doc.notes ?? []).map((n) => `<li>${v(n)}</li>`).join('');
   const refs = Object.entries(doc.refs ?? {}).map(([k, u]) => `<span><span class="hint">${h(k)}</span> <code>${h(u)}</code></span>`).join(' · ');
@@ -173,7 +192,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
   const body = `<div class="shell">
 ${sidebar(project, { current: doc.screen, findings, comments: api ? comments : [], proposals: [] })}
 <main class="main">
-<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
+<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
 <div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
 <div class="states">${statePanels}${variantPanels}</div>
 <div class="section-title">${D.flows}</div><ul class="list">${flows || `<li class="hint">${D.none}</li>`}</ul>

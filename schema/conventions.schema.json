@@ -197,6 +197,50 @@
           "type": "string"
         }
       }
+    },
+    "platforms": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "flows": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gestures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "navs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

@@ -1,0 +1,42 @@
+schema: design-core/0.2
+id: scr_CART1
+screen: cart-sheet
+section: "02. Cart"
+type: sheet
+platform: ios
+
+elements:
+  - id: sheet
+    kind: bottom-sheet
+    title: Cart
+    children:
+      - id: items
+        kind: list-cell
+        repeat: 2
+        title: "{item name}"
+        subtitle: "{qty} × {price}"
+        trailing: "{line total}"
+      - id: total
+        kind: kv-table
+        rows: [[Subtotal, "{subtotal}"], [Delivery, "{fee}"], [Total, "{total}"]]
+      - id: checkout
+        kind: button
+        label: Checkout
+        variant: primary
+        size: full
+  - id: toast
+    kind: snackbar
+    text: Added to cart
+    show_when: an item was just added
+
+layout:
+  root: { kind: stack, direction: column }
+
+states:
+  Empty:
+    - { target: items, replace: { kind: empty-notice, title: Your cart is empty } }
+    - { target: checkout, set: { disabled: true } }
+
+flows:
+  - { from: sheet, via: handle, to: feed, gesture: swipe-down, nav: dismiss }
+  - { from: checkout, to: cart-sheet, gesture: tap, nav: push, when: "checkout flow, out of scope here" }

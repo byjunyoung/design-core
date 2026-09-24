@@ -203,6 +203,28 @@ const rules = {
     }
     return out;
   },
+  L16(ctx) {
+    const vocab = ctx.conventions.flows;
+    if (!vocab) return [];
+    const out = [];
+    for (const s of ctx.screens)
+      (s.doc.flows ?? []).forEach((flow, i) => {
+        if (flow.gesture && vocab.gestures?.length && !vocab.gestures.includes(flow.gesture))
+          out.push(finding('L16', 'warning', s, ['flows', i, 'gesture'], `gesture "${flow.gesture}" is not in flows.gestures`));
+        if (flow.nav && vocab.navs?.length && !vocab.navs.includes(flow.nav))
+          out.push(finding('L16', 'warning', s, ['flows', i, 'nav'], `nav "${flow.nav}" is not in flows.navs`));
+      });
+    return out;
+  },
+  L17(ctx) {
+    const table = ctx.conventions.platforms;
+    if (!table) return [];
+    const known = Object.keys(table).filter((k) => k !== 'default');
+    if (!known.length) return [];
+    return ctx.screens
+      .filter((s) => s.doc.platform && !known.includes(s.doc.platform))
+      .map((s) => finding('L17', 'warning', s, ['platform'], `platform "${s.doc.platform}" is not in conventions.platforms (have: ${known.join(', ')})`));
+  },
 };
 
 export const RULES = Object.keys(rules);

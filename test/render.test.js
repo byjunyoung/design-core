@@ -211,3 +211,30 @@ test('the viewer speaks the language conventions.meta.language names, samples in
   const index = renderIndex(project, { branch: 'x', today: '2026-09-24' });
   assert.match(index, /개요/);
 });
+
+test('an ios screen draws inside a phone frame at the platform width; a kiosk screen in a portrait frame; web has no frame', async () => {
+  const mobile = fileURLToPath(new URL('../examples/mobile-app', import.meta.url));
+  const project = await loadProject(mobile);
+  const feed = project.screens.find((s) => s.doc.screen === 'feed');
+  const html = renderScreen(project, feed);
+  assert.match(html, /class="frame device-phone"[^>]*style="[^"]*--ref-w:390px/);
+  assert.match(html, /class="status-bar"/);
+  assert.match(html, /class="home-indicator"/);
+  assert.match(html, /el-tab-bar/);
+  assert.match(html, /el-list-cell/);
+  assert.match(html, /gesture-tap/);
+  assert.match(html, /nav-push/);
+  const kiosk = { ...feed, doc: { ...feed.doc, platform: 'kiosk' } };
+  assert.match(renderScreen(project, kiosk), /class="frame device-kiosk"[^>]*--ref-w:1080px/);
+  const web = { ...feed, doc: { ...feed.doc, platform: 'web' } };
+  assert.match(renderScreen(project, web), /class="frame device-web"[^>]*--ref-w:1280px/);
+});
+
+test('every mobile kind in the shipped set renders something of its own, not the generic box', async () => {
+  const mobile = fileURLToPath(new URL('../examples/mobile-app', import.meta.url));
+  const project = await loadProject(mobile);
+  for (const name of ['feed', 'item-detail', 'cart-sheet']) {
+    const html = renderScreen(project, project.screens.find((s) => s.doc.screen === name));
+    assert.doesNotMatch(html, /class="el el-[^"]*el-unknown/, `${name} has an unknown kind`);
+  }
+});

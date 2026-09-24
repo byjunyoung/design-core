@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3 — 2026-09-24
+
+Not web-only.
+
+- **Platforms** — `platform:` on a screen (`web`, `ios`, `android`, `tablet`, `kiosk`), a project default in `conventions.platforms`, built-in sizes a team can override. `render` draws each screen at its platform's width inside its frame: phone (status bar, home indicator), tablet, portrait kiosk, or none for web.
+- **Twelve mobile kinds** in the bundled set: `app-bar`, `tab-bar`, `list-cell`, `bottom-sheet`, `fab`, `snackbar`, `chip`, `search-bar`, `segment`, `stepper`, `pull-to-refresh`, `sheet-handle`.
+- **Flows carry `gesture` and `nav`**; `conventions.flows` names the vocabulary and L16 warns outside it. L17 warns on a platform the project does not list.
+- `examples/mobile-app`: a feed, a detail pushed from a cell, a cart sheet — iOS.
+
 ## 0.1.2 — 2026-09-24
 
 Generality, ahead of the first outside user.

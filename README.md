@@ -116,6 +116,12 @@ All of them: `npx design-core <verb>`. Every one prints JSON with `--json`; the 
 
 Bringing in what you already drew (`<file-key>` is the part of the Figma URL after `/design/`): run `map figma` first (it reads the masters the page uses and pairs them with kinds by name), then `import figma`. On a real page the difference was 468 undecided values without the map and 16 with it and one hand-written mapping. `FIGMA_TOKEN` (a personal access token, read scope) must be set.
 
+## Web, app, kiosk
+
+![Three states of an iOS feed, side by side in phone frames](docs/img/mobile-compare.jpg)
+
+The format is platform-neutral; the picture is not. A screen says `platform: ios` (or `android`, `tablet`, `kiosk`, `web`), the project sets a default in `conventions.platforms`, and `render` draws it at that platform's width inside its frame — a phone with status bar and home indicator, a portrait kiosk, a bare web canvas. Twelve mobile kinds ship by name because iOS HIG and Material both have them: `app-bar`, `tab-bar`, `list-cell`, `bottom-sheet`, `fab`, `snackbar`, `chip`, `search-bar`, `segment`, `stepper`, `pull-to-refresh`, `sheet-handle`. Flows carry `gesture` (tap, swipe-left, long-press, back, pull, …) and `nav` (push, modal, sheet, tab, replace, dismiss); `conventions.flows` is the vocabulary and lint warns outside it. `examples/mobile-app` is a three-screen consumer app: a feed, a detail pushed from a cell, a cart sheet.
+
 ## Drawing with your own components
 
 ![The antd adapter: real components, themed from tokens](docs/img/antd-modal.png)

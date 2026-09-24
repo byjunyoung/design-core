@@ -200,3 +200,20 @@ test('the field-test example lints clean on a feature branch', async () => {
   const findings = lint(await loadProject(dir), { branch: 'feature/x', today: '2026-09-23' });
   assert.deepEqual(findings.filter((f) => f.id !== 'L08'), []);
 });
+
+test('L16 warns on a gesture or nav outside the flow vocabulary, and the mobile example lints clean', async () => {
+  const p = project({ screens: [screen({ flows: [{ from: 'table', via: 'row', to: 'order-detail', gesture: 'wiggle', nav: 'teleport' }] }), detail()] });
+  p.conventions.flows = { gestures: ['tap', 'swipe-left'], navs: ['push', 'modal'] };
+  const f = only(lint(p, { branch: 'x' }), 'L16');
+  assert.equal(f.length, 2);
+  const mobile = fileURLToPath(new URL('../examples/mobile-app', import.meta.url));
+  const findings = lint(await loadProject(mobile), { branch: 'feature/x', today: '2026-09-24' });
+  assert.deepEqual(findings.filter((x) => x.severity === 'blocking'), []);
+  assert.equal(only(findings, 'L16').length, 0);
+});
+
+test('a screen platform outside conventions.platforms is a warning (L17)', () => {
+  const p = project({ screens: [screen({ platform: 'watch' }), detail()] });
+  p.conventions.platforms = { default: 'web', web: { width: 1280 }, ios: { width: 390, height: 844, frame: 'phone' } };
+  assert.equal(only(lint(p, { branch: 'x' }), 'L17').length, 1);
+});

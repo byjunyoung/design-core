@@ -1,0 +1,48 @@
+schema: design-core/0.2
+id: scr_ITEM1
+screen: item-detail
+section: "01. Shop"
+type: detail
+platform: ios
+
+elements:
+  - id: bar
+    kind: app-bar
+    title: ""
+    back: true
+    actions: [{ id: share, kind: button, label: Share, variant: icon }]
+  - id: hero
+    kind: image
+    size: full
+  - id: info
+    kind: group
+    children:
+      - { id: name, kind: caption, text: "{item name}", style: title }
+      - { id: price, kind: caption, text: "{price}", style: strong }
+      - { id: desc, kind: caption, text: "{description}" }
+  - id: qty
+    kind: stepper
+    value: 1
+    min: 1
+  - id: buy
+    kind: button
+    label: Add to cart
+    variant: primary
+    size: full
+
+layout:
+  root: { kind: stack, direction: column, gap: space.md }
+  info: { kind: stack, direction: column, gap: space.xs, padding: space.md }
+
+states:
+  Loading:
+    - { target: hero, replace: { kind: skeleton, rows: 4 } }
+    - { target: info, replace: { kind: skeleton, rows: 3 } }
+  Error:
+    - { target: info, replace: { kind: error-notice, title: Item unavailable, text: It may have sold out. } }
+    - { target: buy, set: { disabled: true } }
+
+flows:
+  - { from: bar, via: back, to: feed, gesture: back, nav: dismiss }
+  - { from: buy, to: cart-sheet, gesture: tap, nav: sheet }
+  - { from: hero, to: item-detail, gesture: swipe-left, when: next photo }

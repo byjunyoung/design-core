@@ -1,0 +1,59 @@
+schema: design-core/0.2
+id: scr_FEED1
+screen: feed
+section: "01. Shop"
+type: feed
+platform: ios
+refs:
+  prd: file:README.md
+
+elements:
+  - id: bar
+    kind: app-bar
+    title: Shop
+    actions: [{ id: cart, kind: button, label: Cart, variant: icon }]
+  - id: search
+    kind: search-bar
+    placeholder: Search items
+  - id: filters
+    kind: group
+    children:
+      - { id: all, kind: chip, label: All, selected: true }
+      - { id: hot, kind: chip, label: Hot }
+      - { id: new, kind: chip, label: New }
+  - id: refresh
+    kind: pull-to-refresh
+  - id: list
+    kind: list-cell
+    repeat: 6
+    title: "{item name}"
+    subtitle: "{store} · {distance}"
+    trailing: "{price}"
+    thumbnail: true
+  - id: tabs
+    kind: tab-bar
+    tabs: [Shop, Orders, Me]
+    active: Shop
+
+layout:
+  root: { kind: stack, direction: column, gap: space.sm }
+  filters: { kind: row, gap: space.xs, padding: space.md }
+
+states:
+  Empty:
+    - { target: list, replace: { kind: empty-notice, title: Nothing nearby, text: Try another filter. } }
+  Loading:
+    - { target: list, replace: { kind: skeleton, rows: 6 } }
+  Error:
+    - { target: list, replace: { kind: error-notice, title: Could not load, text: Pull down to retry. } }
+  Refreshing:
+    - { target: refresh, set: { active: true } }
+
+flows:
+  - { from: list, via: cell, to: item-detail, gesture: tap, nav: push }
+  - { from: refresh, to: feed.Refreshing, gesture: pull, style: conditional }
+  - { from: bar, via: action, to: cart-sheet, gesture: tap, nav: sheet }
+  - { from: tabs, via: tab, to: feed, gesture: tap, nav: tab }
+
+notes:
+  - Cells are a repeated list-cell; the app shows 20 per page.

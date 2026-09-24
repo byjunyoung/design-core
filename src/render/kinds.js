@@ -206,6 +206,44 @@ export const kinds = {
   tag(el) {
     return `<span class="tag">${v(el.text ?? el.label ?? el.id)}</span>`;
   },
+  // mobile
+  'app-bar'(el, r) {
+    const actions = list(el.actions).map((a) => (typeof a === 'object' && a.kind ? r.element(a) : `<span class="ab-action">${v(a)}</span>`)).join('');
+    return `<div class="ab-left">${el.back ? '<span class="ab-back">‹</span>' : ''}</div><div class="ab-title">${v(el.title)}</div><div class="ab-actions">${actions}</div>`;
+  },
+  'tab-bar'(el) {
+    return `<div class="tb">${list(el.tabs).map((t) => `<div class="tb-item${String(label(t)) === String(el.active ?? list(el.tabs)[0]) ? ' on' : ''}"><span class="tb-icon"></span>${v(label(t))}</div>`).join('')}</div>`;
+  },
+  'list-cell'(el) {
+    return `<div class="cell">${el.thumbnail ? '<span class="cell-thumb"></span>' : ''}<div class="cell-body"><div class="cell-title">${v(el.title ?? el.label ?? el.id)}</div>${el.subtitle ? `<div class="cell-sub">${v(el.subtitle)}</div>` : ''}</div>${el.trailing !== undefined ? `<div class="cell-trail">${v(el.trailing)}</div>` : ''}<span class="cell-chevron">›</span></div>`;
+  },
+  'bottom-sheet'(el, r) {
+    return `<div class="sheet"><div class="sheet-handle"></div>${el.title ? `<div class="sheet-title">${v(el.title)}</div>` : ''}<div class="sheet-body">${r.children(el)}</div></div>`;
+  },
+  fab(el) {
+    return `<button class="fab" title="${h(el.label ?? '')}">${v(el.icon ?? '+')}</button>`;
+  },
+  snackbar(el) {
+    return `<div class="snack">${v(el.text)}${el.action ? `<span class="snack-action">${v(el.action)}</span>` : ''}</div>`;
+  },
+  chip(el) {
+    return `<span class="chip${el.selected ? ' on' : ''}">${v(el.label ?? el.text ?? el.id)}</span>`;
+  },
+  'search-bar'(el) {
+    return `<div class="search"><span class="search-icon">⌕</span><input readonly placeholder="${h(el.placeholder ?? D.select)}"></div>`;
+  },
+  segment(el) {
+    return `<div class="seg">${list(el.options).map((o, i) => `<span class="${String(o) === String(el.selected ?? list(el.options)[0]) ? 'on' : ''}">${v(o)}</span>`).join('')}</div>`;
+  },
+  stepper(el) {
+    return `<div class="stepper"><span class="step-btn">−</span><span class="step-val">${v(el.value ?? 1)}</span><span class="step-btn">+</span></div>`;
+  },
+  'pull-to-refresh'(el) {
+    return `<div class="ptr${el.active ? ' on' : ''}">${el.active ? '◌' : '↓'}</div>`;
+  },
+  'sheet-handle'() {
+    return `<div class="sheet-handle"></div>`;
+  },
   tile(el) {
     return `<span class="tile t${(String(el.status ?? el.id).length) % 5}" title="${h(el.label ?? el.id)}"></span>`;
   },

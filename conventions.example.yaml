@@ -14,6 +14,18 @@ naming:
 pages:
   exclude_sections: []                 # import figma: sections to skip, e.g. ['^Archived$', '^\[?[Aa]rchive']
 
+platforms:                             # what a screen is drawn as; a screen says `platform:`, else `default`
+  default: web
+  web:     { width: 1280, frame: none }
+  ios:     { width: 390, height: 844, frame: phone }
+  android: { width: 412, height: 915, frame: phone }
+  tablet:  { width: 1024, height: 768, frame: tablet }
+  kiosk:   { width: 1080, height: 1920, frame: kiosk }
+
+flows:                                 # the words a flow may use; lint warns on anything else
+  gestures: [tap, swipe-left, swipe-right, swipe-down, swipe-up, long-press, back, pull]
+  navs: [push, modal, sheet, tab, replace, dismiss]
+
 states:
   known: [Default, Empty, Loading, Error, Validation, Selected]
   required:                            # per screen type; a type with no row gets no check
@@ -64,6 +76,19 @@ kinds:                                 # the bundled set; a kind not listed here
   image:        { }
   tile:         { }                    # one status tile; an import writes repeat: N for a run of them
   tile-grid:    { anchors: [tile] }
+  # mobile — present in both iOS HIG and Material, so they ship by name
+  app-bar:      { anchors: [back, action] }
+  tab-bar:      { anchors: [tab] }
+  list-cell:    { anchors: [cell] }
+  bottom-sheet: { anchors: [handle] }
+  fab:          { }
+  snackbar:     { maps_to: { mui: Alert } }
+  chip:         { maps_to: { antd: Tag, mui: Chip } }
+  search-bar:   { maps_to: { antd: Input, mui: TextField } }
+  segment:      { anchors: [option], maps_to: { antd: Segmented, mui: ToggleButtonGroup } }
+  stepper:      { anchors: [plus, minus] }
+  pull-to-refresh: { }
+  sheet-handle: { }
 
 render:
   base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `design-core bases`)

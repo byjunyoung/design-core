@@ -32,6 +32,10 @@
       "type": "string",
       "minLength": 1
     },
+    "platform": {
+      "type": "string",
+      "minLength": 1
+    },
     "refs": {
       "type": "object",
       "additionalProperties": {
@@ -251,6 +255,12 @@
             "default",
             "conditional"
           ]
+        },
+        "gesture": {
+          "type": "string"
+        },
+        "nav": {
+          "type": "string"
         }
       },
       "additionalProperties": false
