@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma } from './verbs.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
@@ -32,6 +32,9 @@ const USAGE = `usage: design-core <verb> …
   import figma <project-dir> <file-key> --page "<page name>" [--force]
         one screen file per {screen}-{state} frame group on that page; other states become patches;
         kinds by maps_to.figma on the master name, then by node name; unresolved → $tbd. Needs FIGMA_TOKEN.
+  map figma <project-dir> <file-key> --page "<page name>" [--write]
+        pair the page's component masters with kinds by name and (with --write) put them into
+        conventions.yaml as maps_to.figma. Run this before import figma; it is what makes kinds resolve.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
   propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--json]
@@ -44,7 +47,7 @@ function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === '--json' || a === '--force') opts[a.slice(2)] = true;
+    if (a === '--json' || a === '--force' || a === '--write') opts[a.slice(2)] = true;
     else if (a.startsWith('--') && rest[i + 1] !== undefined) opts[a.slice(2)] = rest[++i];
     else opts._.push(a);
   }
@@ -151,8 +154,21 @@ async function importCommand(opts) {
   return 0;
 }
 
+async function mapCommand(opts) {
+  const [source, dir, fileKey] = opts._;
+  if (source !== 'figma' || !dir || !fileKey || !opts.page) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await mapFigma(dir, { fileKey, page: opts.page, write: opts.write === true });
+  if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
+  process.stdout.write(`page "${r.page}": ${r.masters} masters\n`);
+  for (const [kind, master] of Object.entries(r.mapped)) process.stdout.write(`  ${kind.padEnd(14)} ← ${master}\n`);
+  for (const [kind, master] of Object.entries(r.already)) process.stdout.write(`  ${kind.padEnd(14)} = ${master}  (already set)\n`);
+  if (r.unmatched.length) process.stdout.write(`  unplaced: ${r.unmatched.join(', ')}\n`);
+  process.stdout.write(opts.write === true ? `wrote ${r.written.length} into conventions.yaml\n` : `dry run — add --write to put ${Object.keys(r.mapped).length} into conventions.yaml\n`);
+  return 0;
+}
+
 const verbs = {
-  init: initCommand, bases: basesCommand, import: importCommand,
+  init: initCommand, bases: basesCommand, import: importCommand, map: mapCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

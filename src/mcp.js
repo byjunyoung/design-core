@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
@@ -165,6 +165,15 @@ server.registerTool(
     inputSchema: { file_key: z.string(), page: z.string(), force: z.boolean().default(false) },
   },
   guard((input) => importFigma(dir, { fileKey: input.file_key, page: input.page, force: input.force })),
+);
+
+server.registerTool(
+  'map_figma',
+  {
+    description: 'Pair a Figma page\'s component masters with kinds by name (maps_to.figma). Dry run unless write; run before import_figma so kinds resolve instead of landing as $tbd. Returns mapped, already-set and unplaced masters.',
+    inputSchema: { file_key: z.string(), page: z.string(), write: z.boolean().default(false) },
+  },
+  guard((input) => mapFigma(dir, { fileKey: input.file_key, page: input.page, write: input.write })),
 );
 
 // The discipline behind a new or changed screen. fig:draw carried this as a skill document;

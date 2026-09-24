@@ -18,17 +18,47 @@ states:
     form:   [Default, Validation]
     search: [Default, Empty]
 
-kinds:                                 # a kind not listed here still renders with the bundled default
-  page-header:  { anchors: [action] }
+kinds:                                 # the bundled set; a kind not listed here still renders, as a labeled box
+  page-header:  { anchors: [action, tab] }
   group:        { }                    # a bare container, e.g. a button row; layout decides how it sits
+  card:         { }
+  section:      { }
+  fieldset:     { }
   button:       { maps_to: { antd: Button } }
+  filter-bar:   { }
   filter-form:  { maps_to: { antd: Form } }
+  segmented:    { maps_to: { antd: Segmented } }
   table:        { anchors: [row, header], maps_to: { antd: Table } }
   pagination:   { maps_to: { antd: Pagination } }
   detail-card:  { maps_to: { antd: Descriptions } }
+  kv-table:     { maps_to: { antd: Descriptions } }
   empty-notice: { maps_to: { antd: Empty } }
   error-notice: { maps_to: { antd: Result } }
   skeleton:     { maps_to: { antd: Skeleton } }
+  overlay:      { maps_to: { antd: Spin } }
+  toast:        { maps_to: { antd: message } }
+  modal:        { maps_to: { antd: Modal } }
+  confirm:      { maps_to: { antd: Modal.confirm } }
+  field:        { }
+  input:        { maps_to: { antd: Input } }
+  number:       { maps_to: { antd: InputNumber } }
+  textarea:     { maps_to: { antd: Input.TextArea } }
+  select:       { maps_to: { antd: Select } }
+  radio:        { maps_to: { antd: Radio.Group } }
+  date:         { maps_to: { antd: DatePicker } }
+  date-range:   { maps_to: { antd: DatePicker.RangePicker } }
+  upload:       { maps_to: { antd: Upload } }
+  tabs:         { anchors: [tab] }
+  nav:          { anchors: [item] }
+  checkbox:     { maps_to: { antd: Checkbox } }
+  switch:       { maps_to: { antd: Switch } }
+  tag:          { maps_to: { antd: Tag } }
+  caption:      { }
+  hint:         { }
+  divider:      { maps_to: { antd: Divider } }
+  stat-strip:   { maps_to: { antd: Statistic } }
+  tooltip:      { maps_to: { antd: Tooltip } }
+  image:        { }
 
 render:
   base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `design-core bases`)

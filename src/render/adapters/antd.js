@@ -66,6 +66,8 @@ const components = {
   message: (el) => e(antd.Alert, { type: el.level === 'error' ? 'error' : 'success', message: text(el.text), showIcon: true, banner: true }),
   Spin: (el) => e(antd.Spin, { tip: text(el.text ?? 'Loading…') }, e('div', { style: { height: 48 } })),
   Tag: (el) => e(antd.Tag, {}, text(el.text ?? el.label)),
+  Checkbox: (el) => e(antd.Checkbox, { checked: !!el.checked }, text(el.label ?? el.text ?? el.id)),
+  Switch: (el) => e(antd.Switch, { checked: !!el.on }),
   Card: (el, r) => e(antd.Card, { size: 'small', title: el.title ? text(el.title) : undefined }, raw(r.children(el))),
   Modal: (el, r) => e(antd.Card, { title: text(el.title), style: { boxShadow: '0 8px 32px rgba(0,0,0,.25)' } }, raw(r.children(el))),
   'Modal.confirm': (el) => e(antd.Card, { size: 'small', title: text(el.title) }, e('p', null, text(el.text)), e(antd.Space, null, ...list(el.buttons).map((b, i) => e(antd.Button, { key: i, type: i === list(el.buttons).length - 1 ? 'primary' : 'default' }, text(b))))),

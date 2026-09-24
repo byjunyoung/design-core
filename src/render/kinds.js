@@ -164,6 +164,18 @@ export const kinds = {
   'sortable-list'(el) {
     return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">⋮⋮ ${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;
   },
+  nav(el) {
+    return `<div class="nav">${list(el.items).map((i, k) => `<div class="nav-item${k === 0 ? ' on' : ''}">${v(label(i))}</div>`).join('') || '<div class="nav-item on">menu</div>'}</div>`;
+  },
+  checkbox(el) {
+    return `<label class="chk-line"><span class="box${el.checked ? ' on' : ''}"></span>${v(el.label ?? el.text ?? el.id)}</label>`;
+  },
+  switch(el) {
+    return `<span class="sw${el.on ? ' on' : ''}"></span> ${v(el.label ?? '')}`;
+  },
+  tag(el) {
+    return `<span class="tag">${v(el.text ?? el.label ?? el.id)}</span>`;
+  },
   progress() {
     return `<div class="bar"><span style="width:62%"></span></div>`;
   },

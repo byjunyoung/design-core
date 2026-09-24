@@ -87,3 +87,35 @@ test('a page whose frames follow no naming convention still imports: every top-l
   assert.ok(screens[0].doc.notes.some((n) => /did not follow/.test(n)));
   assert.equal(screens[0].doc.elements.find((e) => e.id === 'n3dots').resolve.$tbd.owner, 'import');
 });
+
+test('an instance of a variant resolves through its component set name, not the variant name', () => {
+  const f = structuredClone(file);
+  f.componentSets = { 'set-btn': { name: 'button' } };
+  f.components['c-btn'] = { name: 'type=primary, size=L', componentSetId: 'set-btn' };
+  const conv = structuredClone(conventions);
+  conv.kinds.button.maps_to.figma = 'button';
+  const list = importFigmaTree(f, { page: '[UI] Orders', conventions: conv, tokens, fileKey: 'ABC' }).screens.find((s) => s.doc.screen === 'order-list').doc;
+  assert.equal(list.elements.find((e) => e.id === 'header').children.find((c) => c.id === 'export').kind, 'button');
+});
+
+
+test('a run of instances of one master collapses into one element with repeat, and auto-named wrappers are groups without $tbd', () => {
+  const f = {
+    components: { tile: { name: 'graph-item' } },
+    document: { children: [{ id: 'p', type: 'CANVAS', name: 'P', children: [
+      { id: 'a', type: 'FRAME', name: 'home-Default', children: [
+        { id: 'w', type: 'FRAME', name: 'Frame 483913', children: [
+          ...Array.from({ length: 12 }, (_, i) => ({ id: `t${i}`, type: 'INSTANCE', name: 'graph-item', componentId: 'tile' })),
+        ] },
+      ] },
+    ] }] },
+  };
+  const { screens } = importFigmaTree(f, { page: 'P', conventions, tokens, fileKey: 'K' });
+  const home = screens[0].doc;
+  const wrapper = home.elements[0];
+  assert.equal(wrapper.kind, 'group');
+  assert.equal(wrapper.resolve, undefined);
+  assert.equal(wrapper.children.length, 1);
+  assert.equal(wrapper.children[0].repeat, 12);
+  assert.equal(wrapper.children[0].resolve.$tbd.owner, 'import', 'the master itself is still unresolved');
+});

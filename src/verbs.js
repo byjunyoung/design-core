@@ -13,6 +13,7 @@ import { listProposals } from './proposals.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { initProject, componentBases } from './init.js';
 import { importFigmaTree, writeImport, fetchFigmaPage } from './import/figma.js';
+import { masterNames, suggestFigmaMap, writeFigmaMap } from './import/map.js';
 
 // One implementation per verb, returning plain JSON. The CLI prints it, the MCP server
 // returns it, the viewer will read it. Nothing here writes to stdout.
@@ -135,4 +136,15 @@ export async function importFigma(dir, { fileKey, page, force = false, tree = nu
   const result = importFigmaTree(file, { page, conventions: project.conventions, tokens: project.tokens ?? {}, fileKey });
   const written = await writeImport(dir, result, { force });
   return { page: result.page, screens: result.screens.map((s) => s.screen), ...written };
+}
+
+// map figma: which component masters a page uses, paired with kinds; written only on request.
+export async function mapFigma(dir, { fileKey, page, write = false, tree = null }) {
+  const project = await loadProject(dir);
+  const file = tree ?? (await fetchFigmaPage(fileKey, page));
+  const names = masterNames(file);
+  const suggestion = suggestFigmaMap(names, project.conventions);
+  const result = { page, masters: names.length, ...suggestion, written: [], skipped: [] };
+  if (write) Object.assign(result, await writeFigmaMap(dir, suggestion.mapped));
+  return result;
 }

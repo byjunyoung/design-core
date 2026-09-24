@@ -74,10 +74,19 @@ Two roads, and the tool does not care which. **Self-built** copies the component
 **Bring in what you already drew.**
 
 ```bash
-FIGMA_TOKEN=… node src/cli.js import figma design 8SknCl…wpGF --page "[UI] Home"
+FIGMA_TOKEN=… node src/cli.js map figma design 8SknCl…wpGF --page "[UI] Home" --write
+#   page "[UI] Home": 71 masters
+#     table          ← table
+#     button         ← button, navigaition-button
+#     select         ← dropdown
+#     unplaced: dim, logo, badge, graph-item, …
+#   wrote 16 into conventions.yaml
+node src/cli.js import figma design 8SknCl…wpGF --page "[UI] Home"
 #   page "[UI] Home": 5 screen(s) → design/screens/home.yaml, …
-#   468 $tbd left for a person; run lint to see them
+#   80 $tbd left for a person; run lint to see them
 ```
+
+`map` first: it reads the component masters the page uses and pairs them with kinds by name (`maps_to.figma`, a list per kind), so that `import` resolves instances instead of leaving them as questions. On a real page the difference was 468 `$tbd` without the map and 80 with it.
 
 One page over the Figma REST API. Frames named `{screen}-{state}` become one file per screen with the other states as patches; sections become sections; instances become kinds through `maps_to.figma` on the master's name, then through the node's name; auto-layout becomes `layout` in token names; prototype links become flows. Arrow labels and state chains a flow tool left on the page are skipped. Whatever cannot be resolved — a frame called "wrapper", a required state nobody drew — lands as `$tbd` owned by `import`, so the first `lint` after an import is an honest to-do list rather than a guess. A page with no naming convention still imports: every top-level frame becomes a screen, named by the importer and flagged as such.
 
@@ -164,6 +173,6 @@ The checks are lifted from the [`fig` plugin](https://github.com/byjunyoung/clau
 
 ## Tests and license
 
-`npm test` — 93 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
+`npm test` — 98 tests, `node:test`, no framework. Dependencies: `yaml`, `ajv`, `@modelcontextprotocol/sdk`, `zod`; `antd`, `react`, `react-dom`, `@ant-design/cssinjs` are optional and only loaded by `--components antd`.
 
 MIT.

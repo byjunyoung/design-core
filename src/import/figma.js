@@ -10,26 +10,38 @@ import { stringify, parse } from 'yaml';
 // this cannot resolve lands as `$tbd` owned by "import", so the first lint after an import
 // is the to-do list, not a guess.
 
-const KIND_HINTS = [
-  ['pagination', /pag(er|ination)/i],
+export const KIND_HINTS = [
+  ['pagination', /pag(er|ination|inat)/i],
   ['skeleton', /skeleton|loading/i],
   ['empty-notice', /empty|no data|nothing/i],
   ['error-notice', /error|fail/i],
+  ['date-range', /range ?picker|date ?range/i],
+  ['date', /date ?picker|calendar|datepicker/i],
   ['filter-form', /filter/i],
-  ['page-header', /page ?header|title bar/i],
-  ['table', /table|grid|list/i],
+  ['page-header', /page ?header|title bar|topbar|top bar/i],
+  ['nav', /^nav|navigation|sidebar|side ?nav|menu$/i],
+  ['table', /table|grid|list$/i],
+  ['checkbox', /checkbox|check box/i],
+  ['radio', /radio/i],
+  ['switch', /switch|toggle/i],
   ['button', /button|btn|cta/i],
   ['tabs', /tabs?$/i],
   ['modal', /modal|dialog/i],
+  ['tooltip', /tooltip|popover/i],
+  ['tag', /badge|tag|chip|pill/i],
   ['card', /card|panel/i],
   ['select', /select|dropdown/i],
-  ['input', /input|field|textbox/i],
   ['textarea', /textarea/i],
-  ['radio', /radio/i],
+  ['input', /input|field|textbox/i],
   ['segmented', /segment/i],
   ['divider', /divider|separator/i],
+  ['image', /image|illustration|avatar|logo/i],
   ['group', /header|footer|toolbar|actions|row|group/i],
 ];
+
+// Layer names that carry no meaning of their own: a container Figma auto-named, or one a
+// designer named for where it sits. They become bare groups, not open questions.
+const WRAPPER = /^(frame \d+|group \d+|wrapper|container|contents?|contents?-body|body|inner|outer|left|right|top|bottom|main|area|section \d*)$/i;
 
 const slug = (name) =>
   String(name)
@@ -69,8 +81,14 @@ function layoutOf(node, tokens) {
 
 function makeResolver(file, conventions) {
   const byFigma = {};
-  for (const [kind, def] of Object.entries(conventions.kinds ?? {})) if (def?.maps_to?.figma) byFigma[def.maps_to.figma] = kind;
-  const masterName = (node) => file.components?.[node.componentId]?.name ?? null;
+  for (const [kind, def] of Object.entries(conventions.kinds ?? {}))
+    for (const name of [].concat(def?.maps_to?.figma ?? [])) byFigma[name] = kind;
+  const masterName = (node) => {
+    const c = file.components?.[node.componentId];
+    if (!c) return null;
+    const set = c.componentSetId && file.componentSets?.[c.componentSetId];
+    return set ? set.name : c.name; // a variant's own name is "type=primary"; the set carries the real name
+  };
   return (node) => {
     const master = masterName(node);
     if (master && byFigma[master]) return { kind: byFigma[master], via: 'maps_to.figma' };
@@ -84,8 +102,22 @@ function makeResolver(file, conventions) {
 // text becomes props on its nearest element or a caption of its own.
 function elementsOf(frame, resolve, tokens, layout, ids = new Set()) {
   const out = [];
-  for (const node of frame.children ?? []) {
+  const children = frame.children ?? [];
+  for (let i = 0; i < children.length; i++) {
+    const node = children[i];
     if (node.visible === false) continue;
+    // A run of instances of the same master (a grid of tiles, a list of rows) is one
+    // element repeated, not a hundred elements: `repeat` says how many the page showed.
+    if (node.type === 'INSTANCE' && node.componentId) {
+      let run = 1;
+      while (children[i + run]?.type === 'INSTANCE' && children[i + run].componentId === node.componentId) run++;
+      if (run > 1) {
+        const el = elementsOf({ children: [node] }, resolve, tokens, layout, ids)[0];
+        if (el) out.push({ ...el, repeat: run });
+        i += run - 1;
+        continue;
+      }
+    }
     if (['VECTOR', 'RECTANGLE', 'ELLIPSE', 'LINE', 'BOOLEAN_OPERATION', 'STAR', 'POLYGON'].includes(node.type)) continue;
     let id = slug(node.name);
     while (ids.has(id)) id = `${id}-2`;
@@ -94,7 +126,7 @@ function elementsOf(frame, resolve, tokens, layout, ids = new Set()) {
       out.push({ id, kind: 'caption', text: node.characters ?? '' });
       continue;
     }
-    const hit = resolve(node);
+    const hit = resolve(node) ?? (WRAPPER.test(node.name) && node.children?.length ? { kind: 'group', via: 'wrapper name' } : null);
     const el = { id, kind: hit?.kind ?? 'frame' };
     const strings = texts(node);
     if (!hit) el.resolve = { $tbd: { owner: 'import', note: `kind not resolved from Figma node "${node.name}"` } };
@@ -318,5 +350,5 @@ export async function fetchFigmaPage(fileKey, page, { token = process.env.FIGMA_
   if (!res.ok) throw new Error(`Figma ${res.status} fetching page "${page}"`);
   const body = await res.json();
   const node = body.nodes[canvas.id];
-  return { name: meta.name, components: node.components ?? {}, document: { children: [node.document] } };
+  return { name: meta.name, components: node.components ?? {}, componentSets: node.componentSets ?? {}, document: { children: [node.document] } };
 }
