@@ -4,6 +4,7 @@ import { walkElements, findElement, elementIds } from './elements.js';
 import { basename, join } from 'node:path';
 import { elementProps, RESERVED_KEYS } from './components.js';
 import { hasToken } from './tokens.js';
+import { assetRefs } from './assets.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
@@ -20,7 +21,7 @@ const describe = (c) => (c.file ? `components/${basename(c.file)}` : `convention
 // A finding on a file that is not a screen: a token file, a component file, conventions.yaml.
 const fileFinding = (id, severity, file, path, message) => ({ id, severity, screen: null, file, path, line: null, message });
 // Every token binding a contract declares, with its YAML path: tokens.<slot> and variants.<prop>.<option>.<slot>.
-function* bindingsOf(c) {
+export function* bindingsOf(c) {
   for (const [slot, token] of Object.entries(c.tokens ?? {})) yield { path: ['tokens', slot], token };
   for (const [prop, options] of Object.entries(c.variants ?? {}))
     for (const [opt, b] of Object.entries(options ?? {})) for (const [slot, token] of Object.entries(b ?? {})) yield { path: ['variants', prop, opt, slot], token };
@@ -377,6 +378,17 @@ const rules = {
       }
     if (!any) return [];
     return ctx.screens.filter((s) => !touched.has(s.doc.screen)).map((s) => finding('L24', 'warning', s, ['flows'], `no flow reaches or leaves "${s.doc.screen}" — an entry point, or a screen the map forgot`));
+  },
+  // L25 — an asset a screen or a contract names must be a file under assets/ (src/assets.js)
+  L25(ctx) {
+    const have = new Set((ctx.assets ?? []).map((a) => a.path));
+    return assetRefs(ctx)
+      .filter((r) => !have.has(r.path) && (r.screen || r.file))
+      .map((r) => {
+        const msg = `${r.at.join('.')} "${r.path}" names no file under assets/`;
+        const s = r.screen ? ctx.screens.find((x) => x.doc.screen === r.screen) : null;
+        return s ? finding('L25', 'warning', s, r.at, msg) : fileFinding('L25', 'warning', r.file, r.at, msg);
+      });
   },
 };
 

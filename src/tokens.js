@@ -34,7 +34,7 @@ function deepMerge(into, from) {
 // referenced group's tokens in first, then the group's own.
 function collect(doc, { path = [], type = null, out = [], root = doc, seen = new Set() } = {}) {
   if (isObj(doc) && '$value' in doc) {
-    out.push({ path, type: doc.$type ?? type, value: doc.$value });
+    out.push({ path, type: doc.$type ?? type, value: doc.$value, description: typeof doc.$description === 'string' ? doc.$description : null });
     return out;
   }
   if (!isObj(doc)) {
@@ -167,18 +167,22 @@ export function resolveTokens(docs) {
   const problems = [];
   const tokens = {};
   const raw = {};
+  // what the viewer's tokens page shows beside the value: the declared (or inherited) $type,
+  // the alias a token was written as, and its $description
+  const meta = {};
   for (const e of entries) {
     const at = e.path.join('.');
     const type = e.type ?? (typeof e.value === 'string' && ALIAS.test(e.value) ? byName.get(ALIAS.exec(e.value)[1])?.type : null) ?? null;
     const before = problems.length;
     const value = deref(e.value, byName, problems, at, [at]);
     for (let i = before; i < problems.length; i++) problems[i] = { severity: 'blocking', file: origins[at] ?? null, ...problems[i] };
+    meta[at] = { type, alias: typeof e.value === 'string' && ALIAS.test(e.value) ? ALIAS.exec(e.value)[1] : null, description: e.description ?? null };
     if (value === undefined) continue;
     setIn(raw, e.path, value);
     const css = toCss(type, value);
     if (css !== null) setIn(tokens, e.path, css);
   }
-  return { tokens, raw, origins, problems };
+  return { tokens, raw, origins, meta, problems };
 }
 
 // Every dotted token name in a resolved set.
@@ -258,17 +262,19 @@ async function evaluateResolver(doc, file) {
     order.flatMap((step) => (step.set ? sets[step.set] : modifiers[step.modifier].contexts[input[step.modifier] ?? modifiers[step.modifier].default] ?? []));
   const evaluate = (input) => resolveTokens(docsFor({ ...defaults, ...input }));
   const contexts = {};
+  const contextMeta = {};
   for (const [name, m] of Object.entries(modifiers)) {
     contexts[name] = {};
     for (const ctx of Object.keys(m.contexts)) {
       const r = evaluate({ [name]: ctx });
       contexts[name][ctx] = r.tokens;
+      (contextMeta[name] ??= {})[ctx] = r.meta;
       if (ctx !== m.default) for (const p of r.problems) problems.push({ ...p, context: `${name}=${ctx}` });
     }
     problems.push(...contextGaps(name, contexts[name], file));
   }
   const main = evaluate({});
-  return { tokens: main.tokens, raw: main.raw, origins: main.origins, defaults, contexts, problems: [...main.problems, ...problems] };
+  return { tokens: main.tokens, raw: main.raw, origins: main.origins, meta: main.meta, defaults, contexts, contextMeta, sets: Object.fromEntries(Object.entries(sets).map(([n, docs]) => [n, docs.map((d) => d.file)])), modifiers: Object.fromEntries(Object.entries(modifiers).map(([n, m]) => [n, { default: m.default, contexts: Object.fromEntries(Object.entries(m.contexts).map(([c, docs]) => [c, docs.map((d) => d.file)])) }])), problems: [...main.problems, ...problems] };
 }
 
 // --- the bundled set, as files ------------------------------------------------------------
@@ -391,11 +397,11 @@ export async function loadTokens(dir) {
       }
     }
     const r = resolveTokens(docs);
-    return { source: 'dtcg', resolver: null, files, tokens: r.tokens, raw: r.raw, origins: r.origins, defaults: {}, contexts: {}, problems: [...problems, ...r.problems] };
+    return { source: 'dtcg', resolver: null, files, tokens: r.tokens, raw: r.raw, origins: r.origins, meta: r.meta, defaults: {}, contexts: {}, contextMeta: {}, sets: {}, modifiers: {}, problems: [...problems, ...r.problems] };
   }
   if (flat) {
     files.push(flatFile);
-    return { source: 'flat', resolver: null, files, tokens: flat, raw: flat, origins: {}, defaults: {}, contexts: {}, problems };
+    return { source: 'flat', resolver: null, files, tokens: flat, raw: flat, origins: {}, meta: {}, defaults: {}, contexts: {}, contextMeta: {}, sets: {}, modifiers: {}, problems };
   }
-  return { source: 'none', resolver: null, files, tokens: null, raw: null, origins: {}, defaults: {}, contexts: {}, problems };
+  return { source: 'none', resolver: null, files, tokens: null, raw: null, origins: {}, meta: {}, defaults: {}, contexts: {}, contextMeta: {}, sets: {}, modifiers: {}, problems };
 }

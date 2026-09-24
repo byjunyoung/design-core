@@ -67,7 +67,7 @@ npx @junyoung735/doan init design --base antd   # or --base none: the component 
 npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ```
 
-`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens/` (DTCG token files and a light/dark resolver), a starter screen and its own README. Open the viewer and click the starter screen: state tabs, a picture, a drawer that says which file and line each element came from.
+`design/` now holds `conventions.yaml` (your rules), `sections.yaml`, `tokens/` (DTCG token files and a light/dark resolver), a starter screen and its own README. Open the viewer and click the starter screen: state tabs, a picture, a drawer that says which file and line each element came from. The viewer opens on the domain canvas: the page a Figma file had per domain — sections side by side, a column per screen with its states stacked, arrows between them, at real size with zoom and pan.
 
 Let an agent in. Claude Code — `.mcp.json` in the project:
 
@@ -135,7 +135,7 @@ The format is platform-neutral; the picture is not. A screen says `platform: ios
 
 <img src="docs/img/antd-modal.png" alt="The antd adapter: an edit modal in Default, Validation and Submitting, drawn with real antd components" width="100%">
 
-`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated. Every kind is a file under `components/` — its props, slots and the tokens it binds — and the viewer's Components page draws them all from those files. The Flow map page lays every screen out from its flows — a box per section, a thumbnail per screen, an arrow to the state it names — computed by ELK when the page is drawn (`npm install elkjs`; optional). The Prototype page is the same screens, pressable: a flow's `from` element is a hotspot and pressing it lands on the target screen and state.
+`--base antd` or `--base mui` maps kinds to that library's components and draws them server-side, themed from your `tokens/`. `--base none` copies the bundled set into `design/components/` — from then on it is your component library, and the tool never owns it; that is also the road for shadcn/ui and any in-house system. The viewer's own words follow `meta.language` in conventions (`en`, `ko`); screen content is never translated. Every kind is a file under `components/` — its props, slots and the tokens it binds — and the viewer's Components page draws them all from those files. The overview's flow map lays every screen out from its flows — a box per section, a thumbnail per screen, an arrow to the state it names — computed by ELK when the page is drawn (`npm install elkjs`; optional). The Prototype page is the same screens, pressable: a flow's `from` element is a hotspot and pressing it lands on the target screen and state.
 
 ## Why files and a command line
 
@@ -152,12 +152,13 @@ All of them: `npx @junyoung735/doan <verb>` (or `doan <verb>` after `npm i -g @j
 | `init <dir> [--base none\|antd\|mui]` | start a project; `none` copies the component set into it, a library base maps kinds to that library |
 | `bases` | the component bases and whether each is ready |
 | `tokens <dir>` | every token with its value, per-theme values, file and tier (primitive · semantic · bundled) |
+| `assets <dir>` | every file under `assets/` with who names it, the references that name no file, the files nothing names |
 | `components <dir>` | every kind's contract — props, slots, token bindings, compound or not |
 | `migrate kinds <dir>` | move the rows of `conventions.kinds` into `components/<kind>.yaml` (a project from before 0.4) |
 | `lint <dir>` | schema check + rules L01–L20; every finding has file, YAML path and line; exit 1 on blocking |
 | `prep <file>` | stub the states the screen type requires and the file lacks, as `$tbd` placeholders |
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS / TO-BE between two versions; elements compared by id |
-| `render <dir> [--components antd\|mui] [--proposal <id>]` | static HTML: index, components, flow map, prototype, one page per screen, one per pending proposal |
+| `render <dir> [--components antd\|mui] [--proposal <id>]` | static HTML: index (with the flow map), a canvas per domain, tokens, components, assets, prototype, one page per screen, one per pending proposal |
 | `serve <dir> [--port] [--components …]` | the live viewer: comments, Apply / Reject, `/api/lint` |
 | `propose <dir> <screen> --with <new.yaml>` | queue a new version with diff, lint delta and tier |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | the rest of the loop |

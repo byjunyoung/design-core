@@ -42,7 +42,7 @@ Rather than compete, the tool takes Claude Design as input: an `import html` ada
 | Figma job | Here | v0 |
 |---|---|---|
 | Draw a screen | The agent writes the screen file; `render` draws it with real components | In |
-| Look at screens | Project → screen list → a screen → its states side by side. No infinite canvas | In |
+| Look at screens | A canvas per domain: sections side by side, a column per screen with its states stacked, arrows between them, at real size with zoom and pan (§6.6). Then a screen page with its states side by side | In (0.7) |
 | Components & tokens | The team's code components and tokens, used directly. No Figma-side copy to keep in sync | In |
 | Variants / states | `states:` in the file, required per screen type, checked by lint | In |
 | Prototype links | `flows:` are links; the rendered screen is clickable | In |
@@ -254,6 +254,10 @@ What the engine does with them: `loadComponents` reads `components/*.yaml` (and 
 
 Known limits: a library adapter (antd, MUI) draws from the props its own code reads — a contract's bindings and enum options do not reach it (§13). The shipped contracts were gated against five real projects (three examples, two field projects) for zero L21 before shipping; a prop a team uses that the bundled contract lacks is a one-line edit to a file they own, which is the point.
 
+### 4.6 Assets
+
+The person's own files — icons, photos, illustrations — live under `assets/` (svg, png, jpg, gif, webp, avif, any depth). A screen names one by path from the project directory: `src: assets/photos/menu.jpg` on an image, `icon: assets/icons/cart.svg` on any kind that takes an icon. Anything else in `icon` stays a glyph, so the two coexist. The tool never copies or renames a file: the bundled set draws it as it is (an `<img>`), `serve` answers `/assets/…` from the folder and nothing outside it, `render` copies the folder next to the pages, `doan init` creates it. L25 warns when a path names no file; the assets page (§6.9) says who uses what, what is missing and what nothing names. Decided 2026-09-24, when the owner asked for a place to see the design system's files and not only its tokens and components. Known limit: an SVG drawn through `<img>` cannot take the text colour — an inline-SVG option with `fill: currentColor` is a §13 item.
+
 ## 5. Lint catalogue
 
 Blocking stops handoff; warning is reported and counted. Each rule names the `fig` rule it descends from.
@@ -284,6 +288,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L22 prop-invalid | blocking | a required prop is missing; an enum value is not an option; a slot is not declared | — (new) |
 | L23 kinds-legacy | warning, one per project | rows still in `conventions.kinds` — `doan migrate kinds` | — (new) |
 | L24 flow-orphan | warning | a screen no flow reaches or leaves, once the project has flows and more than one screen | coverage orphans |
+| L25 asset-missing | warning | a `src` or `icon` that names a path under `assets/` with no such file | — (new) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -328,6 +333,8 @@ Shipped 2026-09-24 (0.5.0). The page Figma's flow page was: every screen of the 
 
 Nodes are HTML (so an adapter's thumbnail is the real thing) and the edges are one SVG on top. A thumbnail may itself contain links (antd's pagination does), so a node is a `div` with a link in its head, not a link. `list_flows` (verb and MCP tool) is the same graph as JSON — edges, dead ends, orphans — for an agent that wants the structure without the picture.
 
+Since 2026-09-24 the map is a section of the overview, not a page of its own: the owner asked why a flow view existed beside a canvas that already draws a domain's flows, and it was one thing twice. The canvas holds a domain's flows at real size; the overview holds the map of every domain, with the flows to nowhere and the screens no flow reaches under it, and `index.html#<domain>` lights that domain in it.
+
 ### 6.5 The click-through prototype
 
 Shipped 2026-09-24 (0.6.0). `proto.html` holds every screen in every state and shows one; the elements a flow leaves from are hotspots, and pressing one lands on the flow's target screen and state. That is the whole scope — the owner set it when the stages were planned: the product's navigation, pressed, from the files alone. Typing, validation and branching on input are `fig:proto`'s job, and stay there.
@@ -341,6 +348,60 @@ Shipped 2026-09-24 (0.6.0). `proto.html` holds every screen in every state and s
 | Hotspots visible | on by default, a toggle to hide | shown, it is a map of what the file says is pressable; hidden, it is the picture |
 
 Everything on the page is the same drawing the screen page shows, so a library adapter's components and a compound part look the same here. Nothing is stored and nothing is generated per project: the page is `render` output like the rest.
+
+### 6.6 The domain canvas
+
+Shipped 2026-09-24 (0.7.0). After the four stages the owner looked at the viewer next to a Figma file kept with the `fig` skills and said what was missing: *a page per domain, the domain's screens laid out together, the flow drawn among them*. That page is what a designer opens first; a screen page and a thumbnail map are not it. So the canvas is the viewer's first surface now, and it follows fig's own conventions for a Figma page — the ones `fig:prep` laid out and `fig:lint` checked — because that is the shape the owner's eye already reads.
+
+| Decision | Chosen | Why |
+|---|---|---|
+| The unit | one canvas per domain; a domain is what a section name says before " - " (`NN. {domain} - {feature}`), a section with no dash is its own | fig's section shape, read backwards. No new field: `sections.yaml` already carries it |
+| Inside a section | fig's rule — row 1 is the happy path left to right, a screen's other states stacked under its Default, sections of a domain in one row | predictable, and the same picture as the Figma page. ELK's auto-layout was the alternative; it reorders screens as flows change and cannot stack states, so the owner chose fig's rule |
+| Happy path | the entry screen first — fewest arrivals, most departures, a `back`/`dismiss` flow not counting as an arrival, a list or page before a form or modal on a tie — then what its flows reach, breadth first | every screen of a loop has something arriving; what a person picks by eye is the first screen the flow leaves from |
+| Size | real size, zoom (⌘/ctrl + wheel, pinch, buttons) and pan (wheel, drag), fit on open | a canvas at real size is what "look at the design" means; thumbnails are the flow map's job |
+| Arrows | drawn by the page from what it measures, by fig's rules: leave the source Default's right edge at the trigger element's height (edge midpoint when the element is not on the frame), right-angle elbow, a gap before the head, enter the target state frame's left edge at its midpoint; a flow that goes back climbs into a corridor above both frames and comes down the gap beside the target; `[state]` dashed chains between stacked frames; conditional dashed; label pills | the engine renders the frames but does not know their heights until they are drawn, so the arrows belong to the browser. The rules are `fig:arrows`' geometry, minus frame avoidance beyond the corridor |
+| Comments | an element's comment goes to the screen whose frame it sits in | one canvas holds many screens; the inspector reads the frame |
+| Other domains | a flow leaving the domain is a stub with a link to that canvas | the page stays one domain; the map stays the place for everything |
+
+Not stored: nothing about the canvas is written anywhere. Positions come from CSS, arrows from measurement, order from flows. Change a file and the page changes.
+
+### 6.7 The workspace — the viewer measured against Figma's
+
+Shipped 2026-09-24 (0.8.0). The canvas was right in structure and still felt like a page, not a tool. The owner named the standard: *to replace Figma for looking at the canonical design, the viewer has to follow what Figma's viewer and Dev Mode do, and how they feel* — editing aside. The gap table lives in the session that set it; the first cut is the workspace shape, because every later piece (inspect, status, comments) hangs on it.
+
+| Figma | Here (0.8) | Left for later |
+|---|---|---|
+| One window: pages and layers left, canvas centre, properties right, always | the canvas page is that window: a tree on the left (domain → section → screen → state, the selected frame's element layers under it), the canvas, an inspect panel that stays open with an empty state | the other pages keep their drawer; the tree spans domains by link, not in one document (a project of hundreds of frames would not fit one page — deferred rendering is §13) |
+| Hover outlines, click to select, Esc | the innermost element under the cursor outlines; a click selects it (frame or element); Esc clears; the tree row and the frame follow the selection | multi-select, arrow-key traversal |
+| Shift 1 fit · Shift 2 zoom to selection · Shift 0 100% · ⌘± · pinch · ⌘F | the same keys, the same meanings | zoom to a section, rulers, pixel grid |
+| A link to a node | `#screen.State/elements.1` opens the canvas zoomed to that element, selected; a selection writes the hash | a link that survives a rename (ids do; paths do not) |
+| Pages · prototype · dev mode as modes of one file | the modes on every page: Canvas · Prototype, the flow map a section of the overview | one document, one URL, modes as state |
+
+The rule behind the choices: the viewer's chrome follows Figma where a person's hands already know it (keys, panels, hover, Esc) and follows the files where Figma has nothing (a tree of states, a flow list on a frame, a path in the hash).
+
+### 6.8 The navigation, defined once
+
+The owner's second look at 0.8 found the menus changing under the cursor: the canvas had one sidebar, the other pages another; modes sat on the top bar on one page and in the sidebar foot on the next; the flow map opened with a different left side than the canvas it was opened from. So the navigation is defined once, here, and every page wears the same one. A page differs from another only in its title, its tools and its content.
+
+| Slot | Holds | Never holds |
+|---|---|---|
+| **Left** — content | the project name; then the overview, then the design system — tokens · components · assets (§6.9) — because the screens are built from them, so they come first (the owner's rule, 2026-09-24); then a search box (⌘F) and the domain tree — domain › section › screen › state, the current domain open, the others folded behind a caret | a mode. A link to the prototype does not belong here |
+| **Top, left** — where you are | the page title and its meta. The bar is three columns, the modes in the middle and the two sides sharing the rest equally, so the modes are centred on every page and nothing beside them can push them (the owner's rule, 2026-09-24: nothing up here moves between pages). A long meta truncates, its full text on hover; wide tools wrap rather than push | tools |
+| **Top, centre** — the modes | Canvas · Prototype, always both, always here — Figma's Design · Prototype; the one that applies is lit, on a page that is neither nothing is lit. The prototype keeps its context: it opens on the selected frame. The flow map is not a mode — the canvas already draws a domain's flows — but a section of the overview (§6.4) | a third item |
+| **Top, right** — this page's tools | zoom and the arrows toggle on the canvas; compare and paths on a screen page; the prototype's screen and state selects; the theme select last, on every page | navigation |
+| **Right** — the inspect panel | always present: an empty state until something is selected | anything but the selection |
+
+A screen in the tree links to its frame on the canvas — the canvas is where a screen is looked at; the screen page (states side by side, compare) is reached from the panel. The tree's folding and search are the same script on every page; the canvas adds only what a frame on the same canvas can do in place (select, zoom). A page the server could not place — the overview opened at a domain (`index.html#domain`) and the prototype carry their place in the hash — folds the tree from the hash on load and as it changes, and points the three modes at that place, so switching modes never collapses the tree or loses the domain.
+
+### 6.9 The design system's pages: tokens and assets
+
+The sidebar's design system has three pages, above the tree because the screens are built from them (§6.8): tokens, components (§4.5), assets.
+
+**tokens.html** is laid out like Figma's variables modal — the owner's ask, 2026-09-24. Left, the collections and the groups of the one shown; right, that collection's table, one at a time. A collection is a base set's file (one value column) or a resolver modifier — `theme`, whose contexts light and dark are its mode columns, the way a Figma collection carries its modes; the bundled set comes last when a token lives only there. Rows sit under a heading per group (the first path segment), the name shows its leaf with a type mark, and a value written as an alias is a chip with the alias's name and colour, the way Figma shows a linked variable. A search box and the group list filter the rows. A row opens the token in the inspect panel: every mode's value, the alias chain resolved step by step, the CSS variable, and links to the components (through their bindings) and screens (through layout gap and padding) that use it; `#t:<name>` deep-links to the row, `#c:<collection>` to a collection. A flat `tokens.json` is one collection; the resolver's problems are listed on top.
+
+**assets.html** is a card per file under its folder — the picture, its size, the natural dimensions the browser reads, who names it — then the references that name no file (L25's data) and the files nothing names. A card opens in the inspect panel; `#a:<path>` deep-links to it. An empty folder says where files go.
+
+Both pages fold the tree from the hash like every hash-placed page, and their deep links are prefixed (`t:`, `a:`) so the tree's screen lookup never mistakes one for a screen.
 
 ## 7. The edit loop — "by conversation only"
 
@@ -449,6 +510,7 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 
 | Item | Owner | Note |
 |---|---|---|
+| Inline SVG icons | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |
 | Name | user | `doan` undersells a product; GitHub redirects after a rename |
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
@@ -456,6 +518,8 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
 | Adapter reads the contract | design | antd and MUI pieces draw from the props their own code reads; a contract's enum options and bindings do not reach them (§4.5). An adapter could take `sample`, options and bindings from the registry |
 | Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
+| Canvas arrow avoidance | design | the corridor keeps a back-flow off the frames above its target; a forward flow to a farther column can still cross a frame between. `fig:arrows`' detour rule is the model |
+| Canvas layout tokens | design | column gap 160, frame gap 96, section padding 96, section gap 240 are fixed in css; fig measures them per team (`layout.column_grid` …). A `canvas:` block in conventions when a team asks |
 | Flow map label placement | design | ELK places a label anywhere along its edge; a long self-loop label can sit far from the node. `elk.edgeLabels.placement` and inline labels are the knobs to try |
 | Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |

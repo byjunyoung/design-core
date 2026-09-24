@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens, migrateKinds, listComponents } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens, migrateKinds, listComponents, listAssets } from './verbs.js';
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
@@ -22,6 +22,8 @@ usage: doan <verb> …
   tokens <project-dir> [--json]
         every token the project resolves — name, value, per-theme values, file, tier (primitive · semantic · bundled).
         tokens/ holds DTCG 2025.10 files and a resolver; a flat tokens.json from before 0.3 still reads.
+  assets <project-dir> [--json]
+        every file under assets/ with who names it, the references that name no file, the files nothing names.
 
   lint <project-dir> [--branch <name>] [--today YYYY-MM-DD] [--json]
         validate every screen file against the schema and run rules L01–L15.
@@ -177,6 +179,16 @@ async function tokensCommand(opts) {
   for (const p of r.problems) process.stdout.write(`${p.severity === 'blocking' ? 'BLOCK' : 'warn '}  ${p.file ?? ''}  ${p.path}  ${p.message}\n`);
   return r.problems.some((p) => p.severity === 'blocking') ? 1 : 0;
 }
+async function assetsCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await listAssets(dir);
+  if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
+  process.stdout.write(`${r.count} assets${r.unused.length ? ` (${r.unused.length} unused)` : ''}${r.missing.length ? ` — ${r.missing.length} references name no file` : ''}\n`);
+  for (const a of r.assets) process.stdout.write(`${a.path.padEnd(40)} ${String(a.bytes).padStart(8)} B  ${a.usedBy.map((u) => u.screen ?? `<${u.component}>`).join(', ')}\n`);
+  for (const m of r.missing) process.stdout.write(`warn   ${m.file ?? ''}  ${m.at}  "${m.path}" names no file\n`);
+  return 0;
+}
 function basesCommand() {
   for (const b of componentBases()) process.stdout.write(`${b.id.padEnd(8)} ${b.status.padEnd(8)} ${b.label} — ${b.note}\n`);
   return 0;
@@ -233,7 +245,7 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
+  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

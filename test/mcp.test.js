@@ -25,7 +25,7 @@ const call = async (name, args = {}) => {
 
 test('the server exposes the verbs and the two agent reads', async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_components', 'list_flows', 'list_screens', 'list_tokens', 'prep', 'render', 'propose', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_components', 'list_flows', 'list_screens', 'list_tokens', 'list_assets', 'prep', 'render', 'propose', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());
 });
 
 test('lint returns the same JSON the CLI does', async () => {

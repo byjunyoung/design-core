@@ -16,6 +16,10 @@ export const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp
 
 export const isTbd = (x) => x && typeof x === 'object' && !Array.isArray(x) && '$tbd' in x;
 
+// an icon prop is a glyph, or a file when it names one under assets/. The test is repeated from
+// src/assets.js on purpose: init copies this file into a project, where ../assets.js is not.
+const isAssetRef = (x) => typeof x === 'string' && /^assets\/\S+\.(svg|png|jpe?g|gif|webp|avif)$/i.test(x);
+export const ico = (x) => (isAssetRef(x) ? `<img class="ico-img" src="${h(x)}" alt="">` : v(x));
 export function v(value) {
   if (value === undefined || value === null) return '';
   if (isTbd(value)) {
@@ -98,7 +102,7 @@ export const kinds = {
     return `<span class="caption">${v(el.text)}</span>`;
   },
   hint(el) {
-    return `<span class="hint">${el.icon ? `<span class="ico">${h(el.icon)}</span> ` : ''}${v(el.text)}</span>`;
+    return `<span class="hint">${el.icon ? `<span class="ico">${ico(el.icon)}</span> ` : ''}${v(el.text)}</span>`;
   },
   divider() {
     return `<hr>`;
@@ -171,7 +175,9 @@ export const kinds = {
     return `<button class="btn">${v(el.label ?? D.chooseFile)}</button>`;
   },
   image(el) {
-    return `<div class="img size-${h(el.size ?? 'md')}">${D.image}</div>`;
+    // a real picture when src names a file under assets/, the placeholder otherwise
+    const pic = isAssetRef(el.src) ? `<img src="${h(el.src)}" alt="${h(el.alt ?? '')}">` : D.image;
+    return `<div class="img size-${h(el.size ?? 'md')}">${pic}</div>`;
   },
   'kv-table'(el) {
     const rows = Array.isArray(el.rows) ? el.rows : [];
@@ -221,7 +227,7 @@ export const kinds = {
     return `<div class="sheet"><div class="sheet-handle"></div>${el.title ? `<div class="sheet-title">${v(el.title)}</div>` : ''}<div class="sheet-body">${r.children(el)}</div></div>`;
   },
   fab(el) {
-    return `<button class="fab" title="${h(el.label ?? '')}">${v(el.icon ?? '+')}</button>`;
+    return `<button class="fab" title="${h(el.label ?? '')}">${ico(el.icon ?? '+')}</button>`;
   },
   snackbar(el) {
     return `<div class="snack">${v(el.text)}${el.action ? `<span class="snack-action">${v(el.action)}</span>` : ''}</div>`;

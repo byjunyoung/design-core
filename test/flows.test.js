@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadProject } from '../src/index.js';
 import { flowGraph, layoutFlows, nodeGeometry } from '../src/flowmap.js';
-import { renderFlows } from '../src/render/index.js';
+import { renderIndex } from '../src/render/index.js';
 
 const mobile = fileURLToPath(new URL('../examples/mobile-app', import.meta.url));
 const ops = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
@@ -74,9 +74,9 @@ test('without elkjs the map says so and still lists edges, dead ends and orphans
   assert.ok(map.edges.length >= 2);
 });
 
-test('renderFlows draws section boxes, one node per screen with its thumbnail and state rows, and the edges as right-angle paths with labels', async () => {
+test('the overview draws the flow map: section boxes, one node per screen with its thumbnail and state rows, and the edges as right-angle paths with labels', async () => {
   const project = await loadProject(mobile);
-  const html = await renderFlows(project, { branch: 'x' });
+  const html = await renderIndex(project, { branch: 'x' });
   assert.equal((html.match(/class="flow-node"/g) ?? []).length, 3);
   assert.match(html, /class="flow-sec"[^>]*>\s*<div class="flow-sec-title">/);
   assert.match(html, /class="flow-node"[^>]*><a class="flow-head" href="feed\.html"/);
@@ -84,7 +84,8 @@ test('renderFlows draws section boxes, one node per screen with its thumbnail an
   assert.match(html, /<path class="flow-edge[^"]*" d="M[\d.]+ [\d.]+ L/);
   assert.match(html, /<text class="flow-label"/);
   assert.match(html, /thumb-stage/);
-  assert.match(html, /href="flows\.html"><span class="name">Flow map<\/span>/);
+  assert.match(html, /<nav class="views"><a class="" href="canvas-shop\.html">Canvas<\/a><a class="" href="proto\.html#feed">Prototype<\/a><\/nav>/);
+  assert.match(html, /<div class="flow-sec" data-domain="shop"/);
 });
 
 test('a project with dead ends and orphans lists them under the map; a conditional flow is dashed', async () => {
@@ -96,7 +97,7 @@ test('a project with dead ends and orphans lists them under the map; a condition
     'screens/lonely.yaml': 'schema: doan/0.2\nid: scr_L\nscreen: lonely\nsection: B\ntype: page\nelements: []\n',
   });
   const project = await loadProject(dir);
-  const html = await renderFlows(project);
+  const html = await renderIndex(project);
   assert.match(html, /flow-edge conditional/);
   assert.match(html, /flow-dead[\s\S]*nowhere/);
   assert.match(html, /flow-orphans[\s\S]*lonely/);
@@ -114,17 +115,17 @@ test('renderProto holds every screen in every state, hidden, with the flows as d
   assert.match(html, /<section class="proto-view" data-screen="feed" data-state="Refreshing" hidden>/);
   assert.match(html, /window\.DOAN_FLOWS = \[\{"screen":"cart-sheet"/);
   assert.match(html, /"from":"list","to":"item-detail","state":"Default","nav":"push"/);
-  assert.match(html, /<select id="proto-screen"><option value="feed">feed<\/option>/); // sections order: 01. shop first
+  assert.match(html, /<select id="proto-screen"[^>]*><option value="feed">feed<\/option>/); // sections order: 01. shop first
   assert.match(html, /id="proto-hot" checked/);
   assert.match(html, /querySelectorAll\('\.el\[data-id="' \+ from \+ '"\]'\)/);
-  assert.match(html, /href="proto\.html"><span class="name">Prototype<\/span>/);
+  assert.match(html, /<nav class="views">[^<]*<a class="" href="canvas-shop\.html">Canvas<\/a><a class="current" href="proto\.html#feed">Prototype<\/a><\/nav>/);
 });
 
 test('the flow map and the screen page link into the prototype at that screen', async () => {
   const project = await loadProject(mobile);
   const { renderScreen } = await import('../src/render/index.js');
   const feed = project.screens.find((s) => s.doc.screen === 'feed');
-  assert.match(renderScreen(project, feed), /<a class="toggle" href="proto\.html#feed">/);
-  const flows = await renderFlows(project);
+  assert.match(renderScreen(project, feed), /<nav class="views">[^<]*<a class="" href="canvas-shop\.html#feed">Canvas<\/a><a class="" href="proto\.html#feed">Prototype<\/a>/);
+  const flows = await renderIndex(project);
   assert.match(flows, /<a class="flow-go" href="proto\.html#feed"/);
 });

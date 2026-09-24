@@ -64,7 +64,7 @@ notes:
 
 const PROJECT_README = (base) => `# design
 
-Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens/\` (DTCG files: primitives, semantic, light, dark, and the resolver).
+Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens/\` (DTCG files: primitives, semantic, light, dark, and the resolver); your icons and pictures in \`assets/\`, named by path from a screen (\`src: assets/photos/menu.jpg\`).
 
 Component base: **${base}**${base === 'none' ? ' — the component set is in `components/kinds.js` and is yours to edit.' : ' — kinds map to that library through `maps_to` in `components/<kind>.yaml`.'}
 
@@ -119,6 +119,9 @@ export async function initProject(dir, { base = 'none' } = {}) {
   created.push('README.md');
   // tokens/: DTCG files — primitives, the fixed semantic set, one colour file per theme, and
   // the resolver that says how they combine. Resolved for light this is the bundled default.
+  // assets/: the person's icons and pictures, named by path from a screen (src/assets.js)
+  await mkdir(join(dir, 'assets'), { recursive: true });
+  await writeFile(join(dir, 'assets', '.gitkeep'), '');
   await mkdir(join(dir, 'tokens'), { recursive: true });
   for (const [name, body] of Object.entries(DEFAULT_TOKEN_FILES)) {
     await writeFile(join(dir, 'tokens', name), JSON.stringify(body, null, 2) + '\n');

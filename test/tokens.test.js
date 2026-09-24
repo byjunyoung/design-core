@@ -184,3 +184,47 @@ test('the bundled token files resolve, for light, to exactly DEFAULT_TOKENS — 
   assert.deepEqual(Object.keys(dark.tokens.color).sort(), Object.keys(DEFAULT_TOKENS.color).sort());
   assert.notEqual(dark.tokens.color.bg, light.tokens.color.bg);
 });
+
+import { cp } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { DEFAULT_TOKEN_FILES } from '../src/tokens.js';
+import { renderTokens } from '../src/render/index.js';
+
+test("resolveTokens keeps each token's type, alias and description for the tokens page", () => {
+  const r = resolveTokens([{ doc: { gray: { $type: 'color', 0: { $value: '#ffffff' } }, color: { $type: 'color', bg: { $value: '{gray.0}', $description: 'page background' } } }, file: 'a.tokens.json' }]);
+  assert.deepEqual(r.meta['color.bg'], { type: 'color', alias: 'gray.0', description: 'page background' });
+  assert.deepEqual(r.meta['gray.0'], { type: 'color', alias: null, description: null });
+});
+
+test('the tokens page is the variables table: a collection per file, a column per mode, the alias, the CSS variable and who uses it; one value column without a resolver', async () => {
+  const ops = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
+  const dir = await mkdtemp(join(tmpdir(), 'doan-tokens-page-'));
+  await cp(ops, dir, { recursive: true });
+  await mkdir(join(dir, 'tokens'), { recursive: true });
+  for (const [name, body] of Object.entries(DEFAULT_TOKEN_FILES)) await writeFile(join(dir, 'tokens', name), JSON.stringify(body));
+  const html = renderTokens(await loadProject(dir), { branch: 'x' });
+  // left: the collections, one per file, the first shown; and the groups of the one shown
+  assert.match(html, /<div class="vars-side"><div class="tree-sec">Collections<\/div><a class="side-link vars-coll current" href="#c:primitive\.tokens\.json" data-coll="primitive\.tokens\.json"><span class="name">primitive\.tokens\.json<\/span><span class="hint">\d+<\/span><\/a><a class="side-link vars-coll" href="#c:semantic\.tokens\.json"/);
+  // a resolver modifier is a collection whose contexts are its modes, the way a Figma collection carries modes
+  assert.match(html, /<a class="side-link vars-coll" href="#c:theme" data-coll="theme"><span class="name">theme<\/span><span class="hint">12<\/span><\/a>/);
+  assert.doesNotMatch(html, /data-coll="light\.tokens\.json"/);
+  assert.match(html, /<div class="tree-sec">Groups<\/div><div class="vars-groups"><div data-coll="primitive\.tokens\.json"><a class="side-link vars-group current" href="#" data-group=""><span class="name">All tokens<\/span>.*<a class="side-link vars-group sub" href="#" data-group="gray"><span class="name">gray<\/span><span class="hint">\d+<\/span><\/a>/);
+  // right: one table per collection (the others hidden); a base set has one value column, a modifier a column
+  // per mode; a heading row per group; the name with its type mark; an alias drawn as a chip with its name and colour
+  assert.match(html, /<table class="tok" data-coll="primitive\.tokens\.json"><thead><tr><th>name<\/th><th>value<\/th><\/tr><\/thead>/);
+  assert.match(html, /<table class="tok" data-coll="theme" hidden><thead><tr><th>name<\/th><th>light <span class="hint">theme<\/span><\/th><th>dark <span class="hint">theme<\/span><\/th><\/tr><\/thead>/);
+  assert.match(html, /<tr class="grp" data-group="color"><td colspan="3">color<\/td><\/tr>/);
+  assert.match(html, /<tr data-token="color\.primary" data-group="color" data-panel="[^"]*"><td><span class="ticon" title="color">●<\/span><code>primary<\/code><\/td><td><span class="chip"><span class="swatch" style="background:#2f6fed"><\/span>blue\.500<\/span><\/td><td><span class="chip"><span class="swatch" style="background:#5b8dff"><\/span>blue\.400<\/span><\/td><\/tr>/);
+  assert.match(html, /<tr data-token="gray\.500" data-group="gray" data-panel="[^"]*"><td><span class="ticon" title="color">●<\/span><code>500<\/code><\/td><td><span class="swatch" style="background:#6b7280"><\/span><code>#6b7280<\/code><\/td>/);
+  // the panel a row opens: every mode, the alias chain, the CSS variable and who uses it (escaped into the attribute)
+  assert.match(html, /resolves as&lt;\/td&gt;&lt;td&gt;&lt;code&gt;color\.primary&lt;\/code&gt; → &lt;code&gt;blue\.500&lt;\/code&gt;/);
+  assert.match(html, /&lt;code&gt;var\(--color-primary\)&lt;\/code&gt;/);
+  assert.match(html, /data-token="space\.lg"[^>]*data-panel="[^"]*&lt;u&gt;[a-z-]+&lt;\/u&gt;&lt;\/a&gt; &lt;span class=&quot;hint&quot;&gt;screen/);
+  assert.match(html, /data-token="color\.primary"[^>]*data-panel="[^"]*components\.html#k-button/);
+  assert.match(html, /<a class="side-link sub current" href="tokens\.html"><span class="name">Tokens<\/span><span class="hint">\d+<\/span><\/a>/);
+  // no resolver: one collection, a single value column, no mode
+  const bare = renderTokens(await loadProject(ops), { branch: 'x' });
+  assert.match(bare, /<thead><tr><th>name<\/th><th>value<\/th><\/tr><\/thead>/);
+  assert.doesNotMatch(bare, /<span class="hint">theme<\/span>/);
+  assert.equal((bare.match(/class="side-link vars-coll/g) ?? []).length, 1);
+});

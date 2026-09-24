@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.9.0 — 2026-09-24
+
+The design system, seen: a tokens page, and assets — the person's own files — named from screens and seen on a page of their own (DESIGN.md §4.6, §6.9).
+
+- **`tokens.html`** — laid out like Figma's variables modal: collections on the left (a base set's file, or a resolver modifier such as `theme` whose contexts are its mode columns), the groups of the one shown under them, and its table on the right — a heading per group, the name with a type mark, the value per mode, an alias as a chip with its name and colour. Search and group filters. A row opens the token in the inspect panel with every mode's value, its alias chain, the CSS variable and who uses it (contracts through their bindings, screens through layout gap and padding); `#t:<name>` and `#c:<collection>` deep-link. A flat `tokens.json` is one collection; the bundled set comes last when a token lives only there; the resolver's problems are listed on top.
+- **Assets** — files under `assets/` (svg, png, jpg, gif, webp, avif). A screen names one by path: `src: assets/photos/menu.jpg` on an image, `icon: assets/icons/cart.svg` on any kind with an icon; anything else in `icon` stays a glyph. The bundled set draws the file itself; `serve` serves `/assets/…` from the folder and nothing outside it; `render` copies the folder next to the pages. `doan init` creates the folder.
+- **`assets.html`** — a card per file under its folder, with its size, its natural dimensions and who names it; then the references that name no file and the files nothing names. A card opens in the inspect panel; `#a:<path>` deep-links to it.
+- **L25** (warning): a `src` or `icon` that names a path under `assets/` with no such file.
+- **`doan assets <dir>`** and MCP **`list_assets`**: the same summary for a person or an agent.
+- The sidebar's design system: 개요, then **디자인 시스템 — 토큰 · 컴포넌트 · 에셋**, then the tree, because the screens are built from them.
+
+## 0.8.0 — 2026-09-24
+
+The workspace: the canvas page becomes the window Figma's viewer is — measured against it, editing aside (DESIGN.md §6.7).
+
+- **Left, a tree**: domain → section → screen → state; under the selected frame, its element layers, hovering a row outlines the element, clicking selects and zooms to it. ⌘F searches screens.
+- **Right, the inspect panel stays open** — an empty state until something is selected; a frame shows its file, type, platform, the flows leaving it, and links to the screen page and the prototype at that state; an element shows what the drawer showed.
+- **Selection**: hover outlines the innermost element; a click selects an element or, on empty frame space, the frame; Esc clears; the tree, the frame and the URL follow.
+- **Keys**: Shift 1 fit · Shift 2 zoom to selection · Shift 0 100% · ⌘/ctrl ± zoom · Esc.
+- **Deep links**: `canvas-<domain>.html#screen.State/elements.1` opens zoomed to that element, selected; a selection writes the hash, so a review can be sent as a link to the exact element.
+- **Two navigations, not one twice.** The left sidebar is content — the overview and the component library first, because the screens are built from them, then the domain tree — and the top bar is the modes of looking at it: Canvas · Prototype, the way Figma keeps Design · Prototype up there. Switching a mode keeps the sidebar and the context: the prototype opens on the selected frame. The duplicate links in the sidebar are gone; the arrows toggle is called "arrows", not "flows".
+- **Defined once, worn by every page** (DESIGN.md §6.8): the same left column, the same top bar in the same order — where you are · the two modes · this page's tools and the theme — and the inspect panel on every page. The overview, the screen page, the proposal page and the component library now use it too; a screen in the tree links to its frame on the canvas. The overview opened at a domain and the prototype fold the tree from their hash and point the modes at that place, so the tree and the modes follow the prototype as you click through it. The top bar's three slots hold their positions: the modes are centred in the bar and the two sides share the rest equally, so nothing beside them moves them — a long meta truncates (full text on hover), wide tools wrap, and the prototype's screen and state selects carry their labels as tooltips to stay narrow.
+- **The flow map is a section of the overview, not a mode.** The canvas already draws a domain's flows, so a second flow view was one thing twice (the owner's question, 2026-09-24). `flows.html` is gone; the ELK map of every domain — with the flows to nowhere and the screens no flow reaches under it — sits on the overview below the domain cards, and `index.html#<domain>` lights that domain in it.
+
+## 0.7.0 — 2026-09-24
+
+The domain canvas: the page a Figma file had per domain, rebuilt from the files.
+
+- **`canvas-<domain>.html`** — a domain is what a section name says before " - " (`NN. {domain} - {feature}`). Its sections side by side, each a box; inside, one column per screen with the happy path first and the screen's other states stacked under its Default; frames at real size; zoom (⌘/ctrl + wheel, pinch, buttons) and pan (wheel, drag). The viewer's first surface: the sidebar and the overview open with the domains (DESIGN.md §6.6).
+- **Arrows on the canvas**, drawn by the page from what it measures, by fig's arrow rules: from the source Default's right edge at the trigger element's height, a right-angle elbow, a gap before the head, into the target state frame's left edge; a flow that goes back climbs into a corridor above and comes down beside the target; `[state]` dashed chains between stacked frames; conditional dashed; label pills; a flow to another domain is a stub with a link.
+- A comment on the canvas goes to the screen whose frame the element sits in, and a comment dot shows only in that screen's frames — the same path exists on every screen of a domain.
+- The flow map's section titles link to the domain canvases.
+
 ## 0.6.0 — 2026-09-24
 
 The click-through prototype: the product's navigation, pressed, from the files alone.

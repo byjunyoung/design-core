@@ -67,7 +67,7 @@ npx @junyoung735/doan init design --base antd   # 또는 --base none: 컴포넌�
 npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ```
 
-`design/`에 `conventions.yaml`(규칙), `sections.yaml`, `tokens/`(DTCG 토큰 파일과 light/dark 리졸버), 시작 화면 한 장, 그리고 그 폴더의 README가 생깁니다. 뷰어를 열어 시작 화면을 누르면 상태 탭, 그림, 요소마다 어느 파일 몇 줄에서 왔는지 말해 주는 드로어가 있습니다.
+`design/`에 `conventions.yaml`(규칙), `sections.yaml`, `tokens/`(DTCG 토큰 파일과 light/dark 리졸버), 시작 화면 한 장, 그리고 그 폴더의 README가 생깁니다. 뷰어를 열어 시작 화면을 누르면 상태 탭, 그림, 요소마다 어느 파일 몇 줄에서 왔는지 말해 주는 드로어가 있습니다. 뷰어는 도메인 캔버스로 엽니다 — 피그마 파일이 도메인마다 갖던 그 페이지. 섹션이 나란히, 화면마다 열에 상태가 쌓이고, 그 사이에 화살표, 실물 크기에 줌·팬.
 
 에이전트를 들입니다. Claude Code — 프로젝트의 `.mcp.json`:
 
@@ -135,7 +135,7 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 
 <img src="docs/img/antd-modal.png" alt="antd 어댑터: 수정 모달의 Default·Validation·Submitting을 진짜 antd 컴포넌트로" width="100%">
 
-`--base antd`나 `--base mui`는 kind를 그 라이브러리의 컴포넌트에 짝지어 서버에서 그리고, `tokens/`로 테마를 입힙니다. `--base none`은 기본 세트를 `design/components/`에 복사합니다 — 그때부터 그건 팀의 컴포넌트 라이브러리이고 도구는 그걸 소유하지 않습니다. shadcn/ui나 자체 디자인 시스템도 이 길입니다. 뷰어 자체의 말은 conventions의 `meta.language`(`en`, `ko`)를 따르고, 화면 내용은 절대 번역하지 않습니다. kind 하나가 파일 하나입니다 — `components/<kind>.yaml`에 props·슬롯·바인딩된 토큰이 있고, 뷰어의 컴포넌트 페이지가 그 파일들로 전부 그립니다. 흐름도 페이지는 flows 로 화면 전체를 배치합니다 — 섹션마다 상자, 화면마다 썸네일, 가리키는 상태 행으로 꽂히는 화살표. 페이지를 그릴 때 ELK 가 계산합니다(`npm install elkjs`, 선택). 프로토타입 페이지는 같은 화면을 눌러 보는 것입니다 — 흐름의 `from` 요소가 핫스팟이고, 누르면 그 흐름의 대상 화면·상태로 넘어갑니다.
+`--base antd`나 `--base mui`는 kind를 그 라이브러리의 컴포넌트에 짝지어 서버에서 그리고, `tokens/`로 테마를 입힙니다. `--base none`은 기본 세트를 `design/components/`에 복사합니다 — 그때부터 그건 팀의 컴포넌트 라이브러리이고 도구는 그걸 소유하지 않습니다. shadcn/ui나 자체 디자인 시스템도 이 길입니다. 뷰어 자체의 말은 conventions의 `meta.language`(`en`, `ko`)를 따르고, 화면 내용은 절대 번역하지 않습니다. kind 하나가 파일 하나입니다 — `components/<kind>.yaml`에 props·슬롯·바인딩된 토큰이 있고, 뷰어의 컴포넌트 페이지가 그 파일들로 전부 그립니다. 개요의 흐름도는 flows 로 화면 전체를 배치합니다 — 섹션마다 상자, 화면마다 썸네일, 가리키는 상태 행으로 꽂히는 화살표. 페이지를 그릴 때 ELK 가 계산합니다(`npm install elkjs`, 선택). 프로토타입 페이지는 같은 화면을 눌러 보는 것입니다 — 흐름의 `from` 요소가 핫스팟이고, 누르면 그 흐름의 대상 화면·상태로 넘어갑니다.
 
 ## 왜 파일과 명령줄인가
 
@@ -152,12 +152,13 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 | `init <dir> [--base none\|antd\|mui]` | 프로젝트 시작. `none`은 컴포넌트 세트를 복사해 내 것으로, 라이브러리 기반은 kind를 그 라이브러리에 대응 |
 | `bases` | 컴포넌트 기반 목록과 준비 여부 |
 | `tokens <dir>` | 토큰 전부 — 값, 테마별 값, 파일, 계층(primitive · semantic · bundled) |
+| `assets <dir>` | `assets/` 아래 파일 전부 — 어느 화면·컴포넌트가 쓰는지, 파일 없는 참조, 안 쓰이는 파일 |
 | `components <dir>` | kind 마다의 계약 — props, 슬롯, 토큰 바인딩, 복합 여부 |
 | `migrate kinds <dir>` | `conventions.kinds`의 행을 `components/<kind>.yaml`로 옮김 (0.4 이전 프로젝트) |
 | `lint <dir>` | 스키마 검사 + 규칙 L01–L20. 지적마다 파일·YAML 경로·줄. 차단이 있으면 exit 1 |
 | `prep <file>` | 유형이 요구하는데 없는 상태를 `$tbd` 자리표시로 채움 |
 | `diff <a> <b>` · `diff <file> --from <ref>` | 두 판의 AS-IS / TO-BE. 요소는 id로 비교 |
-| `render <dir> [--components antd\|mui] [--proposal <id>]` | 정적 HTML: 인덱스, 컴포넌트, 흐름도, 프로토타입, 화면마다 한 장, 대기 제안마다 한 장 |
+| `render <dir> [--components antd\|mui] [--proposal <id>]` | 정적 HTML: 인덱스(흐름도 포함), 도메인마다 캔버스, 토큰, 컴포넌트, 에셋, 프로토타입, 화면마다 한 장, 대기 제안마다 한 장 |
 | `serve <dir> [--port] [--components …]` | 살아있는 뷰어: 코멘트, 적용/반려, `/api/lint` |
 | `propose <dir> <screen> --with <new.yaml>` | 새 판을 diff·lint 전후·tier와 함께 대기열에 |
 | `proposals <dir>` · `apply <dir> <id> --by <name>` · `reject <dir> <id>` · `undo <dir> <id>` | 루프의 나머지 |

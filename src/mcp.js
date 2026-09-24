@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listFlows } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, listFlows } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -73,6 +73,16 @@ server.registerTool(
     inputSchema: {},
   },
   guard(() => listTokens(dir)),
+);
+
+server.registerTool(
+  'list_assets',
+  {
+    description:
+      'Every file under assets/ (icons, photos, illustrations) with its size and the screens and components that name it, plus the references that name no file and the files nothing names. A screen names one by path: `src: assets/photos/menu.jpg` on an image, `icon: assets/icons/cart.svg` on any kind with an icon.',
+    inputSchema: {},
+  },
+  guard(() => listAssets(dir)),
 );
 
 server.registerTool(
@@ -250,7 +260,7 @@ server.registerPrompt(
           type: 'text',
           text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
 
-1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element — and list_tokens — the semantic tokens a layout may name; never a primitive. Read conventions: the required states for its type, the layout vocabulary. New work inherits the shell every screen in the section shares.
+1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary. New work inherits the shell every screen in the section shares.
 
 2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
 

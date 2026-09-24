@@ -7,3 +7,4 @@ export { loadTokens, resolveTokens } from './tokens.js';
 export { loadComponents, elementProps, enumAttrs, RESERVED_KEYS } from './components.js';
 export { expandComponents } from './expand.js';
 export { flowGraph, layoutFlows } from './flowmap.js';
+export { domainOf, slugOf, canvasPages, happyPathOrder } from './canvas.js';

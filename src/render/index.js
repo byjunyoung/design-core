@@ -1,15 +1,18 @@
 import { mergeState } from '../merge.js';
 import { walkElements } from '../elements.js';
-import { lint, summarize } from '../lint.js';
+import { lint, summarize, bindingsOf } from '../lint.js';
+import { tokenNames, getToken, hasToken } from '../tokens.js';
+import { assetsSummary } from '../assets.js';
 import { resolveFlowTarget } from '../flows.js';
 import { kinds, h, v, isTbd, setLanguage } from './kinds.js';
 import { dictionary, languageOf, pageStrings } from './i18n.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
-import { CSS, INSPECTOR_JS, PROTO_JS } from './page.js';
+import { CSS, INSPECTOR_JS, PROTO_JS, CANVAS_JS } from './page.js';
 import { parseScreenText } from '../project.js';
 import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
 import { layoutFlows, flowGraph } from '../flowmap.js';
+import { canvasPages } from '../canvas.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -132,30 +135,88 @@ function flowLink(project, screen, flow) {
 
 // The sidebar every page shares: sections → screens, each with what a reviewer wants to
 // know before opening it — blocking findings, undecided values, open comments.
-function sidebar(project, { current = null, findings = null, comments = [], proposals = [] } = {}) {
-  const D = dictionary(languageOf(project));
+// ---------------------------------------------------------------------------------------------
+// The navigation, defined once and worn by every page (DESIGN.md §6.8):
+//
+//   left   content — the project; the overview, then the design system (tokens · components ·
+//          assets) since the screens are built from them; then a search box and the domain tree (domain › section
+//          › screen › state; the current domain open, the others folded). Never modes.
+//   top    [where you are] [the modes: canvas · prototype] [this page's tools · theme]
+//          in that order on every page; a mode that does not apply is simply not lit.
+//   right  the inspect panel, always there — an empty state until something is selected.
+//
+// A page differs from another only in its title, its tools and its content. Nothing else moves.
+
+// The domain a screen sits in, by its section name.
+function placeOf(project, screenName, state = null) {
+  const s = project.screens.find((x) => x.doc.screen === screenName);
+  const spec = s ? canvasPages(project).find((p) => p.sections.some((sec) => sec.name === s.doc.section)) : null;
+  return { domain: spec?.slug ?? null, screen: screenName ?? null, state };
+}
+
+function navSidebar(project, D, place = {}, { findings = null, comments = [], proposals = [] } = {}) {
   const found = findings ?? lint(project, { branch: null });
-  const bySection = {};
-  for (const s of project.screens) (bySection[s.doc.section] ??= []).push(s);
-  const order = [...project.sections.filter((x) => bySection[x]), ...Object.keys(bySection).filter((x) => !project.sections.includes(x))];
-  const links = order
-    .map((section) => {
-      const items = bySection[section]
-        .map((s) => {
-          const mine = found.filter((f) => f.file === s.file);
-          const block = mine.filter((f) => f.severity === 'blocking').length;
-          const tbd = mine.filter((f) => f.id === 'L08').length;
-          const open = comments.filter((c) => c.screen === s.doc.screen).length;
-          const pills = [block ? `<span class="pill block">${block}</span>` : '', tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
-          return `<a class="side-link${current === s.doc.screen ? ' current' : ''}" href="${h(s.doc.screen)}.html"><span class="name">${h(s.doc.screen)}</span>${pills}</a>`;
-        })
+  const pillsOf = (screen) => {
+    const s = project.screens.find((x) => x.doc.screen === screen);
+    const mine = found.filter((f) => f.file === s?.file);
+    const block = mine.filter((f) => f.severity === 'blocking').length;
+    const tbd = mine.filter((f) => f.id === 'L08').length;
+    const open = comments.filter((c) => c.screen === screen).length;
+    return [block ? `<span class="pill block">${block}</span>` : '', tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
+  };
+  const tree = canvasPages(project)
+    .map((p) => {
+      const cur = p.slug === place.domain;
+      const n = p.sections.reduce((k, s) => k + s.screens.length, 0);
+      const body = p.sections
+        .map(
+          (sec) =>
+            `<div class="tree-sec">${h(sec.name)}</div>` +
+            sec.screens
+              .map((s) => {
+                const curScreen = cur && place.screen === s.screen;
+                const states = s.states
+                  .map(
+                    (st) =>
+                      `<a class="tree-frame${curScreen && place.state === st ? ' current' : ''}" data-screen="${h(s.screen)}" data-state="${h(st)}" href="canvas-${h(p.slug)}.html#${h(s.screen)}.${h(st)}">${h(st)}</a><div class="tree-layers" data-screen="${h(s.screen)}" data-state="${h(st)}"></div>`,
+                  )
+                  .join('');
+                return `<div class="tree-screen${curScreen ? ' open current' : ''}" data-screen="${h(s.screen)}"><div class="tree-screen-head"><span class="caret"></span><a class="name" href="canvas-${h(p.slug)}.html#${h(s.screen)}">${h(s.screen)}</a><span class="hint">${h(s.type ?? '')}</span>${pillsOf(s.screen)}</div><div class="tree-states">${states}</div></div>`;
+              })
+              .join(''),
+        )
         .join('');
-      return `<div class="sec">${h(section)}</div>${items}`;
+      return `<div class="tree-domain${cur ? ' open current' : ''}" data-domain="${h(p.slug)}"><div class="tree-domain-head"><span class="caret"></span><a class="name" href="canvas-${h(p.slug)}.html">${h(p.domain)}</a><span class="hint">${n}</span></div><div class="tree-body">${body}</div></div>`;
     })
     .join('');
   const nComponents = Object.keys(project.components ?? {}).length;
-  const foot = `<div class="foot"><a class="side-link${current === null ? ' current' : ''}" href="index.html"><span class="name">${D.overview}</span>${proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : ''}</a><a class="side-link${current === 'components' ? ' current' : ''}" href="components.html"><span class="name">${D.library}</span><span class="hint">${nComponents}</span></a><a class="side-link${current === 'flows' ? ' current' : ''}" href="flows.html"><span class="name">${D.flowMap}</span></a><a class="side-link${current === 'proto' ? ' current' : ''}" href="proto.html"><span class="name">${D.proto}</span></a></div>`;
-  return `<nav class="side"><div class="brand">${D.screens} <span class="hint">${project.screens.length}</span></div>${links}${foot}</nav>`;
+  // the overview and the design system — tokens, components, assets — sit above the tree:
+  // the screens are built from them
+  const nTokens = tokenNames(mergeTokens(DEFAULT_TOKENS, project.tokens)).length;
+  const nAssets = (project.assets ?? []).length;
+  const link = (page, href, label, hint) => `<a class="side-link${page === 'index' ? '' : ' sub'}${place.page === page ? ' current' : ''}" href="${href}"><span class="name">${label}</span>${hint}</a>`;
+  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('tokens', 'tokens.html', D.tokens, `<span class="hint">${nTokens}</span>`)}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
+  return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
+}
+
+function topBar(project, D, { title, meta = '', mode = null, place = {}, tools = '' }) {
+  const screenRef = place.screen ? place.screen + (place.state && place.state !== 'Default' ? `.${place.state}` : '') : null;
+  // three fixed slots, not a flex row: the modes sit at the same x on every page whatever the
+  // title or the tools beside them; a long meta truncates (its full text on hover)
+  return `<header class="top"><div class="where" title="${h(String(meta).replace(/<[^>]+>/g, ''))}"><h1>${title}</h1><span class="meta">${meta}</span></div>${viewTabs(project, mode, D, { domain: place.domain ?? null, screen: screenRef })}<div class="tools">${tools}${modeControls(project)}</div></header>`;
+}
+
+function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [] }) {
+  // the zoom keys exist only on the canvas; the other pages keep the same empty panel without the hint
+  const empty = `<div class="hint">${D.clickToInspect}</div>${mode === 'canvas' ? `<p class="hint">${D.shortcutsHint}</p>` : ''}`;
+  return `<div class="shell workspace">
+${navSidebar(project, D, place, { findings, comments, proposals })}
+<main class="main${mainClass ? ` ${mainClass}` : ''}">
+${topBar(project, D, { title, meta, mode, place, tools })}
+${content}
+</main>
+<aside id="inspector" class="drawer">${panel ?? empty}</aside>
+</div>`;
 }
 
 // Modes. Every modifier axis of the project's token resolver (theme: light | dark …) becomes
@@ -201,7 +262,7 @@ function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', f
 <style>${tokensToCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
-<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
+<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
@@ -234,23 +295,24 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
   const refs = Object.entries(doc.refs ?? {}).map(([k, u]) => `<span><span class="hint">${h(k)}</span> <code>${h(u)}</code></span>`).join(' · ');
   const commentList = comments.map((c) => `<li data-comment="${h(c.id)}"><b>${h(c.author)}</b> on <code>${h(c.path)}</code>: ${h(c.text)}</li>`).join('');
 
-  const body = `<div class="shell">
-${sidebar(project, { current: doc.screen, findings, comments: api ? comments : [], proposals: [] })}
-<main class="main">
-<header class="top"><h1>${h(doc.screen)}</h1><span class="meta">${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}<a class="toggle" href="proto.html#${h(doc.screen)}">▶ ${D.proto}</a><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
-<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
+  const body = shellOf(project, D, {
+    title: h(doc.screen),
+    meta: `${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}`,
+    place: placeOf(project, doc.screen, 'Default'),
+    tools: `<label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
+    findings,
+    comments: api ? comments : [],
+    content: `<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
 <div class="states">${statePanels}${variantPanels}</div>
 <div class="section-title">${D.flows}</div><ul class="list">${flows || `<li class="hint">${D.none}</li>`}</ul>
 <div class="section-title">${D.notes}</div><ul class="list">${notes || `<li class="hint">${D.none}</li>`}</ul>
 <div class="section-title">${D.comments} <span class="hint">${comments.length} ${D.open}</span></div><ul class="list" id="comments">${commentList || `<li class="hint">${D.none}</li>`}</ul>
-${refs ? `<div class="section-title">${D.references}</div><div class="hint" style="font-size:12px">${refs}</div>` : ''}
-</main>
-<aside id="inspector" class="drawer"></aside>
-</div>`;
+${refs ? `<div class="section-title">${D.references}</div><div class="hint" style="font-size:12px">${refs}</div>` : ''}`,
+  });
   return page({ title: doc.screen, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
 }
 
-export function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false } = {}) {
+export async function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false, adapter = null } = {}) {
   const lang = languageOf(project);
   const D = dictionary(lang);
   setLanguage(lang);
@@ -286,16 +348,28 @@ export function renderIndex(project, { branch = null, today, proposals = [], com
         .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html"><u>${h(p.id)}</u></a></td><td>${h(p.screen)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} ${D.blocking}, ${p.lint?.after?.warning ?? 0} ${D.warning}</td></tr>`)
         .join('')}</tbody></table>`
     : '';
-  const body = `<div class="shell">
-${sidebar(project, { current: null, findings, comments, proposals })}
-<main class="main">
-<header class="top"><h1>${D.overview}</h1><span class="meta">${project.screens.length} ${D.screens}${branch ? ` ${D.on} ${h(branch)}` : ''} — ${total.blocking} ${D.blocking}, ${total.warning} ${D.warning}${comments.length ? `, ${comments.length} ${D.openComments}` : ''}</span><span class="spacer"></span>${modeControls(project)}</header>
-${waiting}
-${cards}
-</main>
-<aside id="inspector" class="drawer"></aside>
-</div>`;
-  return page({ title: D.screens, tokens, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: '', comments: [], lang });
+  // the domains first — each a canvas, the page a Figma file had per domain
+  const domainCards = canvasPages(project)
+    .map((p) => {
+      const n = p.sections.reduce((k, s) => k + s.screens.length, 0);
+      return `<a class="scard" href="canvas-${h(p.slug)}.html"><div class="t">${h(p.domain)}</div><div class="m">${p.sections.map((s) => h(s.feature ?? s.name)).join(' · ')}</div><div class="pills"><span class="pill ok">${n} ${D.screens}</span></div></a>`;
+    })
+    .join('');
+  const flows = await flowMapSection(project, D, adapter);
+  const body = shellOf(project, D, {
+    title: D.overview,
+    meta: `${project.screens.length} ${D.screens}${branch ? ` ${D.on} ${h(branch)}` : ''} — ${total.blocking} ${D.blocking}, ${total.warning} ${D.warning}${comments.length ? `, ${comments.length} ${D.openComments}` : ''}`,
+    place: { page: 'index' },
+    findings,
+    comments,
+    proposals,
+    // then the map of every domain's flows, then the screens by section
+    content: `${waiting}
+${domainCards ? `<div class="section-title">${D.domains}</div><div class="card-grid">${domainCards}</div>` : ''}
+${flows.html}
+${cards}`,
+  }) + flows.script;
+  return page({ title: D.screens, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
@@ -347,17 +421,72 @@ ${c.tokens || c.variants ? `<div class="section-title">${D.bindingsLabel}</div><
 </section>`;
     })
     .join('');
-  const body = `<div class="shell">
-${sidebar(project, { current: 'components', proposals: [] })}
-<main class="main">
-<header class="top"><h1>${D.library}</h1><span class="meta">${Object.keys(registry).length}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}</header>
-${sections || `<div class="hint">${D.noneOfKind}</div>`}
-</main>
-<aside id="inspector" class="drawer"></aside>
-</div>`;
+  const body = shellOf(project, D, {
+    title: D.library,
+    meta: `${Object.keys(registry).length}${branch ? ` · ${h(branch)}` : ''}`,
+    place: { page: 'components' },
+    content: sections || `<div class="hint">${D.noneOfKind}</div>`,
+  });
   return page({ title: D.library, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 const basenameOf = (p) => String(p).split('/').pop();
+
+// The domain canvas (src/canvas.js): the page a Figma file had per domain. Sections side by
+// side, each a box; inside, one column per screen — Default on top, the other states under
+// it — at real size. Zoom and pan are the page's; the arrows are drawn by the page too, from
+// the frames and elements it measures, by fig's arrow rules (edge midpoint or the trigger
+// element's height, right-angle elbow, a gap before the head, a corridor above for a flow that
+// goes back). A flow to another domain becomes a stub with a link.
+// The modes of looking at the same content — canvas · flow map · prototype — on the top bar,
+// the way Figma keeps Design / Prototype / Dev Mode there. They keep their context: the flow
+// map opens on this domain, the prototype on this screen. Content navigation (domains, the
+// overview, the component library) is the left sidebar's, never duplicated up here.
+function viewTabs(project, current, D, { domain = null, screen = null } = {}) {
+  const pages = canvasPages(project);
+  const spec = pages.find((p) => p.slug === domain) ?? pages[0];
+  const canvas = spec ? `canvas-${spec.slug}.html${screen ? `#${screen}` : ''}` : 'index.html';
+  const proto = `proto.html${screen ? `#${screen}` : spec?.sections[0]?.screens[0] ? `#${spec.sections[0].screens[0].screen}` : ''}`;
+  const tab = (key, href, label) => `<a class="${current === key ? 'current' : ''}" href="${h(href)}">${label}</a>`;
+  return `<nav class="views">${tab('canvas', canvas, D.viewCanvas)}${tab('proto', proto, D.proto)}</nav>`;
+}
+
+export function renderCanvas(project, pageSpec, { branch = null, adapter = null, api = false, comments = [] } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const maps = mapsFor(project);
+  const graph = flowGraph(project);
+  const inDomain = pageSpec.sections.flatMap((s) => s.screens.map((x) => x.screen));
+  const frame = (screen, state) => {
+    const s = project.screens.find((x) => x.doc.screen === screen);
+    const html = renderView(project, s, mergeState(s.doc, state), maps, adapter).replace('<div class="stage', '<div class="cv-stage');
+    const platform = platformOf(project, s);
+    return `<div class="cv-frame" data-screen="${h(screen)}" data-state="${h(state)}" data-type="${h(s.doc.type)}" data-platform="${h(platform.name)}" data-file="${h(project.screenName(s))}"><a class="cv-frame-title" href="${h(screen)}.html#state-${h(state)}">${h(screen)}-${h(state)}</a><div class="cv-body">${html}</div></div>`;
+  };
+  const sections = pageSpec.sections
+    .map((sec) => `<div class="cv-section" data-section="${h(sec.name)}"><div class="cv-section-title">${h(sec.name)}</div><div class="cv-row">${sec.screens.map((s) => `<div class="cv-col" data-screen="${h(s.screen)}">${s.states.map((st) => frame(s.screen, st)).join('')}</div>`).join('')}</div></div>`)
+    .join('');
+  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, via: e.via, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, label: e.label, when: e.when }));
+  const others = canvasPages(project).filter((p) => p.slug !== pageSpec.slug);
+  const screenDomain = Object.fromEntries(others.flatMap((p) => p.sections.flatMap((s) => s.screens.map((x) => [x.screen, { domain: p.domain, slug: p.slug }]))));
+  const nScreens = inDomain.length;
+  const body =
+    shellOf(project, D, {
+      title: h(pageSpec.domain),
+      meta: `${pageSpec.sections.length} ${D.sectionsN} · ${nScreens} ${D.screens}${branch ? ` · ${h(branch)}` : ''}`,
+      mode: 'canvas',
+      place: { domain: pageSpec.slug },
+      tools: `<button class="toggle" id="cv-out" type="button">−</button><span class="toggle zoom" id="cv-zoom">100%</span><button class="toggle" id="cv-in" type="button">+</button><button class="toggle" id="cv-fit" type="button">${D.fitLabel}</button><label class="toggle"><input type="checkbox" id="cv-show-arrows" checked> ${D.arrowsLabel}</label>`,
+      mainClass: 'cv-main',
+      comments: api ? comments : [],
+      content: `<div class="cv-wrap" id="cv-wrap"><div class="cv-canvas" id="cv-canvas"><div class="cv-domain" id="cv-domain">${sections}</div><svg class="cv-arrows" id="cv-arrows"><defs><marker id="cv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs></svg></div></div>`,
+    }) +
+    `
+<script>window.DOAN_FLOWS = ${JSON.stringify(flows)}; window.DOAN_CANVAS = ${JSON.stringify({ domain: pageSpec.domain, screens: inDomain })}; window.DOAN_SCREEN_DOMAIN = ${JSON.stringify(screenDomain)};</script>
+<script>${CANVAS_JS}</script>`;
+  return page({ title: pageSpec.domain, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments, lang });
+}
 
 // The click-through prototype: every screen in every state on one page, one shown at a time;
 // the elements a flow leaves from are hotspots, and pressing one lands on the flow's target
@@ -377,20 +506,17 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
     .flatMap((s) => stateOrder(project, s).map((state) => `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" hidden>${renderView(project, s, mergeState(s.doc, state), maps, adapter)}</section>`))
     .join('');
   const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, label: e.label }));
-  const body = `<div class="shell">
-${sidebar(project, { current: 'proto', proposals: [] })}
-<main class="main">
-<header class="top proto-bar"><h1>${D.proto}</h1><span class="meta">${flows.length} ${D.flows.toLowerCase()}${branch ? ` · ${h(branch)}` : ''}</span>
-<label class="toggle">${D.screen} <select id="proto-screen">${screens.map((s) => `<option value="${h(s.doc.screen)}">${h(s.doc.screen)}</option>`).join('')}</select></label>
-<label class="toggle">${D.states} <select id="proto-state"></select></label>
-<button class="toggle" id="proto-back" type="button">‹ ${D.back}</button>
-<label class="toggle"><input type="checkbox" id="proto-hot" checked> ${D.hotspots}</label>
-<span class="spacer"></span>${modeControls(project)}<a class="toggle" href="flows.html">${D.flowMap}</a></header>
-<div class="proto-stage" id="proto-stage">${views || `<div class="hint">${D.none}</div>`}</div>
-<div class="proto-overlay" id="proto-overlay" hidden></div>
-</main>
-<aside id="inspector" class="drawer"></aside>
-</div>
+  const body =
+    shellOf(project, D, {
+      title: D.proto,
+      meta: `${flows.length} ${D.flows.toLowerCase()}${branch ? ` · ${h(branch)}` : ''}`,
+      mode: 'proto',
+      tools: `<label class="toggle" title="${D.screen}"><select id="proto-screen" aria-label="${D.screen}">${screens.map((s) => `<option value="${h(s.doc.screen)}">${h(s.doc.screen)}</option>`).join('')}</select></label><label class="toggle" title="${D.states}"><select id="proto-state" aria-label="${D.states}"></select></label><button class="toggle" id="proto-back" type="button">‹ ${D.back}</button><label class="toggle"><input type="checkbox" id="proto-hot" checked> ${D.hotspots}</label>`,
+      mainClass: 'proto-main',
+      content: `<div class="proto-stage" id="proto-stage">${views || `<div class="hint">${D.none}</div>`}</div>
+<div class="proto-overlay" id="proto-overlay" hidden></div>`,
+    }) +
+    `
 <script>window.DOAN_FLOWS = ${JSON.stringify(flows)};</script>
 <script>${PROTO_JS}</script>`;
   return page({ title: D.proto, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
@@ -400,11 +526,11 @@ ${sidebar(project, { current: 'proto', proposals: [] })}
 // row per state — and flows as right-angle paths that land on the row of the state they name.
 // Nodes are HTML so the thumbnails are the same drawing the screen page shows; edges are one
 // SVG on top. Async because ELK is.
-export async function renderFlows(project, { branch = null, adapter = null, api = false } = {}) {
-  const lang = languageOf(project);
-  const D = dictionary(lang);
-  setLanguage(lang);
-  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+// The flow map: every domain on one page, laid out by ELK (src/flowmap.js). A section of the
+// overview since 2026-09-24 — the canvas holds a domain's flows at real size, the overview is
+// where all of them are seen at once — so this returns a section, not a page, plus the script
+// that lights the domain named in the hash (index.html#<domain>) and scrolls the map to it.
+async function flowMapSection(project, D, adapter) {
   const maps = mapsFor(project);
   const map = await layoutFlows(project);
   const r1 = (n) => Math.round(n * 10) / 10;
@@ -419,7 +545,11 @@ ${map.orphans.length ? `<div class="section-title">${D.orphanScreens}</div><ul c
   let picture;
   if (!map.ok) picture = `<div class="hint">${h(map.reason)}</div>`;
   else {
-    const secs = map.sections.map((s) => `<div class="flow-sec" style="left:${r1(s.x)}px;top:${r1(s.y)}px;width:${r1(s.w)}px;height:${r1(s.h)}px"><div class="flow-sec-title">${h(s.title)}</div></div>`).join('');
+    const slugOfSection = Object.fromEntries(canvasPages(project).flatMap((p) => p.sections.map((s) => [s.name, p.slug])));
+    // #<domain> in the URL — the way the canvas opens this map — lights that domain's sections
+    const secs = map.sections
+      .map((s) => `<div class="flow-sec" data-domain="${h(slugOfSection[s.title] ?? '')}" style="left:${r1(s.x)}px;top:${r1(s.y)}px;width:${r1(s.w)}px;height:${r1(s.h)}px"><div class="flow-sec-title">${slugOfSection[s.title] ? `<a href="canvas-${h(slugOfSection[s.title])}.html">${h(s.title)}</a>` : h(s.title)}</div></div>`)
+      .join('');
     const nodes = map.nodes
       .map(
         (n) =>
@@ -437,16 +567,9 @@ ${map.orphans.length ? `<div class="section-title">${D.orphanScreens}</div><ul c
     const svg = `<svg class="flow-edges" width="${Math.ceil(map.width)}" height="${Math.ceil(map.height)}"><defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>${edges}</svg>`;
     picture = `<div class="flow-scroll"><div class="flowmap" style="width:${Math.ceil(map.width)}px;height:${Math.ceil(map.height)}px">${secs}${nodes}${svg}</div></div>`;
   }
-  const body = `<div class="shell">
-${sidebar(project, { current: 'flows', proposals: [] })}
-<main class="main">
-<header class="top"><h1>${D.flowMap}</h1><span class="meta">${project.screens.length} ${D.screens} · ${map.edges.length} ${D.flows.toLowerCase()}${map.dead.length ? ` · <span class="bad">${map.dead.length} ${D.deadFlows.toLowerCase()}</span>` : ''}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}</header>
-${picture}
-${lists}
-</main>
-<aside id="inspector" class="drawer"></aside>
-</div>`;
-  return page({ title: D.flowMap, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+  const title = `<div class="section-title" id="flows">${D.flowMap} <span class="hint">${map.edges.length} ${D.flows.toLowerCase()}${map.dead.length ? ` · <span class="bad">${map.dead.length} ${D.deadFlows.toLowerCase()}</span>` : ''}</span></div>`;
+  const script = `<script>(function () { var d = decodeURIComponent(location.hash.slice(1)); if (!d) return; var first = null; document.querySelectorAll('.flow-sec[data-domain]').forEach(function (s) { if (s.getAttribute('data-domain') === d) { s.classList.add('current'); first = first || s; } }); var box = document.querySelector('.flow-scroll'); if (first && box) { box.scrollLeft = Math.max(0, first.offsetLeft - (box.clientWidth - first.offsetWidth) / 2); box.scrollTop = Math.max(0, first.offsetTop - 24); } })();</script>`;
+  return { html: `${title}${picture}${lists}`, script };
 }
 
 export function renderProposal(project, proposal, { branch = null, adapter = null, api = false } = {}) {
@@ -486,19 +609,263 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
       ? `<p><input id="by" placeholder="${D.yourName}" style="width:160px;display:inline-block"> <button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">${D.apply}</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">${D.reject}</button> <span class="hint" id="verdict"></span></p>`
       : `<p class="hint">${D.toAccept}: <code>doan apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · ${D.toDecline}: <code>doan reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
 
-  const body = `<div class="shell">
-${sidebar(project, { current: proposal.screen })}
-<main class="main">
-<header class="top"><h1>${h(proposal.screen)} <span class="hint">${D.proposal}</span></h1><span class="meta">${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}</span><span class="spacer"></span>${modeControls(project)}<label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label></header>
-<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>
+  const body = shellOf(project, D, {
+    title: `${h(proposal.screen)} <span class="hint">${D.proposal}</span>`,
+    meta: `${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}`,
+    place: placeOf(project, proposal.screen),
+    tools: `<label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
+    content: `<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>
 <div class="section-title">${D.decided}</div>${decisions}
 <div class="section-title">${D.whatChanges}</div>${diff}
 ${verdict}
 <div class="section-title">${D.asisTobe}</div>
 <div class="tabs-row">${tabs}</div>
-<div class="states">${panels}</div>
-</main>
-<aside id="inspector" class="drawer"></aside>
-</div>`;
+<div class="states">${panels}</div>`,
+  });
   return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
 }
+
+// The tokens page: Figma's variables modal, as near as the files allow. Left, the collections
+// and the groups of the one shown; right, its table — a row per token under its group's
+// heading, the name with a type mark, then the value, or a column per mode when the collection
+// has modes. A collection is a base set's file (one value column) or a resolver modifier (its
+// contexts are its modes — `theme` with light and dark, the way a Figma collection carries its
+// modes); the bundled set comes last when a token lives only there. A value written as an
+// alias shows as a chip with the alias's name and colour, the way Figma shows a linked
+// variable. A row opens the token in the inspect panel — every mode's value, the alias chain,
+// the CSS variable and who uses it (contracts through their bindings, screens through layout
+// gap and padding); `#t:<name>` deep-links to it, `#c:<collection>` to a collection. A flat
+// tokens.json is one collection.
+export function renderTokens(project, { branch = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const set = project.tokenSet ?? { source: 'none', files: [], contexts: {}, contextMeta: {}, sets: {}, modifiers: {}, defaults: {}, origins: {}, meta: {}, problems: [] };
+  const merged = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const meta = set.meta ?? {};
+  // a flat file declares no $type: read it off the value
+  const typeOf = (name, value) =>
+    meta[name]?.type ?? (/^(#|rgba?\(|hsla?\(|color\()/.test(String(value)) ? 'color' : /^-?[\d.]+(px|rem|em|%)$/.test(String(value)) ? 'dimension' : 'string');
+  const MARK = { color: '●', dimension: '#', number: '#', string: 'T', fontFamily: 'Aa', typography: 'Aa', fontWeight: 'B', duration: '⏱', shadow: '▱', boolean: '◐' };
+  const swatch = (css) => `<span class="swatch" style="background:${h(css)}"></span>`;
+  // a cell: the alias as a chip with its name and, for a colour, its swatch; else the value
+  const cell = (name, type, tokens, m) => {
+    const value = getToken(tokens, name);
+    if (value === undefined || value === null) return '<span class="hint">—</span>';
+    const alias = m?.[name]?.alias;
+    if (alias) return `<span class="chip">${type === 'color' ? swatch(value) : ''}${h(alias)}</span>`;
+    if (type === 'color') return `${swatch(value)}<code>${h(value)}</code>`;
+    if (type === 'dimension' && /^[\d.]+px$/.test(String(value))) return `<span class="dim" style="width:${h(value)}"></span><code>${h(value)}</code>`;
+    return `<code>${h(value)}</code>`;
+  };
+  const cssVar = (name) => `--${name.replace(/\./g, '-')}`;
+  const used = {};
+  const note = (name, key, who) => (used[name] ??= { components: new Set(), screens: new Set() })[key].add(who);
+  for (const c of Object.values(project.components ?? {})) for (const { token } of bindingsOf(c)) note(token, 'components', c.kind);
+  const layoutRefs = (rule, screen) => {
+    for (const k of ['gap', 'padding']) if (typeof rule?.[k] === 'string' && hasToken(merged, rule[k])) note(rule[k], 'screens', screen);
+  };
+  for (const s of project.screens) {
+    for (const rule of Object.values(s.doc.layout ?? {})) layoutRefs(rule, s.doc.screen);
+    for (const patches of Object.values(s.doc.states ?? {})) for (const p of Array.isArray(patches) ? patches : []) layoutRefs(p?.layout, s.doc.screen);
+  }
+  const chainOf = (name) => {
+    const out = [name];
+    for (let cur = meta[name]?.alias; cur && !out.includes(cur); cur = meta[cur]?.alias) out.push(cur);
+    return out;
+  };
+  // collections: the base sets' files in order, then each modifier, then the bundled set
+  const setsOf = set.sets ?? {};
+  const modsOf = set.modifiers ?? {};
+  const fileOf = (name) => set.origins?.[name] ?? (set.source === 'flat' && getToken(set.tokens, name) !== undefined ? set.files?.[0] : null);
+  const modifierOfFile = (file) => Object.entries(modsOf).find(([, m]) => Object.values(m.contexts).some((files) => files.includes(file)))?.[0] ?? null;
+  const byColl = new Map([...Object.values(setsOf).flat().map((f) => basenameOf(f)), ...Object.keys(modsOf)].map((k) => [k, []]));
+  for (const name of tokenNames(merged)) {
+    const file = fileOf(name);
+    const key = file ? (modifierOfFile(file) ?? basenameOf(file)) : '';
+    if (!byColl.has(key)) byColl.set(key, []);
+    byColl.get(key).push(name);
+  }
+  const bundledOnly = byColl.get('') ?? [];
+  byColl.delete('');
+  const modesOf = (key) =>
+    modsOf[key]
+      ? Object.keys(modsOf[key].contexts)
+          .sort((a, b) => (a === modsOf[key].default ? -1 : b === modsOf[key].default ? 1 : 0))
+          .map((ctx) => ({ axis: key, ctx, tokens: set.contexts?.[key]?.[ctx] ?? merged, meta: set.contextMeta?.[key]?.[ctx] ?? meta }))
+      : [];
+  const collections = [...byColl.entries()].filter(([, names]) => names.length).map(([key, names]) => ({ key, label: key, names, modes: modesOf(key) }));
+  if (bundledOnly.length) collections.push({ key: 'bundled', label: D.bundledSet, names: bundledOnly, modes: [] });
+  const collOf = (name) => collections.find((c) => c.names.includes(name));
+  const groupOf = (name) => name.split('.')[0];
+  const panelOf = (name, type, value) => {
+    const u = used[name] ?? { components: new Set(), screens: new Set() };
+    const modes = collOf(name)?.modes ?? [];
+    const per = modes.length
+      ? modes.map((m) => `<tr><td class="hint">${h(m.ctx)} <span class="hint">${h(m.axis)}</span></td><td>${cell(name, type, m.tokens, m.meta)}</td></tr>`).join('')
+      : `<tr><td class="hint">${D.valueLabel}</td><td>${cell(name, type, merged, meta)}</td></tr>`;
+    const chain = chainOf(name);
+    return `<h3><code>${h(name)}</code></h3><div class="hint">${h(type)}${set.origins?.[name] ? ` · ${h(basenameOf(set.origins[name]))}` : ''}</div>${meta[name]?.description ? `<p class="hint">${h(meta[name].description)}</p>` : ''}<table class="props">${per}${chain.length > 1 ? `<tr><td class="hint">${D.chainLabel}</td><td>${chain.map((c) => `<code>${h(c)}</code>`).join(' → ')}</td></tr>` : ''}<tr><td class="hint">CSS</td><td><code>var(${h(cssVar(name))})</code></td></tr></table><div class="section-title">${D.usedBy}</div>${u.components.size || u.screens.size ? `<ul class="list">${[...u.components].map((k) => `<li><a href="components.html#k-${h(k)}"><u>${h(k)}</u></a> <span class="hint">${D.component}</span></li>`).join('')}${[...u.screens].map((s) => `<li>${screenLinkOf(project, s)} <span class="hint">${D.screen}</span></li>`).join('')}</ul>` : `<div class="hint">${D.none}</div>`}`;
+  };
+  const rowsOf = (coll) => {
+    const cols = 1 + Math.max(coll.modes.length, 1);
+    const groups = new Map();
+    for (const name of coll.names) {
+      const g = groupOf(name);
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(name);
+    }
+    return [...groups.entries()]
+      .map(
+        ([g, names]) =>
+          `<tr class="grp" data-group="${h(g)}"><td colspan="${cols}">${h(g)}</td></tr>` +
+          names
+            .map((name) => {
+              const value = getToken(merged, name);
+              const type = typeOf(name, value);
+              const leaf = name.length > g.length ? name.slice(g.length + 1) : name;
+              const cells = coll.modes.length ? coll.modes.map((m) => `<td>${cell(name, type, m.tokens, m.meta)}</td>`).join('') : `<td>${cell(name, type, merged, meta)}</td>`;
+              return `<tr data-token="${h(name)}" data-group="${h(g)}" data-panel="${h(panelOf(name, type, value))}"><td><span class="ticon" title="${h(type)}">${MARK[type] ?? '·'}</span><code>${h(leaf)}</code></td>${cells}</tr>`;
+            })
+            .join(''),
+      )
+      .join('');
+  };
+  const headOf = (coll) => `<thead><tr><th>${D.nameLabel}</th>${coll.modes.length ? coll.modes.map((m) => `<th>${h(m.ctx)} <span class="hint">${h(m.axis)}</span></th>`).join('') : `<th>${D.valueLabel}</th>`}</tr></thead>`;
+  const tables = collections.map((c, i) => `<table class="tok" data-coll="${h(c.key)}"${i ? ' hidden' : ''}>${headOf(c)}<tbody>${rowsOf(c)}</tbody></table>`).join('');
+  const groupLinks = (c) => {
+    const gs = [...new Set(c.names.map(groupOf))];
+    return `<a class="side-link vars-group current" href="#" data-group=""><span class="name">${D.allTokens}</span><span class="hint">${c.names.length}</span></a>${gs.map((g) => `<a class="side-link vars-group sub" href="#" data-group="${h(g)}"><span class="name">${h(g)}</span><span class="hint">${c.names.filter((n) => groupOf(n) === g).length}</span></a>`).join('')}`;
+  };
+  const side = `<div class="vars-side"><div class="tree-sec">${D.collections}</div>${collections.map((c, i) => `<a class="side-link vars-coll${i ? '' : ' current'}" href="#c:${h(c.key)}" data-coll="${h(c.key)}"><span class="name">${h(c.label)}</span><span class="hint">${c.names.length}</span></a>`).join('')}<div class="tree-sec">${D.groupsLabel}</div><div class="vars-groups">${collections.map((c, i) => `<div data-coll="${h(c.key)}"${i ? ' hidden' : ''}>${groupLinks(c)}</div>`).join('')}</div></div>`;
+  const main = `<div class="vars-main"><input class="tree-search vars-search" type="search" placeholder="${h(D.searchTokens)}">${tables}</div>`;
+  const problems = (set.problems ?? []).length
+    ? `<div class="section-title">${D.tokenProblems}</div><ul class="list">${set.problems.map((p) => `<li class="${p.severity === 'blocking' ? 'bad' : ''}">${h(p.path ?? '')}${p.context ? ` <span class="hint">${h(p.context)}</span>` : ''} — ${h(p.message)}</li>`).join('')}</ul>`
+    : '';
+  const content = problems + (set.source === 'none' ? `<div class="hint">${D.noTokens}</div>` : '') + `<div class="vars">${side}${main}</div>`;
+  const body =
+    shellOf(project, D, {
+      title: D.tokens,
+      meta: `${tokenNames(merged).length} · ${h(set.source)}${set.resolver ? ` · ${h(set.resolver)}` : ''}${branch ? ` · ${h(branch)}` : ''}`,
+      place: { page: 'tokens' },
+      content,
+    }) +
+    VARS_SCRIPT +
+    PICK_SCRIPT;
+  return page({ title: D.tokens, tokens: merged, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: '', comments: [], lang });
+}
+
+// The variables layout's own behaviour: one collection shown at a time, its groups filter the
+// rows, the search box filters by name; `#c:<collection>` opens a collection, `#t:<name>`
+// opens the collection that holds the token (the shared script then selects the row).
+const VARS_SCRIPT = `
+<script>(function () {
+  var colls = document.querySelectorAll('.vars-coll'), tables = document.querySelectorAll('table.tok[data-coll]'), boxes = document.querySelectorAll('.vars-groups > div[data-coll]'), search = document.querySelector('.vars-search');
+  var group = '';
+  function apply() {
+    var q = search ? search.value.trim().toLowerCase() : '';
+    tables.forEach(function (t) {
+      if (t.hidden) return;
+      var seen = {};
+      t.querySelectorAll('tr[data-token]').forEach(function (tr) {
+        var g = tr.getAttribute('data-group');
+        var ok = (!group || g === group) && (!q || tr.getAttribute('data-token').toLowerCase().indexOf(q) >= 0);
+        tr.hidden = !ok;
+        if (ok) seen[g] = true;
+      });
+      t.querySelectorAll('tr.grp').forEach(function (tr) { tr.hidden = !seen[tr.getAttribute('data-group')]; });
+    });
+  }
+  function show(key) {
+    colls.forEach(function (a) { a.classList.toggle('current', a.getAttribute('data-coll') === key); });
+    tables.forEach(function (t) { t.hidden = t.getAttribute('data-coll') !== key; });
+    boxes.forEach(function (b) { b.hidden = b.getAttribute('data-coll') !== key; });
+    group = '';
+    document.querySelectorAll('.vars-group').forEach(function (a) { a.classList.toggle('current', a.getAttribute('data-group') === ''); });
+    apply();
+  }
+  colls.forEach(function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); show(a.getAttribute('data-coll')); history.replaceState(null, '', '#c:' + a.getAttribute('data-coll')); });
+  });
+  document.querySelectorAll('.vars-group').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      group = a.getAttribute('data-group');
+      a.parentElement.querySelectorAll('.vars-group').forEach(function (x) { x.classList.toggle('current', x === a); });
+      apply();
+    });
+  });
+  if (search) search.addEventListener('input', apply);
+  var m = decodeURIComponent(location.hash.slice(1)).match(/^([tc]):(.+)$/);
+  if (m && m[1] === 'c') show(m[2]);
+  else if (m && m[1] === 't') { var row = document.querySelector('tr[data-token="' + m[2].replace(/"/g, '') + '"]'); if (row) show(row.closest('table').getAttribute('data-coll')); }
+})();</script>`;
+
+// The assets page: a card per file under assets/, grouped by folder, with its size, its
+// natural dimensions (the browser reads them) and who names it; then the references that
+// name no file and the files nothing names. A card selects into the inspect panel;
+// `#a:<path>` deep-links to it.
+export function renderAssets(project, { branch = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const { assets, missing, unused } = assetsSummary(project);
+  const kb = (n) => (n >= 1024 ? `${Math.round(n / 102.4) / 10} KB` : `${n} B`);
+  const who = (r) => (r.screen ? `${screenLinkOf(project, r.screen)} <span class="hint">${h(r.at.join('.'))}</span>` : `<a href="components.html#k-${h(r.component)}"><u>${h(r.component)}</u></a> <span class="hint">${h(r.at.join('.'))}</span>`);
+  const panelOf = (a) => `<h3>${h(basenameOf(a.path))}</h3><div class="hint">${h(a.path)}</div><table class="props"><tr><td class="hint">${D.sizeLabel}</td><td>${kb(a.bytes)}</td></tr><tr><td class="hint">${D.typeLabel}</td><td><code>${h(a.type)}</code></td></tr></table><div class="section-title">${D.usedBy}</div>${a.usedBy.length ? `<ul class="list">${a.usedBy.map((r) => `<li>${who(r)}</li>`).join('')}</ul>` : `<div class="hint">${D.unusedMark}</div>`}`;
+  const card = (a) =>
+    `<a class="asset" data-asset="${h(a.path)}" data-panel="${h(panelOf(a))}" href="#a:${h(a.path)}"><div class="asset-pic"><img src="${h(a.path)}" alt=""></div><div class="t" title="${h(a.path)}">${h(basenameOf(a.path))}</div><div class="m">${h(a.path.split('.').pop().toLowerCase())} · ${kb(a.bytes)} · <span class="dim-of"></span></div><div class="pills">${a.usedBy.length ? `<span class="pill ok">${a.usedBy.length} ${D.usesN}</span>` : `<span class="pill tbd">${D.unusedMark}</span>`}</div></a>`;
+  const folders = new Map();
+  for (const a of assets) {
+    const folder = a.path.split('/').slice(1, -1).join('/') || 'assets/';
+    if (!folders.has(folder)) folders.set(folder, []);
+    folders.get(folder).push(a);
+  }
+  const grid = [...folders.entries()].map(([folder, list]) => `<div class="section-title"><code>${h(folder)}</code> <span class="hint">${list.length} ${D.filesN}</span></div><div class="asset-grid">${list.map(card).join('')}</div>`).join('');
+  const lists = `${missing.length ? `<div class="section-title">${D.missingAssets}</div><ul class="list">${missing.map((r) => `<li><code class="bad">${h(r.path)}</code> — ${who(r)}</li>`).join('')}</ul>` : ''}${unused.length ? `<div class="section-title">${D.unusedFiles}</div><ul class="list">${unused.map((p) => `<li><a href="#a:${h(p)}"><code>${h(p)}</code></a></li>`).join('')}</ul>` : ''}`;
+  const body =
+    shellOf(project, D, {
+      title: D.assets,
+      meta: `${assets.length} ${D.filesN}${missing.length ? ` · <span class="bad">${missing.length} ${D.missingAssets.toLowerCase()}</span>` : ''}${branch ? ` · ${h(branch)}` : ''}`,
+      place: { page: 'assets' },
+      content: (grid || `<div class="hint">${D.noAssets}</div>`) + lists,
+    }) + PICK_SCRIPT;
+  return page({ title: D.assets, tokens, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: '', comments: [], lang });
+}
+
+const screenLinkOf = (project, screen) => {
+  const p = placeOf(project, screen);
+  return `<a href="${p.domain ? `canvas-${h(p.domain)}.html#${h(screen)}` : `${h(screen)}.html`}"><u>${h(screen)}</u></a>`;
+};
+
+// Shared by the tokens and assets pages: a click on a row or a card puts its pre-rendered
+// detail into the inspect panel and writes the deep link; the hash on load selects; an asset
+// card learns its natural size from the picture once it has loaded.
+const PICK_SCRIPT = `
+<script>(function () {
+  var panel = document.getElementById('inspector');
+  function pick(el) {
+    document.querySelectorAll('.current[data-panel]').forEach(function (n) { n.classList.remove('current'); });
+    el.classList.add('current');
+    if (panel) panel.innerHTML = el.getAttribute('data-panel');
+  }
+  document.querySelectorAll('[data-panel]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      if (e.target.closest('a[href]') && e.target.closest('a[href]') !== el) return;
+      e.preventDefault();
+      pick(el);
+      var key = el.hasAttribute('data-token') ? 't:' + el.getAttribute('data-token') : 'a:' + el.getAttribute('data-asset');
+      history.replaceState(null, '', '#' + key);
+    });
+  });
+  var m = decodeURIComponent(location.hash.slice(1)).match(/^([ta]):(.+)$/);
+  if (m) {
+    var el = document.querySelector(m[1] === 't' ? '[data-token="' + m[2].replace(/"/g, '') + '"]' : '[data-asset="' + m[2].replace(/"/g, '') + '"]');
+    if (el) { pick(el); el.scrollIntoView({ block: 'center' }); }
+  }
+  document.querySelectorAll('.asset-pic img').forEach(function (img) {
+    var fill = function () { var d = img.closest('.asset').querySelector('.dim-of'); if (d) d.textContent = img.naturalWidth + '×' + img.naturalHeight; };
+    if (img.complete) fill(); else img.addEventListener('load', fill);
+  });
+})();</script>`;

@@ -11,7 +11,8 @@ const EN = {
   apply: 'Apply', reject: 'Reject', yourName: 'your name', toAccept: 'to accept', toDecline: 'to decline', noSummary: '(no summary)',
   item: 'item', decision: 'decision', why: 'why', blocking: 'blocking', warning: 'warning', clean: 'clean', states: 'states', openComments: 'open comments',
   comment: 'comment', commentsN: 'comments', tbd: '$tbd', components: 'components', on: 'on',
-  flowMap: 'Flow map', deadFlows: 'Flows to nowhere', orphanScreens: 'Screens no flow reaches', proto: 'Prototype', hotspots: 'hotspots', back: 'back',
+  flowMap: 'Flow map', deadFlows: 'Flows to nowhere', orphanScreens: 'Screens no flow reaches', domains: 'Domains', sectionsN: 'sections', fitLabel: 'fit', viewCanvas: 'Canvas', arrowsLabel: 'arrows', searchTree: 'Search screens  \u2318F', shortcutsHint: 'Shift 1 fit \u00b7 Shift 2 zoom to selection \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 zoom \u00b7 Esc clear', proto: 'Prototype', hotspots: 'hotspots', back: 'back',
+  tokens: 'Tokens', assets: 'Assets', designSystem: 'Design system', nameLabel: 'name', typeLabel: 'type', valueLabel: 'value', cssVar: 'CSS variable', usedBy: 'used by', aliasLabel: 'alias', bundledSet: 'bundled set — not in your files', noTokens: 'No token files: the bundled set is in use. doan init writes tokens/.', tokenProblems: 'Token problems', unusedFiles: 'Files nothing names', missingAssets: 'References to no file', noAssets: 'Put icons and pictures under assets/ and name them by path — src: assets/photos/menu.jpg on an image, icon: assets/icons/cart.svg on any kind with an icon.', unusedMark: 'unused', usesN: 'uses', filesN: 'files', sizeLabel: 'size', collections: 'Collections', groupsLabel: 'Groups', allTokens: 'All tokens', searchTokens: 'Search tokens', modeLabel: 'mode', chainLabel: 'resolves as',
   library: 'Components', propsLabel: 'props', slotsLabel: 'slots', bindingsLabel: 'token bindings', compound: 'compound — drawn from its own elements', legacyKind: 'still in conventions.kinds', noneOfKind: 'no components yet — doan migrate kinds, or add components/<kind>.yaml', requiredMark: 'required',
   // drawer (sent to the page as JSON)
   clickToInspect: 'Click an element to inspect it.', component: 'component', bundled: 'bundled default', samplesNote: 'values shown in the picture are samples unless the file sets them',
@@ -33,7 +34,8 @@ const KO = {
   apply: '적용', reject: '반려', yourName: '이름', toAccept: '적용하려면', toDecline: '반려하려면', noSummary: '(요약 없음)',
   item: '항목', decision: '결정', why: '이유', blocking: '차단', warning: '경고', clean: '이상 없음', states: '상태', openComments: '열린 코멘트',
   comment: '코멘트', commentsN: '코멘트', components: '컴포넌트', on: '·',
-  flowMap: '흐름도', deadFlows: '갈 곳 없는 흐름', orphanScreens: '흐름이 닿지 않는 화면', proto: '프로토타입', hotspots: '핫스팟', back: '뒤로',
+  flowMap: '흐름도', deadFlows: '갈 곳 없는 흐름', orphanScreens: '흐름이 닿지 않는 화면', domains: '도메인', sectionsN: '섹션', fitLabel: '맞춤', viewCanvas: '캔버스', arrowsLabel: '화살표', searchTree: '화면 검색  \u2318F', shortcutsHint: 'Shift 1 맞춤 \u00b7 Shift 2 선택에 맞춤 \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 줌 \u00b7 Esc 해제', proto: '프로토타입', hotspots: '핫스팟', back: '뒤로',
+  tokens: '토큰', assets: '에셋', designSystem: '디자인 시스템', nameLabel: '이름', typeLabel: '타입', valueLabel: '값', cssVar: 'CSS 변수', usedBy: '사용처', aliasLabel: '별칭', bundledSet: '기본 세트 — 파일에 없음', noTokens: '토큰 파일이 없어 기본 세트로 그립니다. doan init이 tokens/를 만듭니다.', tokenProblems: '토큰 문제', unusedFiles: '쓰이지 않는 파일', missingAssets: '파일이 없는 참조', noAssets: 'assets/ 아래에 아이콘·이미지를 넣고 경로로 부르면 여기 나옵니다 — 이미지는 src: assets/photos/menu.jpg, 아이콘은 icon: assets/icons/cart.svg.', unusedMark: '안 쓰임', usesN: '곳', filesN: '파일', sizeLabel: '크기', collections: '컬렉션', groupsLabel: '그룹', allTokens: '전체', searchTokens: '토큰 검색', modeLabel: '모드', chainLabel: '풀면',
   library: '컴포넌트', propsLabel: '속성', slotsLabel: '슬롯', bindingsLabel: '토큰 바인딩', compound: '복합 — 자기 elements로 그림', legacyKind: '아직 conventions.kinds에 있음', noneOfKind: '컴포넌트 없음 — doan migrate kinds 또는 components/<kind>.yaml 추가', requiredMark: '필수',
   clickToInspect: '요소를 누르면 여기에 나옵니다.', component: '컴포넌트', bundled: '기본 세트', samplesNote: '그림의 값은 파일에 없으면 샘플입니다',
   file: '파일', path: '경로', line: '줄', copy: '경로:줄 복사', copied: '복사됨', noneOnElement: '이 요소에는 없음',
@@ -55,6 +57,6 @@ export function languageOf(project) {
 // The subset the page's own JavaScript needs, as plain strings.
 export function pageStrings(lang) {
   const d = dictionary(lang);
-  const keys = ['clickToInspect', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
+  const keys = ['clickToInspect', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
   return Object.fromEntries(keys.map((k) => [k, d[k]]));
 }

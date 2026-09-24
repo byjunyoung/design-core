@@ -72,7 +72,7 @@ test('variants render one row per axis, each option in Default; a modal sits on 
 
 test('the index lists every screen with its blocking and $tbd counts', async () => {
   const project = await loadProject(ops);
-  const html = renderIndex(project, { branch: 'feature/x', today: '2026-09-23' });
+  const html = await renderIndex(project, { branch: 'feature/x', today: '2026-09-23' });
   for (const s of project.screens) assert.match(html, new RegExp(`href="${s.doc.screen}\\.html"`));
   assert.match(html, /\$tbd/);
 });
@@ -113,7 +113,7 @@ test('the index lists pending proposals with a link to their page', async () => 
   const before = readFileSync(join(dir, 'screens', 'order-list.yaml'), 'utf8');
   const p = await propose(dir, { screen: 'order-list', after: before.replace('kind: pagination', 'kind: pager') }, { branch: 'x', today: '2026-09-23' });
   const project = await loadProject(dir);
-  const html = renderIndex(project, { branch: 'x', today: '2026-09-23', proposals: await listProposals(dir) });
+  const html = await renderIndex(project, { branch: 'x', today: '2026-09-23', proposals: await listProposals(dir) });
   assert.match(html, new RegExp(`href="proposal-${p.id}\\.html"`));
 });
 
@@ -151,7 +151,8 @@ test('the viewer shell: sidebar with every screen, state tabs with the first act
   const project = await loadProject(ops);
   const screen = project.screens.find((s) => s.doc.screen === 'inventory-list');
   const html = renderScreen(project, screen);
-  for (const s of project.screens) assert.match(html, new RegExp(`class="side-link[^"]*" href="${s.doc.screen}\\.html"`));
+  for (const s of project.screens) assert.match(html, new RegExp(`class="tree-screen[^"]*" data-screen="${s.doc.screen}"><div class="tree-screen-head"><span class="caret"></span><a class="name" href="canvas-[^"]+\\.html#${s.doc.screen}"`));
+  assert.match(html, /<nav class="views"><a class="" href="canvas-[^"]+\.html#inventory-list">Canvas<\/a>/, "the modes bar is on the screen page too, with this screen as context");
   assert.match(html, /class="tab active" data-state="Default"/);
   assert.match(html, /class="tab" data-state="Empty"/);
   assert.match(html, /id="compare"/);
@@ -180,7 +181,7 @@ test('empty cells carry sample values made from the column name, and a leaf elem
 
 test('the index is the same shell: sections in the sidebar, cards per section in the main area', async () => {
   const project = await loadProject(ops);
-  const html = renderIndex(project, { branch: 'x', today: '2026-09-24' });
+  const html = await renderIndex(project, { branch: 'x', today: '2026-09-24' });
   assert.match(html, /class="side"/);
   assert.match(html, /class="card-grid"/);
   assert.match(html, /02\. Inventory/);
@@ -189,7 +190,7 @@ test('the index is the same shell: sections in the sidebar, cards per section in
 test('with the mui adapter, mapped kinds render as MUI components and unmapped kinds fall back', async () => {
   const { createAdapter } = await import('../src/render/adapters/index.js');
   const project = await loadProject(ops);
-  for (const [kind, mui] of Object.entries({ table: 'Table', button: 'Button', segmented: 'ToggleButtonGroup', pagination: 'Pagination' })) project.conventions.kinds[kind].maps_to = { ...(project.conventions.kinds[kind].maps_to ?? {}), mui };
+  for (const [kind, mui] of Object.entries({ table: 'Table', button: 'Button', segmented: 'ToggleButtonGroup', pagination: 'Pagination' })) project.components[kind].maps_to = { ...(project.components[kind].maps_to ?? {}), mui };
   const adapter = await createAdapter('mui', project);
   const screen = project.screens.find((s) => s.doc.screen === 'inventory-list');
   const html = renderScreen(project, screen, { adapter });
@@ -208,7 +209,7 @@ test('the viewer speaks the language conventions.meta.language names, samples in
   assert.match(html, /상태 비교/);
   assert.match(html, /흐름/);
   assert.match(html, /<td>항목 1<\/td>/);
-  const index = renderIndex(project, { branch: 'x', today: '2026-09-24' });
+  const index = await renderIndex(project, { branch: 'x', today: '2026-09-24' });
   assert.match(index, /개요/);
 });
 

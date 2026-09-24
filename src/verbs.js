@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, cp } from 'node:fs/promises';
 import { join, relative, basename } from 'node:path';
 import { parse, parseDocument } from 'yaml';
 import { existsSync } from 'node:fs';
@@ -12,7 +12,9 @@ import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderFlows, renderProto } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets } from './render/index.js';
+import { canvasPages } from './canvas.js';
+import { assetsSummary } from './assets.js';
 import { listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 import { resolveAdapter } from './render/adapters/index.js';
@@ -119,14 +121,23 @@ export async function renderProject(dir, opts = {}) {
   await mkdir(out, { recursive: true });
   const pages = [];
   const pending = await listProposals(dir, { status: 'pending' });
-  await writeFile(join(out, 'index.html'), renderIndex(project, { branch, today: today(opts.today), proposals: pending }));
+  await writeFile(join(out, 'index.html'), await renderIndex(project, { branch, today: today(opts.today), proposals: pending, adapter }));
   pages.push(join(out, 'index.html'));
   await writeFile(join(out, 'components.html'), renderLibrary(project, { branch, adapter }));
   pages.push(join(out, 'components.html'));
-  await writeFile(join(out, 'flows.html'), await renderFlows(project, { branch, adapter }));
-  pages.push(join(out, 'flows.html'));
+  await writeFile(join(out, 'tokens.html'), renderTokens(project, { branch }));
+  pages.push(join(out, 'tokens.html'));
+  await writeFile(join(out, 'assets.html'), renderAssets(project, { branch }));
+  pages.push(join(out, 'assets.html'));
   await writeFile(join(out, 'proto.html'), renderProto(project, { branch, adapter }));
   pages.push(join(out, 'proto.html'));
+  // the person's asset files go along, at the relative path the pages name them by
+  await cp(join(dir, 'assets'), join(out, 'assets'), { recursive: true }).catch(() => {});
+  for (const spec of canvasPages(project)) {
+    const file = join(out, `canvas-${spec.slug}.html`);
+    await writeFile(file, renderCanvas(project, spec, { branch, adapter }));
+    pages.push(file);
+  }
   for (const s of project.screens) {
     const file = join(out, `${s.doc.screen}.html`);
     await writeFile(file, renderScreen(project, s, { branch, adapter }));
@@ -263,4 +274,18 @@ export async function listFlows(dir) {
   const { flowGraph } = await import('./flowmap.js');
   const project = await loadProject(dir);
   return flowGraph(project);
+}
+
+// Every asset file with who names it, the references that name no file, and the files nothing
+// names — the assets page draws the same summary (src/assets.js).
+export async function listAssets(dir) {
+  const project = await loadProject(dir);
+  const { assets, missing, unused } = assetsSummary(project);
+  const rel = (r) => ({ ...r, file: r.file ? relative(dir, r.file) : null, at: r.at.join('.') });
+  return {
+    count: assets.length,
+    assets: assets.map((a) => ({ path: a.path, bytes: a.bytes, type: a.type, usedBy: a.usedBy.map(rel) })),
+    missing: missing.map(rel),
+    unused,
+  };
 }
