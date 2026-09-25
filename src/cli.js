@@ -67,7 +67,7 @@ function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === '--json' || a === '--force' || a === '--write') opts[a.slice(2)] = true;
+    if (a === '--json' || a === '--force' || a === '--write' || a === '--md') opts[a.slice(2)] = true;
     else if (a.startsWith('--') && rest[i + 1] !== undefined) opts[a.slice(2)] = rest[++i];
     else opts._.push(a);
   }

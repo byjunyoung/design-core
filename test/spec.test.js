@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { mkdtemp, mkdir, readFile, writeFile, cp } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+const readFileSyncText = (p) => readFileSync(p, 'utf8');
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadProject } from '../src/index.js';
@@ -11,6 +13,7 @@ import { DEFAULT_TOKEN_FILES } from '../src/tokens.js';
 import { lint } from '../src/lint.js';
 import { renderSpec, renderScreen } from '../src/render/index.js';
 import { specScreen, exportTokens, listScreens } from '../src/verbs.js';
+import { execFileSync } from 'node:child_process';
 
 const orders = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const ops = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
@@ -40,6 +43,7 @@ test('the spec reads a screen off the file: elements with code, copy, states as 
   assert.ok(spec.tokens.some((t) => t.usedAt.some((a) => a.startsWith('button.'))), 'contract bindings count as use');
   assert.ok(spec.components.some((c) => c.kind === 'button' && c.maps_to.code?.name === 'Button'));
   assert.ok(spec.acceptance.some((a) => /Empty: table becomes empty-notice/.test(a.text) && a.source === 'states.Empty'));
+  assert.ok(spec.acceptance.some((a) => a.text === 'Error: table becomes error-notice $tbd (pm, due 2026-10-02)'), 'a $tbd text reads as lint prints it, not as JSON');
   assert.ok(spec.acceptance[0].text.startsWith('the screen has every state its type requires'));
   assert.ok(spec.flows.length >= 1 && spec.acceptance.some((a) => a.source.startsWith('flows.')));
   assert.equal(typeof spec.lint.blocking, 'number');
@@ -57,6 +61,15 @@ test('the markdown spec is a ticket: title, acceptance checklist, element table 
   assert.match(md, /## Acceptance\n\n- \[ \] the screen has every state/);
   assert.match(md, /\| export \| button \| <Button kind="secondary">Export<\/Button> \|/);
   assert.match(md, /## Tokens used/);
+});
+
+test('the CLI takes --md as a flag, also before --out', () => {
+  const cli = fileURLToPath(new URL('../src/cli.js', import.meta.url));
+  const out = execFileSync(process.execPath, [cli, 'spec', orders, 'order-list', '--md'], { encoding: 'utf8' });
+  assert.match(out, /^# order-list — developer spec/);
+  const dir = join(tmpdir(), `doan-spec-md-${Date.now()}.md`);
+  execFileSync(process.execPath, [cli, 'spec', orders, 'order-list', '--md', '--out', dir], { encoding: 'utf8' });
+  assert.match(readFileSyncText(dir), /^# order-list/);
 });
 
 test('tokens export: css custom properties with a block per non-default context, and a tailwind theme.extend', async () => {

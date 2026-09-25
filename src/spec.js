@@ -17,8 +17,10 @@ import { RESERVED_KEYS } from './components.js';
 const COPY_PROPS = ['text', 'label', 'title', 'subtitle', 'placeholder', 'caption', 'hint', 'note', 'alt', 'error', 'summary'];
 const COPY_LISTS = ['options', 'tabs', 'stats', 'items', 'buttons', 'actions'];
 const fmt = (tpl, vars) => String(tpl ?? '').replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? ''));
-const short = (v) => (typeof v === 'string' ? v : JSON.stringify(v));
 const isTbd = (v) => v && typeof v === 'object' && !Array.isArray(v) && '$tbd' in v;
+// a $tbd reads the way lint prints it: `$tbd (pm, due 2026-10-02)`
+const tbdText = (v) => { const m = v.$tbd ?? {}; const who = [m.owner, m.due && `due ${m.due}`].filter(Boolean).join(', '); return `$tbd${who ? ` (${who})` : ''}`; };
+const short = (v) => (typeof v === 'string' ? v : isTbd(v) ? tbdText(v) : JSON.stringify(v));
 
 function* walkTbd(value, path = []) {
   if (value === null || typeof value !== 'object') return;
@@ -32,7 +34,10 @@ function* walkTbd(value, path = []) {
 
 function describeChange(D, p) {
   if (p.hide) return D.chHide;
-  if (p.replace) return fmt(D.chReplace, { kind: p.replace.kind + (p.replace.title ? ` "${p.replace.title}"` : p.replace.text ? ` "${p.replace.text}"` : '') });
+  if (p.replace) {
+    const t = p.replace.title ?? p.replace.text;
+    return fmt(D.chReplace, { kind: p.replace.kind + (t === undefined ? '' : isTbd(t) ? ` ${short(t)}` : ` "${t}"`) });
+  }
   if (p.set) return fmt(D.chSet, { what: Object.entries(p.set).map(([k, v]) => `${k}=${short(v)}`).join(', ') });
   if (p.layout) return fmt(D.chLayout, { what: Object.entries(p.layout).map(([k, v]) => `${k}=${short(v)}`).join(', ') });
   return '';
@@ -192,7 +197,7 @@ export function specMarkdown(spec, lang = 'en') {
   if (Object.keys(spec.refs).length) out.push(Object.entries(spec.refs).map(([k, v]) => `- ${k}: ${v}`).join('\n'), '');
   out.push(`## ${D.acceptance}`, '', spec.acceptance.length ? spec.acceptance.map((a) => `- [ ] ${a.text}`).join('\n') : `_${D.noneYet}_`, '');
   out.push(`## ${D.elementsLabel}`, '', table(['id', 'kind', D.codeLabel, 'props', 'path'], spec.elements.map((e) => [e.id, e.kind, e.code ? e.code.snippet : e.component?.maps_to ? Object.entries(e.component.maps_to).filter(([k]) => k !== 'code').map(([k, v]) => `${k}/${v}`).join(', ') : '', Object.entries(e.props).map(([k, v]) => `${k}: ${short(v)}`).join('; '), `${e.path}${e.line ? `:${e.line}` : ''}`])), '');
-  out.push(`## ${D.states}`, '', ...spec.states.map((s) => `- **${s.name}**${s.required ? ' *' : ''}: ${s.changes.map((c) => `${c.target} ${c.change}`).join('; ') || D.noneYet}`), '');
+  out.push(`## ${D.states[0].toUpperCase()}${D.states.slice(1)}`, '', ...spec.states.map((s) => `- **${s.name}**${s.required ? ' *' : ''}: ${s.changes.map((c) => `${c.target} ${c.change}`).join('; ') || D.noneYet}`), '');
   if (spec.variants.length) out.push(`## ${D.variants}`, '', ...spec.variants.flatMap((v) => v.options.map((o) => `- **${v.axis} = ${o.name}**: ${o.changes.map((c) => `${c.target} ${c.change}`).join('; ') || D.noneYet}`)), '');
   if (spec.breakpoints.length) out.push(`## ${D.breakpointsLabel}`, '', ...spec.breakpoints.map((b) => `- **${b.name}** (${b.width ?? '?'}px): ${b.changes.map((c) => `${c.target} ${c.change}`).join('; ') || D.noneYet}`), '');
   out.push(`## ${D.flows}`, '', table(['from', 'gesture', 'nav', 'to', 'when'], spec.flows.map((f) => [f.via ? `${f.from}.${f.via}` : f.from, f.gesture ?? '', f.nav ?? '', f.to, f.when ?? ''])), '');
