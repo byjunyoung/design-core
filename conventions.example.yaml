@@ -39,6 +39,13 @@ render:
   base: none                           # what mapped kinds are drawn with: none (self-built) | antd | … (see `doan bases`)
   components: null                     # self-built: a module exporting `kinds`, e.g. ./components/kinds.js (init copies the bundled set there)
 
+breakpoints:
+  # named widths a screen may adapt to. A screen that has a `breakpoints:` block is drawn at
+  # each of these, its patches for that name applied last; a screen without one keeps its platform width
+  mobile: 390
+  tablet: 768
+  desktop: 1280
+
 layout:
   containers: [stack, grid, columns]
   spacing_tokens: 'space.'             # prefix: only names starting with this may appear in gap/padding

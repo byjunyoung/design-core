@@ -67,6 +67,8 @@ a { color: inherit; text-decoration: none; }
 .frame.device-web { width: var(--ref-w); }
 .frame.device-phone, .frame.device-tablet { width: var(--ref-w); background: var(--color-bg); border: 10px solid #1f2328; border-radius: 44px; overflow: hidden; margin: var(--space-md) auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
 .frame.device-tablet { border-radius: 24px; }
+.view-root [style*="overflow-x:auto"] > .el { flex: 0 0 auto; }
+.view-root [style*="overflow-x:auto"] > * { flex-wrap: nowrap; } .view-root [style*="overflow-x:auto"] > * > * { flex: 0 0 auto; } .view-root [style*="flex-wrap:wrap"] > * { flex-wrap: wrap; }
 .frame.device-phone .view-root, .frame.device-tablet .view-root { flex: 1; min-height: 0; overflow: hidden; }
 .frame[style*="--ref-h"] { height: var(--ref-h); }
 .status-bar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-lg); font-size: 12px; font-weight: 600; flex: 0 0 auto; }
@@ -297,6 +299,25 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .ticon { display: inline-block; width: 16px; margin-right: var(--space-xs); color: var(--color-muted); font-size: 11px; text-align: center; }
 .chip { display: inline-flex; align-items: center; gap: var(--space-xs); padding: 1px 8px 1px 4px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-bg); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .chip .swatch { margin-right: 0; }
+/* narrow windows: first the inspect panel becomes a toggle, then the sidebar folds behind a menu button */
+.side-toggle, .panel-toggle { display: none; }
+@media (max-width: 1180px) {
+  .shell.workspace { grid-template-columns: var(--side-w) minmax(0, 1fr) 0; }
+  .shell.workspace .drawer { display: none; }
+  body.panel-open .shell.workspace .drawer { display: block; position: fixed; right: 0; top: 0; height: 100vh; width: min(var(--drawer-w), 90vw); z-index: 40; box-shadow: -8px 0 24px rgba(0,0,0,.12); }
+  .panel-toggle { display: inline-flex; }
+}
+@media (max-width: 860px) {
+  .shell.workspace { grid-template-columns: minmax(0, 1fr) 0; }
+  .shell.workspace .side { display: none; }
+  body.side-open .shell.workspace .side { display: block; position: fixed; left: 0; top: 0; height: 100vh; width: min(var(--side-w), 85vw); z-index: 40; box-shadow: 8px 0 24px rgba(0,0,0,.12); }
+  .side-toggle { display: inline-flex; }
+  .top { grid-template-columns: minmax(0, 1fr) auto; }
+  .top .where { grid-row: 1; grid-column: 1; }
+  .top .tools { grid-row: 1; grid-column: 2; }
+  .top .views { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
+  .vars { grid-template-columns: 1fr; } .vars-side { position: static; }
+}
 .nav { display: flex; flex-direction: column; gap: var(--space-xs); min-width: var(--size-sm); } .nav-item { padding: 6px 10px; border-radius: var(--radius-sm); color: var(--color-muted); } .nav-item.on { background: var(--color-surface); color: var(--color-text); }
 .chk-line { display: inline-flex; align-items: center; gap: var(--space-xs); } .box { width: 14px; height: 14px; border: 1px solid var(--color-border); border-radius: 3px; display: inline-block; } .box.on { background: var(--color-primary); border-color: var(--color-primary); }
 .sw { display: inline-block; width: 28px; height: 16px; border-radius: 8px; background: var(--color-border); vertical-align: middle; } .sw.on { background: var(--color-primary); }
@@ -445,6 +466,7 @@ export const INSPECTOR_JS = `
 
   // drawer inspector: one delegated click
   function openDrawer(el) {
+    if (window.doanPanelOpen) window.doanPanelOpen();
     window.DOAN_CURRENT_EL = el; // the canvas holds many screens; a comment goes to the frame the element sits in
     if (selected) selected.classList.remove('selected');
     selected = el; el.classList.add('selected');
@@ -529,6 +551,15 @@ export const INSPECTOR_JS = `
   // a page whose place is only in its hash (index.html#domain, proto.html#screen.State) folds
   // the tree the way a server-placed page arrives: that domain open and current, on the
   // prototype the screen and its state too. Pages the server placed (canvas, screen) keep theirs.
+  // narrow windows (page.js media queries): the menu button shows the sidebar, the panel button
+  // the inspect panel; a selection opens the panel by itself; Esc closes both; a tree link closes the menu
+  var sideToggle = document.getElementById('side-toggle'), panelToggle = document.getElementById('panel-toggle');
+  if (sideToggle) sideToggle.addEventListener('click', function () { document.body.classList.toggle('side-open'); });
+  if (panelToggle) panelToggle.addEventListener('click', function () { document.body.classList.toggle('panel-open'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { document.body.classList.remove('side-open'); document.body.classList.remove('panel-open'); } });
+  var sideNav = document.querySelector('.side');
+  if (sideNav) sideNav.addEventListener('click', function (e) { if (e.target.closest('a')) document.body.classList.remove('side-open'); });
+  window.doanPanelOpen = function () { if (window.matchMedia('(max-width: 1180px)').matches) document.body.classList.add('panel-open'); };
   var serverPlaced = !!document.querySelector('.tree-domain.current');
   var treeFollow = function () {
     if (serverPlaced) return;
@@ -593,10 +624,15 @@ export const PROTO_JS = `
   var screenSel = document.getElementById('proto-screen'), stateSel = document.getElementById('proto-state');
   var back = document.getElementById('proto-back'), hot = document.getElementById('proto-hot'), overlay = document.getElementById('proto-overlay');
   var stack = [];
-  function statesOf(screen) { return views.filter(function (v) { return v.getAttribute('data-screen') === screen; }).map(function (v) { return v.getAttribute('data-state'); }); }
+  var bpSel = document.getElementById('proto-bp');
+  function bpOf(v) { return v.getAttribute('data-bp') || ''; }
+  function statesOf(screen) { return views.filter(function (v) { return v.getAttribute('data-screen') === screen && !bpOf(v); }).map(function (v) { return v.getAttribute('data-state'); }); }
+  // the view for a screen and state at the chosen breakpoint; a screen with no view at that
+  // breakpoint shows its base view, and a state it lacks falls back to its first view
   function viewOf(screen, state) {
-    var exact = views.filter(function (v) { return v.getAttribute('data-screen') === screen && v.getAttribute('data-state') === state; })[0];
-    return exact || views.filter(function (v) { return v.getAttribute('data-screen') === screen; })[0] || null;
+    var bp = bpSel ? bpSel.value : '';
+    var at = function (want, b) { return views.filter(function (v) { return v.getAttribute('data-screen') === screen && v.getAttribute('data-state') === want && bpOf(v) === b; })[0]; };
+    return (bp && at(state, bp)) || at(state, '') || views.filter(function (v) { return v.getAttribute('data-screen') === screen && !bpOf(v); })[0] || null;
   }
   function top() { return stack[stack.length - 1]; }
   function lineOf(f) { return f.label + ' \\u2192 ' + f.to + (f.state !== 'Default' ? '.' + f.state : ''); }
@@ -697,6 +733,7 @@ export const PROTO_JS = `
   document.body.classList.toggle('show-hotspots', hot.checked);
   hot.addEventListener('change', function () { document.body.classList.toggle('show-hotspots', hot.checked); });
   screenSel.addEventListener('change', function () { stack = [{ screen: screenSel.value, state: 'Default' }]; show(); });
+  if (bpSel) bpSel.addEventListener('change', show);
   stateSel.addEventListener('change', function () { var t = top(); if (!t) return; if (t.overlay) stack.pop(); top().state = stateSel.value; show(); });
   back.addEventListener('click', function () { if (stack.length > 1) { stack.pop(); show(); } });
   overlay.addEventListener('click', function (e) { if (e.target === overlay && stack.length > 1) { stack.pop(); show(); } });
@@ -850,6 +887,7 @@ export const CANVAS_JS = `
     if (decodeURIComponent(location.hash.slice(1)) !== want) history.replaceState(null, '', '#' + want);
   }
   function frameInfo(frame) {
+    if (window.doanPanelOpen) window.doanPanelOpen();
     var screen = frame.getAttribute('data-screen'), state = frame.getAttribute('data-state');
     var mine = (window.DOAN_FLOWS || []).filter(function (f) { return f.screen === screen; });
     panel.innerHTML =

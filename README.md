@@ -95,11 +95,15 @@ Two things make the file worth reading in a pull request. **States are patches**
 
 `variants:` uses the same patch shape for what a screen *is* — an edit dialog for a counted item vs a cup, a form in Create vs Edit mode — as opposed to what it is *doing* (Empty, Loading). The distinction came out of transcribing six real screens; it is in `DESIGN.md` §12.
 
+`breakpoints:` uses it once more for width: `conventions.breakpoints` names the widths (mobile 390, tablet 768, desktop 1280 in the example), and a screen that must work at several lists per name what changes — a tile grid that goes from 25 columns to 10, a stat strip that wraps and then scrolls — applied last, on top of the state. Layout adapts on its own before that: `columns: auto` with a `min` size class, `wrap: true`, `scroll: horizontal`.
+
 ## The viewer
 
 <img src="docs/img/overview.jpg" alt="Overview: every screen by section, with pills for what needs attention" width="100%">
 
 A sidebar lists every screen by section with pills for blocking findings, undecided values and open comments. A screen page shows one state at a time as tabs — variants too — or every state side by side with **compare states**, scaled to fit.
+
+A screen with breakpoints gets a tab per width beside the state tabs, each a frame at that width; the prototype gets a breakpoint select. The viewer itself folds for narrow windows: the inspect panel becomes a toggle under 1180px, the sidebar a menu button under 860px.
 
 <img src="docs/img/screen.jpg" alt="A screen page: state tabs, the picture scaled to fit, flows and notes below" width="100%">
 

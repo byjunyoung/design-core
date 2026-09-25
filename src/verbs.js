@@ -72,6 +72,7 @@ export async function listScreens(dir) {
       id: s.doc.id,
       section: s.doc.section,
       type: s.doc.type,
+      breakpoints: Object.keys(s.doc.breakpoints ?? {}),
       file: s.file,
       states: Object.keys(s.doc.states ?? {}),
       variants: Object.fromEntries(Object.entries(s.doc.variants ?? {}).map(([k, v]) => [k, Object.keys(v ?? {})])),
@@ -79,11 +80,11 @@ export async function listScreens(dir) {
   };
 }
 
-export async function getScreen(dir, { screen, state = 'Default', variants = {} }) {
+export async function getScreen(dir, { screen, state = 'Default', variants = {}, breakpoint = null }) {
   const project = await loadProject(dir);
   const found = project.screens.find((s) => s.doc.screen === screen);
   if (!found) throw new Error(`no screen named "${screen}" in ${dir}`);
-  const view = mergeState(found.doc, state, variants);
+  const view = mergeState(found.doc, state, variants, breakpoint);
   return { screen, file: found.file, type: found.doc.type, refs: found.doc.refs ?? {}, ...view, flows: found.doc.flows ?? [], notes: found.doc.notes ?? [] };
 }
 

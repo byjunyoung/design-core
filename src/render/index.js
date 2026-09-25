@@ -32,10 +32,17 @@ function layoutStyle(rule, { container = true } = {}) {
   if (container) {
     if (rule.kind === 'stack') s.push('display:flex', `flex-direction:${rule.direction ?? 'column'}`);
     if (rule.kind === 'row') s.push('display:flex', 'flex-direction:row', 'align-items:center');
-    if (rule.kind === 'grid' || rule.kind === 'columns') s.push('display:grid', `grid-template-columns:repeat(${rule.columns ?? 2},minmax(0,1fr))`);
+    // `columns: auto` fits as many as the width allows, each at least `min` wide — the grid
+    // adapts on its own, before any breakpoint says so
+    if (rule.kind === 'grid' || rule.kind === 'columns')
+      s.push('display:grid', rule.columns === 'auto' ? `grid-template-columns:repeat(auto-fill,minmax(var(--size-${rule.min ?? 'sm'}),1fr))` : `grid-template-columns:repeat(${rule.columns ?? 2},minmax(0,1fr))`);
     if (rule.gap) s.push(`gap:${tokenVar(rule.gap)}`);
     if (rule.align) s.push(`justify-content:${ALIGN[rule.align] ?? rule.align}`, rule.kind ? '' : 'display:flex');
   }
+  // wrapping and sideways scrolling apply to a leaf kind that draws its own row — a stat strip —
+  // as much as to a container: page.js passes them down to the kind's inner row
+  if (rule.wrap) s.push('flex-wrap:wrap');
+  if (rule.scroll === 'horizontal') s.push('overflow-x:auto', 'flex-wrap:nowrap');
   if (rule.padding) s.push(`padding:${tokenVar(rule.padding)}`);
   if (rule.grow) s.push('flex:1 1 auto');
   if (rule.size) s.push(`width:var(--size-${rule.size})`);
@@ -96,7 +103,7 @@ export function platformOf(project, screen) {
   return { name, width: spec.width ?? 1280, height: spec.height ?? null, frame: spec.frame ?? 'none' };
 }
 
-function renderView(project, screen, merged, maps, adapter = null) {
+function renderView(project, screen, merged, maps, adapter = null, { width = null } = {}) {
   const view = expandComponents(merged, project.components ?? {});
   const r = makeRenderer(screen, view.layout, maps, adapter, project.components ?? {});
   const body = view.elements.map((el) => r.element(el)).join('');
@@ -106,7 +113,8 @@ function renderView(project, screen, merged, maps, adapter = null) {
   const content = screen.doc.type === 'modal' ? `<div class="backdrop"><div class="modal-box">${inner}</div></div>` : inner;
   const device = platform.frame && platform.frame !== 'none';
   const chrome = platform.frame === 'phone' ? { top: `<div class="status-bar"><span>9:41</span><span class="notch"></span><span>●●●</span></div>`, bottom: `<div class="home-indicator"><span></span></div>` } : { top: '', bottom: '' };
-  const style = `--ref-w:${platform.width}px${platform.height ? `;--ref-h:${platform.height}px` : ''}`;
+  // a breakpoint draws the same screen narrower: the width is the breakpoint's, the frame the platform's
+  const style = `--ref-w:${width ?? platform.width}px${platform.height ? `;--ref-h:${platform.height}px` : ''}`;
   return `<div class="stage${device ? ' stage-device' : ''}"><div class="frame device-${h(platform.frame === 'none' ? 'web' : platform.frame)}" style="${style}">${chrome.top}${content}${chrome.bottom}</div></div>`;
 }
 
@@ -203,7 +211,7 @@ function topBar(project, D, { title, meta = '', mode = null, place = {}, tools =
   const screenRef = place.screen ? place.screen + (place.state && place.state !== 'Default' ? `.${place.state}` : '') : null;
   // three fixed slots, not a flex row: the modes sit at the same x on every page whatever the
   // title or the tools beside them; a long meta truncates (its full text on hover)
-  return `<header class="top"><div class="where" title="${h(String(meta).replace(/<[^>]+>/g, ''))}"><h1>${title}</h1><span class="meta">${meta}</span></div>${viewTabs(project, mode, D, { domain: place.domain ?? null, screen: screenRef })}<div class="tools">${tools}${modeControls(project)}</div></header>`;
+  return `<header class="top"><div class="where" title="${h(String(meta).replace(/<[^>]+>/g, ''))}"><button class="btn side-toggle" id="side-toggle" type="button" aria-label="${h(D.menuLabel)}">☰</button><h1>${title}</h1><span class="meta">${meta}</span></div>${viewTabs(project, mode, D, { domain: place.domain ?? null, screen: screenRef })}<div class="tools"><button class="btn panel-toggle" id="panel-toggle" type="button">${D.panelLabel}</button>${tools}${modeControls(project)}</div></header>`;
 }
 
 function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [] }) {
@@ -289,6 +297,15 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
     .map(([axis, options]) => Object.keys(options ?? {}).map((opt) => `<section class="state" id="variant-${h(axis)}-${h(opt)}"><h3>${h(axis)} · ${h(opt)}</h3>${renderView(project, screen, mergeState(doc, 'Default', { [axis]: opt }), maps, adapter)}</section>`).join(''))
     .join('');
 
+  // a screen with a breakpoints block is drawn once per named width, its patches for that
+  // name applied over Default — the frame per breakpoint a Figma file kept by hand
+  const bpTable = doc.breakpoints ? project.conventions.breakpoints ?? {} : {};
+  const bpNames = Object.keys(bpTable);
+  const bpTabs = bpNames.map((bp) => `<button class="tab" data-state="bp=${h(bp)}" data-target="bp-${h(bp)}">${h(bp)} <span class="n">${bpTable[bp]}</span></button>`).join('');
+  const bpPanels = bpNames
+    .map((bp) => `<section class="state" id="bp-${h(bp)}"><h3>${h(bp)} · ${bpTable[bp]}px</h3>${renderView(project, screen, mergeState(doc, 'Default', {}, bp), maps, adapter, { width: bpTable[bp] })}</section>`)
+    .join('');
+
   const flows = (doc.flows ?? [])
     .map((f) => `<li><code>${h(f.from)}${f.via ? `.${h(f.via)}` : ''}</code>${f.gesture ? ` <span class="gesture gesture-${h(f.gesture)}">${h(f.gesture)}</span>` : ''} → ${flowLink(project, screen, f)}${f.nav ? ` <span class="navkind nav-${h(f.nav)}">${h(f.nav)}</span>` : ''}${f.when ? ` <span class="hint">when ${v(f.when)}</span>` : ''}${f.style === 'conditional' ? ' <span class="hint">(conditional)</span>' : ''}</li>`)
     .join('');
@@ -303,8 +320,8 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
     tools: `<label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
     findings,
     comments: api ? comments : [],
-    content: `<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}</div>
-<div class="states">${statePanels}${variantPanels}</div>
+    content: `<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}${bpTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.breakpointsLabel}</span>${bpTabs}` : ''}</div>
+<div class="states">${statePanels}${variantPanels}${bpPanels}</div>
 <div class="section-title">${D.flows}</div><ul class="list">${flows || `<li class="hint">${D.none}</li>`}</ul>
 <div class="section-title">${D.notes}</div><ul class="list">${notes || `<li class="hint">${D.none}</li>`}</ul>
 <div class="section-title">${D.comments} <span class="hint">${comments.length} ${D.open}</span></div><ul class="list" id="comments">${commentList || `<li class="hint">${D.none}</li>`}</ul>
@@ -504,7 +521,15 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
   const order = [...project.sections, ...project.screens.map((s) => s.doc.section).filter((x) => !project.sections.includes(x))];
   const screens = [...project.screens].sort((a, b) => order.indexOf(a.doc.section) - order.indexOf(b.doc.section) || a.doc.screen.localeCompare(b.doc.screen));
   const views = screens
-    .flatMap((s) => stateOrder(project, s).map((state) => `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" hidden>${renderView(project, s, mergeState(s.doc, state), maps, adapter)}</section>`))
+    .flatMap((s) => {
+      // a screen with breakpoints gets a view per breakpoint on top of its base views; the
+      // prototype's breakpoint select picks among them, the base is the fallback
+      const bps = s.doc.breakpoints ? Object.entries(project.conventions.breakpoints ?? {}) : [];
+      return stateOrder(project, s).flatMap((state) => [
+        `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" hidden>${renderView(project, s, mergeState(s.doc, state), maps, adapter)}</section>`,
+        ...bps.map(([bp, width]) => `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" data-bp="${h(bp)}" hidden>${renderView(project, s, mergeState(s.doc, state, {}, bp), maps, adapter, { width })}</section>`),
+      ]);
+    })
     .join('');
   const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, label: e.label }));
   const body =
@@ -512,7 +537,7 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
       title: D.proto,
       meta: `${flows.length} ${D.flows.toLowerCase()}${branch ? ` · ${h(branch)}` : ''}`,
       mode: 'proto',
-      tools: `<label class="toggle" title="${D.screen}"><select id="proto-screen" aria-label="${D.screen}">${screens.map((s) => `<option value="${h(s.doc.screen)}">${h(s.doc.screen)}</option>`).join('')}</select></label><label class="toggle" title="${D.states}"><select id="proto-state" aria-label="${D.states}"></select></label><button class="toggle" id="proto-back" type="button">‹ ${D.back}</button><label class="toggle"><input type="checkbox" id="proto-hot" checked> ${D.hotspots}</label>`,
+      tools: `${project.screens.some((s) => s.doc.breakpoints) ? `<label class="toggle" title="${D.breakpointsLabel}"><select id="proto-bp" aria-label="${D.breakpointsLabel}"><option value="">${D.baseWidth}</option>${Object.entries(project.conventions.breakpoints ?? {}).map(([bp, w]) => `<option value="${h(bp)}">${h(bp)} ${w}</option>`).join('')}</select></label>` : ''}<label class="toggle" title="${D.screen}"><select id="proto-screen" aria-label="${D.screen}">${screens.map((s) => `<option value="${h(s.doc.screen)}">${h(s.doc.screen)}</option>`).join('')}</select></label><label class="toggle" title="${D.states}"><select id="proto-state" aria-label="${D.states}"></select></label><button class="toggle" id="proto-back" type="button">‹ ${D.back}</button><label class="toggle"><input type="checkbox" id="proto-hot" checked> ${D.hotspots}</label>`,
       mainClass: 'proto-main',
       content: `<div class="proto-stage" id="proto-stage">${views || `<div class="hint">${D.none}</div>`}</div>
 <div class="proto-overlay" id="proto-overlay" hidden></div>`,
@@ -850,6 +875,7 @@ const PICK_SCRIPT = `
 <script>(function () {
   var panel = document.getElementById('inspector');
   function pick(el) {
+    if (window.doanPanelOpen) window.doanPanelOpen();
     document.querySelectorAll('.current[data-panel]').forEach(function (n) { n.classList.remove('current'); });
     el.classList.add('current');
     if (panel) panel.innerHTML = el.getAttribute('data-panel');

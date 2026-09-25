@@ -71,6 +71,17 @@ variants:
     "Yes":
       - { target: notice, set: { label: Edit notice } }
 
+breakpoints:                    # how the page narrows (conventions.breakpoints); desktop is the base as written
+  desktop: []
+  tablet:
+    - { target: tiles, set: { columns: 20 } }
+    - { target: stats, layout: { wrap: true } }
+  mobile:
+    - { target: tiles, set: { columns: 10 } }
+    - { target: stats, layout: { scroll: horizontal } }
+    - { target: table, layout: { scroll: horizontal } }
+    - { target: period, layout: { scroll: horizontal } }
+
 flows:
   - { from: tiles, via: tile, to: home, when: switches the app to that store (app shell event) }
   - { from: header, via: action, to: notice-edit, when: Register / Edit notice }
@@ -80,6 +91,6 @@ flows:
 notes:
   - The tile grid is always 100 tiles per page, padded with "no data" tiles that have no tooltip and cannot be clicked.
   - The legend maps many server states onto 5 colours.
-  - The stat strip has a minimum width and scrolls sideways; the table scrolls sideways too. (responsive — no place for it yet)
+  - The stat strip wraps on tablet and scrolls sideways on mobile (breakpoints); the table scrolls sideways on its own.
   - Sorting a column toggles asc/desc and resets to page 1; changing the period also resets to page 1.
   - Custom range with a missing date sends no request.

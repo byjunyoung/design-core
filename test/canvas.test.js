@@ -93,3 +93,16 @@ test('the overview and the prototype arrive with no placed domain and fold the t
   assert.match(proto, /window\.doanTreeFollow\(\)/);
   assert.match(renderCanvas(project, shop, { branch: 'x' }), /class="tree-domain open current" data-domain="shop"/);
 });
+
+test('the shell folds for narrow windows: a menu button and a panel button on every page, and media queries that hide the sidebar and the panel', async () => {
+  const project = await loadProject(mobile);
+  const [shop] = canvasPages(project);
+  const { renderIndex, renderTokens } = await import('../src/render/index.js');
+  for (const html of [renderCanvas(project, shop, { branch: 'x' }), await renderIndex(project, { branch: 'x' }), renderTokens(project, { branch: 'x' })]) {
+    assert.match(html, /<header class="top"><div class="where"[^>]*><button class="btn side-toggle" id="side-toggle" type="button" aria-label="Menu">☰<\/button><h1>/);
+    assert.match(html, /<div class="tools"><button class="btn panel-toggle" id="panel-toggle" type="button">Panel<\/button>/);
+    assert.match(html, /@media \(max-width: 1180px\) \{\s*\.shell\.workspace \{ grid-template-columns: var\(--side-w\) minmax\(0, 1fr\) 0; \}/);
+    assert.match(html, /@media \(max-width: 860px\) \{\s*\.shell\.workspace \{ grid-template-columns: minmax\(0, 1fr\) 0; \}/);
+    assert.match(html, /window\.doanPanelOpen = function \(\)/);
+  }
+});

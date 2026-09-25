@@ -256,6 +256,14 @@
           }
         }
       }
+    },
+    "breakpoints": {
+      "type": "object",
+      "description": "named widths a screen may adapt to; a screen with a breakpoints block is drawn at each",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      }
     }
   }
 }

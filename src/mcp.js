@@ -93,6 +93,7 @@ server.registerTool(
       screen: z.string().describe('screen name, e.g. order-list'),
       state: z.string().default('Default').describe('a state name; Default is the elements as written'),
       variants: z.record(z.string(), z.string()).default({}).describe('one option per variant axis, e.g. { item_type: "Counted" }'),
+      breakpoint: z.string().optional().describe('a breakpoint name from conventions.breakpoints; its patches apply last, the screen narrower'),
     },
   },
   guard((input) => getScreen(dir, input)),
@@ -264,7 +265,7 @@ server.registerPrompt(
           type: 'text',
           text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
 
-1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary. New work inherits the shell every screen in the section shares.
+1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary, and breakpoints — a screen that must work at several widths gets a breakpoints block (patches per name, applied last) and layout that adapts on its own (columns: auto with min, wrap, scroll: horizontal). New work inherits the shell every screen in the section shares.
 
 2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
 

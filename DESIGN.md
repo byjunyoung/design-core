@@ -258,6 +258,14 @@ Known limits: a library adapter (antd, MUI) draws from the props its own code re
 
 The person's own files — icons, photos, illustrations — live under `assets/` (svg, png, jpg, gif, webp, avif, any depth). A screen names one by path from the project directory: `src: assets/photos/menu.jpg` on an image, `icon: assets/icons/cart.svg` on any kind that takes an icon. Anything else in `icon` stays a glyph, so the two coexist. The tool never copies or renames a file: the bundled set draws it as it is (an `<img>`), `serve` answers `/assets/…` from the folder and nothing outside it, `render` copies the folder next to the pages, `doan init` creates it. L25 warns when a path names no file; the assets page (§6.9) says who uses what, what is missing and what nothing names. Decided 2026-09-24, when the owner asked for a place to see the design system's files and not only its tokens and components. Known limit: an SVG drawn through `<img>` cannot take the text colour — an inline-SVG option with `fill: currentColor` is a §13 item.
 
+### 4.7 Responsive: breakpoints and layout that adapts on its own
+
+A screen that must work at several widths keeps one file. Two things make it responsive, decided 2026-09-25 when the owner asked to "do responsive properly", against what Figma offers — a frame per breakpoint kept by hand, auto layout with min/max and wrap inside one frame ([Design+Code](https://designcode.io/figma-responsive-layouts-adaptive-design/), [moonlearning](https://www.moonlearning.io/responsive-figma)), and in Figma Sites a component variant per breakpoint name ([Figma Help](https://help.figma.com/hc/en-us/articles/31242826664983-Create-a-responsive-component-that-automatically-adapts-to-each-breakpoint)).
+
+**Breakpoints are patches.** `conventions.breakpoints` names the widths (`mobile: 390`, `tablet: 768`, `desktop: 1280` in the example). A screen opts in with a `breakpoints:` block: per name, the same patch list a state uses (`set`, `replace`, `hide`, `layout`), applied last — after the variant and the state — because the viewport is the outermost fact about a view; the same Empty state, narrower. A name the conventions do not know is L26; a patch whose target does not exist is L07 like any other; a patch layout that names no token is L18 like any other. The frame per breakpoint a Figma file kept by hand is what the viewer *draws*: the screen page gets a tab per named width beside the state tabs, each a frame at that width with the patches applied; the prototype gets a breakpoint select and a view per breakpoint for the screens that have one (the base view stands in for the rest); the canvas draws the base width only — a domain page three times wider would say less, not more. One file per breakpoint was rejected for the reason Figma users know: the copies drift.
+
+**Layout that adapts without a breakpoint.** Three words joined the layout vocabulary for the cases the field test hit (§12, row 6): `columns: auto` with `min: <size class>` — as many columns as fit, each at least that wide (`repeat(auto-fill, minmax(var(--size-sm), 1fr))`); `wrap: true` on a stack or row; `scroll: horizontal` — the children keep their width and the container scrolls sideways. The last two apply to a leaf kind that draws its own row (a stat strip) as much as to a container. For a developer these are CSS one to one; for a designer they are what auto layout's wrap and min width mean. One thing to know when writing a breakpoint patch: a leaf kind that draws its own inside — a tile grid, a table — takes its columns from its own props, so the patch is `set: { columns: 10 }`, not `layout: { columns: 10 }`; `layout` speaks to containers and to the wrap and scroll words.
+
 ## 5. Lint catalogue
 
 Blocking stops handoff; warning is reported and counted. Each rule names the `fig` rule it descends from.
@@ -289,6 +297,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L23 kinds-legacy | warning, one per project | rows still in `conventions.kinds` — `doan migrate kinds` | — (new) |
 | L24 flow-orphan | warning | a screen no flow reaches or leaves, once the project has flows and more than one screen | coverage orphans |
 | L25 asset-missing | warning | a `src` or `icon` that names a path under `assets/` with no such file | — (new) |
+| L26 breakpoint-known | warning | a screen adapts to a breakpoint `conventions.breakpoints` does not name | — (new) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -394,7 +403,7 @@ The owner's second look at 0.8 found the menus changing under the cursor: the ca
 | **Top, right** — this page's tools | zoom and the arrows toggle on the canvas; compare and paths on a screen page; the prototype's screen and state selects; the theme select last, on every page | navigation |
 | **Right** — the inspect panel | always present: an empty state until something is selected | anything but the selection |
 
-A screen in the tree links to its frame on the canvas — the canvas is where a screen is looked at; the screen page (states side by side, compare) is reached from the panel. The tree's folding and search are the same script on every page; the canvas adds only what a frame on the same canvas can do in place (select, zoom). A page the server could not place — the overview opened at a domain (`index.html#domain`) and the prototype carry their place in the hash — folds the tree from the hash on load and as it changes, and points the three modes at that place, so switching modes never collapses the tree or loses the domain.
+A screen in the tree links to its frame on the canvas — the canvas is where a screen is looked at; the screen page (states side by side, compare) is reached from the panel. The tree's folding and search are the same script on every page; the canvas adds only what a frame on the same canvas can do in place (select, zoom). A page the server could not place — the overview opened at a domain (`index.html#domain`) and the prototype carry their place in the hash — folds the tree from the hash on load and as it changes, and points the three modes at that place, so switching modes never collapses the tree or loses the domain. The shell folds for narrow windows (2026-09-25): under 1180px the inspect panel is hidden behind a Panel button and opens by itself on a selection, under 860px the sidebar is hidden behind a menu button, the top bar goes to two rows with the modes centred on the second, and the tokens page to one column.
 
 ### 6.9 The design system's pages: tokens and assets
 
@@ -497,7 +506,7 @@ What it found, in the order it hurt:
 | 3 | Three of six screens have **variants** that are not lifecycle states: an edit modal that behaves as counted / cup-lid / other; a dialog that is Create or Edit; a home whose button reads Register or Edit by data | format gap | done: `variants:` (§4.2), L15; the three screens rewritten. Custom period stayed a state — it is reached by an action |
 | 4 | Conditional visibility recurs on four of six screens: `show_when`, `disabled_when`, and a radio option that *reveals* its own control | format gap | accepted as element props for now (`show_when`, `disabled_when`, `reveals`); render and lint do nothing with them yet |
 | 5 | Derived values (quantity = max × level, auto-filled max until edited), timed transitions (a 7-second overlay before reload), and role checks on button press rather than by hiding | not expressible | `notes:` — deliberately. These are behaviour, not screen structure; the format records that they exist, and the spec owns them |
-| 6 | Responsive changes (3 columns → 2 on small; a stat strip that scrolls sideways) | format gap | still TBD (§12); two of six screens needed it |
+| 6 | Responsive changes (3 columns → 2 on small; a stat strip that scrolls sideways) | format gap | done 2026-09-25: `breakpoints:` patches and `columns: auto` · `wrap` · `scroll: horizontal` (§4.7) |
 | 7 | A detail shown under the list on the same page | awkward but works | a hidden element revealed by a `Selected` state |
 | 8 | Modals as their own screen files (`type: modal`, `refs.parent`) with flows from the parent | works | keep |
 | 9 | Two empty-state variants — "no data" vs "no match when filtered" — on every list | works | a team adds `NoMatch` to `states.known`; shows the extension point does its job |
@@ -517,14 +526,14 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Name | user | `doan` undersells a product; GitHub redirects after a rename |
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
-| Layout vocabulary depth | design | v0.2 ships stack/grid/columns + tokens. Responsive rules (per breakpoint) are the next axis |
+| Layout vocabulary depth | design | stack/grid/columns + tokens, then `columns: auto`·`min`·`wrap`·`scroll` and breakpoints (§4.7, 2026-09-25). Responsive typography and per-breakpoint tokens are the next axis |
 | Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
 | Adapter reads the contract | design | antd and MUI pieces draw from the props their own code reads; a contract's enum options and bindings do not reach them (§4.5). An adapter could take `sample`, options and bindings from the registry |
 | Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
 | Canvas arrow avoidance | design | the corridor keeps a back-flow off the frames above its target; a forward flow to a farther column can still cross a frame between. `fig:arrows`' detour rule is the model |
 | Canvas layout tokens | design | column gap 160, frame gap 96, section padding 96, section gap 240 are fixed in css; fig measures them per team (`layout.column_grid` …). A `canvas:` block in conventions when a team asks |
 | Flow map label placement | design | ELK places a label anywhere along its edge; a long self-loop label can sit far from the node. `elk.edgeLabels.placement` and inline labels are the knobs to try |
-| Platform / breakpoint variants | design | a `breakpoint` axis in `variants:`, or one file per platform. Two of six field-test screens needed it (§12) |
+| Platform / breakpoint variants | decided | a `breakpoints:` block of patches, one file per screen (§4.7, 2026-09-25); one file per platform rejected — the copies drift |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
 | Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer |
 | Agent runtime for the hosted loop | later | bring-your-own (Claude Code, Codex via MCP) first; a hosted agent is a pricing decision, not a design one |

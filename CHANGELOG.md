@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — 2026-09-25
+
+Responsive, both ways: product screens that adapt to width, and a viewer that does (DESIGN.md §4.7, §6.8).
+
+- **Breakpoints.** `conventions.breakpoints` names the widths; a screen opts in with a `breakpoints:` block — per name, the patches a state would use, applied last. The screen page draws a frame per breakpoint beside the state tabs; the prototype gets a breakpoint select; the canvas keeps the base width. `get_screen` takes `breakpoint`, `list_screens` says which a screen has, the draw prompt asks about it. L26 warns on a breakpoint the conventions do not name; L07 and L18 cover breakpoint patches like any other.
+- **Layout that adapts on its own**: `columns: auto` + `min`, `wrap: true`, `scroll: horizontal` — the three the field test wanted (§12, row 6). They reach a leaf kind's own row too.
+- **The viewer fits narrow windows**: under 1180px the inspect panel becomes a toggle, under 860px the sidebar folds behind a menu button, the top bar goes to two rows and the tokens page to one column.
+- The store-ops example's home screen shows it: 25 tiles per row on desktop, 20 on tablet, 10 on mobile; the stat strip wraps, then scrolls.
+
 ## 0.9.3 — 2026-09-25
 
 - **Applying a proposal resolves the comments it answers.** `propose` takes `comments` — the ids of the open comments this version answers — and counts any id mentioned in its summary or decisions (the draw prompt writes `why: 코멘트 c_…`). `apply` resolves them with the approver's name and the proposal id as the resolution; a text-only change that applies at once resolves them as `auto`; `undo` reopens them. Until now the loop's last step, closing the comment, was done by hand (the kiosk's first comment was). CLI: `propose … --comments <id,id>`.

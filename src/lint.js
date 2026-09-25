@@ -26,11 +26,12 @@ export function* bindingsOf(c) {
   for (const [prop, options] of Object.entries(c.variants ?? {}))
     for (const [opt, b] of Object.entries(options ?? {})) for (const [slot, token] of Object.entries(b ?? {})) yield { path: ['variants', prop, opt, slot], token };
 }
-// Every patch in a screen — states and variant options — with the base path of the patch.
+// Every patch in a screen — states, variant options and breakpoints — with the base path of the patch.
 function* patchesOf(s) {
   for (const [state, patches] of Object.entries(s.doc.states ?? {})) for (let i = 0; i < (patches ?? []).length; i++) yield { patch: patches[i], base: ['states', state, i] };
   for (const [axis, options] of Object.entries(s.doc.variants ?? {}))
     for (const [opt, patches] of Object.entries(options ?? {})) for (let i = 0; i < (patches ?? []).length; i++) yield { patch: patches[i], base: ['variants', axis, opt, i] };
+  for (const [bp, patches] of Object.entries(s.doc.breakpoints ?? {})) for (let i = 0; i < (patches ?? []).length; i++) yield { patch: patches[i], base: ['breakpoints', bp, i] };
 }
 
 function finding(id, severity, s, path, message) {
@@ -122,6 +123,7 @@ const rules = {
       for (const [state, patches] of Object.entries(s.doc.states ?? {})) report(s, patches, ['states', state]);
       for (const [axis, options] of Object.entries(s.doc.variants ?? {}))
         for (const [option, patches] of Object.entries(options ?? {})) report(s, patches, ['variants', axis, option]);
+      for (const [bp, patches] of Object.entries(s.doc.breakpoints ?? {})) report(s, patches, ['breakpoints', bp]);
     }
     return out;
   },
@@ -269,8 +271,8 @@ const rules = {
     };
     for (const s of ctx.screens) {
       for (const [key, rule] of Object.entries(s.doc.layout ?? {})) check(s, rule, ['layout', key]);
-      for (const [state, patches] of Object.entries(s.doc.states ?? {}))
-        patches.forEach((p, i) => p.layout && check(s, p.layout, ['states', state, i, 'layout']));
+      // a patch's layout — in a state, a variant option or a breakpoint — names tokens too
+      for (const { patch, base } of patchesOf(s)) if (patch.layout) check(s, patch.layout, [...base, 'layout']);
     }
     // a contract's bindings name tokens too
     for (const c of Object.values(registryOf(ctx)))
@@ -292,8 +294,8 @@ const rules = {
     };
     for (const s of ctx.screens) {
       for (const [key, rule] of Object.entries(s.doc.layout ?? {})) check(s, rule, ['layout', key]);
-      for (const [state, patches] of Object.entries(s.doc.states ?? {}))
-        patches.forEach((p, i) => p.layout && check(s, p.layout, ['states', state, i, 'layout']));
+      // a patch's layout — in a state, a variant option or a breakpoint — names tokens too
+      for (const { patch, base } of patchesOf(s)) if (patch.layout) check(s, patch.layout, [...base, 'layout']);
     }
     for (const c of Object.values(registryOf(ctx)))
       if (c.file) for (const { path, token } of bindingsOf(c)) if (primitive(token)) out.push(fileFinding('L19', 'blocking', c.file, path, `${path.join('.')} "${token}" is a primitive token; bind the semantic token that uses it`));
@@ -378,6 +380,16 @@ const rules = {
       }
     if (!any) return [];
     return ctx.screens.filter((s) => !touched.has(s.doc.screen)).map((s) => finding('L24', 'warning', s, ['flows'], `no flow reaches or leaves "${s.doc.screen}" — an entry point, or a screen the map forgot`));
+  },
+  // L26 — a breakpoint a screen adapts to must be one conventions.breakpoints names
+  L26(ctx) {
+    const known = ctx.conventions.breakpoints ?? null;
+    if (!known || !Object.keys(known).length) return [];
+    const out = [];
+    for (const s of ctx.screens)
+      for (const bp of Object.keys(s.doc.breakpoints ?? {}))
+        if (!(bp in known)) out.push(finding('L26', 'warning', s, ['breakpoints', bp], `breakpoint "${bp}" is not in conventions.breakpoints (${Object.keys(known).join(', ')})`));
+    return out;
   },
   // L25 — an asset a screen or a contract names must be a file under assets/ (src/assets.js)
   L25(ctx) {

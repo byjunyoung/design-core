@@ -89,6 +89,16 @@
       "items": {
         "type": "string"
       }
+    },
+    "breakpoints": {
+      "type": "object",
+      "description": "patches per breakpoint name (conventions.breakpoints), applied last, on top of the state",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/patch"
+        }
+      }
     }
   },
   "$defs": {
@@ -158,8 +168,16 @@
           ]
         },
         "columns": {
-          "type": "integer",
-          "minimum": 1
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "const": "auto"
+            }
+          ],
+          "description": "a count, or auto: as many as fit, each at least `min` wide"
         },
         "gap": {
           "type": "string"
@@ -175,6 +193,20 @@
         },
         "size": {
           "type": "string"
+        },
+        "min": {
+          "type": "string",
+          "description": "a size class (sm, md, lg) — the least width of an auto column"
+        },
+        "wrap": {
+          "type": "boolean",
+          "description": "a stack or row whose children wrap onto the next line when the width runs out"
+        },
+        "scroll": {
+          "enum": [
+            "horizontal"
+          ],
+          "description": "children keep their width and the container scrolls sideways"
         }
       },
       "additionalProperties": false

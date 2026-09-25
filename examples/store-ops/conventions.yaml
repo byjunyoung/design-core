@@ -23,3 +23,9 @@ lifecycle:
   handoff_requires: [ 'lint:blocking=0' ]
 edit:
   auto_apply: [ text ]
+
+breakpoints:
+  # the widths a screen may adapt to; a screen with a `breakpoints:` block is drawn at each
+  mobile: 390
+  tablet: 768
+  desktop: 1280
