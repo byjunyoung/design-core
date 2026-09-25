@@ -56,6 +56,176 @@
 
 왼쪽에서 오른쪽으로. 사람은 두 번 말하고(원하는 것, 그다음 답) 한 번 행동합니다(적용). 에이전트는 쓰기 전에 읽고, 제안 없이는 절대 쓰지 않습니다. doan은 둘 아래에 있습니다. 검사하고, 제안을 현재 화면 옆에 그려 주고, 적용 때만 쓰고, `main`을 깨끗하게 지킵니다.
 
+손에 잡히게 다섯 단계로. ④는 몇 번이고 돕니다.
+
+```
+① 시작 ─→ ② 그리기 ─→ ③ 보기 ─→ ④ 고치기 ─→ ⑤ 넘기기
+                          ↑            │
+                          └────────────┘
+```
+
+### ① 시작 — 프로젝트당 한 번
+
+```bash
+npx @junyoung735/doan init design
+```
+```
+design/
+├── conventions.yaml   규칙 — 화면 이름 꼴, 유형별 필수 상태, 브레이크포인트, 무엇이 바로 적용되나
+├── sections.yaml      "03. Orders - Order list" 같은 섹션 목록
+├── tokens/            색·간격·서체(DTCG)와 light/dark 리졸버
+├── components/        kind마다 계약 한 장 — 에이전트가 쓸 수 있는 부품 전부
+├── assets/            아이콘·이미지 파일
+└── screens/           화면 파일. 처음엔 시작 화면 한 장
+```
+
+`.mcp.json`에 서버를 등록하면(아래 "처음 5분") 에이전트가 doan의 도구를 씁니다.
+
+### ② 그리기 — 에이전트에게 말로
+
+```
+사람      주문 목록 화면. 필터 있고, 행 누르면 상세로.
+
+에이전트  정할 것 다섯입니다.
+          1 필터 항목  2 표의 열  3 빈 화면 문구  4 행을 누르면 push? modal?  5 내보내기 버튼
+          1부터 — order-detail이 기간·지점을 쓰니 기간·지점·상태를 권합니다. 괜찮나요?
+
+사람      ㅇㅇ
+          …(하나씩)…
+
+에이전트  ┌──────────────────────────────────────┐
+          │ Orders                      [Export] │
+          │ [기간 ▾] [지점 ▾] [상태 ▾]            │
+          │ ┌──────────────────────────────────┐ │
+          │ │ 주문번호  지점  금액  상태  주문시각 │ │
+          │ │ …                                │ │
+          │ └──────────────────────────────────┘ │
+          │                            ‹ 1 2 3 › │
+          └──────────────────────────────────────┘
+          Empty    표 대신 "No orders match.", 페이지 숨김
+          Loading  표 대신 스켈레톤 10줄
+          Error    표 대신 에러 문구 — 문구는 pm이 정할 것($tbd)
+          이대로 제안할게요.
+
+사람      go
+```
+
+에이전트가 쓰는 건 이 파일입니다(줄인 것). 상태는 사본이 아니라 "기본에서 무엇이 다른지"이고, 아무도 안 정한 값은 담당자가 붙은 `$tbd`입니다.
+
+```yaml
+# screens/order-list.yaml
+screen: order-list
+type: list                                  # list 유형은 Empty·Loading·Error가 필수
+elements:
+  - { id: header, kind: page-header, title: Orders, actions: [{ id: export, kind: button, label: Export }] }
+  - { id: filter, kind: filter-form, fields: [period, branch, status] }
+  - { id: table,  kind: table, columns: [order_no, branch, amount, status, ordered_at] }
+  - { id: paging, kind: pagination }
+states:
+  Empty:   [{ target: table, replace: { kind: empty-notice, text: "No orders match." } }, { target: paging, hide: true }]
+  Loading: [{ target: table, replace: { kind: skeleton, rows: 10 } }]
+  Error:   [{ target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm } } } }]
+flows:
+  - { from: table, via: row, to: order-detail }
+```
+
+### ③ 보기 — 뷰어에서
+
+```bash
+npx @junyoung735/doan serve design          # http://127.0.0.1:4870/
+```
+```
+┌ design ────────────┬─ Orders      [캔버스] 프로토타입       − 45% + ┬─ 인스펙트 ───────────┐
+│ 개요               │                                               │ order-list-Default   │
+│ 디자인 시스템       │  order-list-Default ───row───▶ order-detail    │ 파일 order-list.yaml │
+│   토큰 컴포넌트 에셋 │  ┌────────────┐             ┌────────────┐   │ [화면] [▶ 프로토타입] │
+│ 화면 검색 ⌘F        │  │ Orders     │             │ #1042      │   │ [개발 스펙]          │
+│ ▾ Orders           │  │ [▾][▾][▾]  │             │ …          │   │                     │
+│   order-list  ●    │  │ ▤▤▤▤▤▤▤▤   │             └────────────┘   │ 흐름                 │
+│     Default        │  └────────────┘                              │  table → order-detail│
+│     Empty          │  order-list-Empty                            │                     │
+│     Loading        │  ┌────────────┐                              │                     │
+│   order-detail     │  │ 없어요      │                              │                     │
+└────────────────────┴──────────────────────────────────────────────┴─────────────────────┘
+  왼쪽: 어디로 갈지         가운데: 상태별 프레임, 그 사이 흐름 화살표       오른쪽: 누른 것
+```
+
+상단 **프로토타입**은 화살표대로 눌러 보는 모드, 왼쪽 **디자인 시스템**은 토큰·컴포넌트·에셋 페이지입니다. `●`은 lint 지적·미정 값·열린 코멘트가 있다는 pill.
+
+### ④ 고치기 — 코멘트로
+
+```
+뷰어에서 Export 버튼 클릭 → 오른쪽 패널에 코멘트: "문구 '내보내기'로"
+        │
+        ▼
+사람 → 에이전트   "코멘트 반영해줘"
+        │
+        ▼
+에이전트          코멘트 읽음 → 파일 읽음 → 제안(propose)
+        │
+        ├─ 문구만 바뀌고 lint 깨끗 ──▶ 바로 적용, 되돌리기 남음          ← 이 경우
+        └─ 구조가 바뀜 ─────────────▶ 제안 페이지에서 기다림 ──▶ Apply / Reject
+        │
+        ▼
+코멘트 닫힘.  되돌리기: "undo 해줘"
+```
+
+제안 페이지는 결정 표, 바뀌는 것, 상태마다 AS-IS 옆 TO-BE:
+
+```
+AS-IS                                        TO-BE
+actions: [{ id: export, label: Export }]     actions: [{ id: export, label: 내보내기 }]
+```
+
+빠진 상태·정하지 않은 값은 lint가 파일과 줄로 말하고, 개요에 pill로 붙습니다. `main`엔 `$tbd`가 못 올라갑니다.
+
+```
+$ npx @junyoung735/doan lint design
+warn   L08  screens/order-list.yaml:38  states.Error.0.replace.text  $tbd (pm, due 2026-10-02)
+BLOCK  L11  screens/order-list.yaml:3   screen  on main: 1 $tbd, 0 blocking finding(s)
+```
+
+### ⑤ 넘기기 — 개발자에게
+
+```
+캔버스에서 프레임 클릭 → 오른쪽 패널 [개발 스펙] → 스펙 페이지 → [마크다운으로 복사] → 티켓에 붙임
+```
+```
+┌ order-list  스펙                                       [마크다운으로 복사] [화면] ┐
+│ 수용 기준 7                                                                    │
+│ ☐ 타입이 요구하는 상태가 모두 있다 (Default, Empty, Loading, Error)               │
+│ ☐ Empty: table이(가) empty-notice "No orders match."로 바뀜                     │
+│ ☐ Empty: paging이(가) 숨겨짐                                                    │
+│ ☐ table.row → order-detail                                                     │
+│ 요소 5                                                                         │
+│  id      kind     코드                                     props                │
+│  export  button   <Button kind="secondary">Export</Button>  label Export        │
+│  table   table    antd/Table, mui/Table                    columns order_no …   │
+│ 상태 · 흐름 · 카피 · 쓰인 토큰 · 컴포넌트 · 미결 1 (pm) · lint                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+코드 열은 계약의 `maps_to.code`에서 옵니다(Code Connect에 해당). 매핑이 없는 kind는 어댑터 대응이나 기본 세트로 표시됩니다. 붙여 넣으면 이런 티켓이 됩니다 — 예제 프로젝트가 영어라 영어로, 문구는 프로젝트 언어를 따릅니다:
+
+```markdown
+# order-list — developer spec
+## Acceptance
+- [ ] the screen has every state its type requires (Default, Empty, Loading, Error)
+- [ ] Empty: table becomes empty-notice "No orders match."
+- [ ] Empty: paging is hidden
+- [ ] table.row → order-detail
+## Elements
+| id | kind | Code | props | path |
+| export | button | <Button kind="secondary">Export</Button> | label: Export; variant: secondary | elements.0.actions.0:14 |
+```
+
+개발자의 에이전트는 같은 걸 MCP `handoff` 도구로 받습니다. 화면이 확정됐으면 한 마디 더:
+
+```
+개발자 → Claude Code   "doan에서 order-list 스펙 받아서 구현해줘"
+사람   → 에이전트      "order-list 준비됐어"   →  status: ready  →  개요·트리에 표시, $tbd가 남으면 L27 경고
+```
+
 이 규율은 에이전트가 도구에서 받습니다. MCP 서버가 `draw` 프롬프트를 줍니다: 가장 가까운 화면에 앵커를 잡고, 정할 것을 목록으로, 하나씩 권장안과 함께 묻고, 답을 표로, 결정을 붙여 제안하고, 그려서 보여 주고, 기다린다. 어느 에이전트가 붙든 같은 방식으로 그립니다.
 
 ## 처음 5분

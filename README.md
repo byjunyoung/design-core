@@ -56,6 +56,176 @@ Not for: decks, illustration, marketing pages, or anyone who wants to move boxes
 
 Read it left to right. The person speaks twice (what they want, then answers) and acts once (Apply). The agent reads before it writes and never writes without a proposal. doan sits under both: it checks, draws the proposal side by side with the current screen, writes only on Apply, and keeps `main` clean.
 
+Five steps, in your hands. ④ goes round as often as it needs to.
+
+```
+① start ─→ ② draw ─→ ③ look ─→ ④ fix ─→ ⑤ hand off
+                        ↑          │
+                        └──────────┘
+```
+
+### ① Start — once per project
+
+```bash
+npx @junyoung735/doan init design
+```
+```
+design/
+├── conventions.yaml   the rules — screen name shape, required states per type, breakpoints, what applies at once
+├── sections.yaml      the sections, like "03. Orders - Order list"
+├── tokens/            colour, space, type (DTCG) and a light/dark resolver
+├── components/        one contract per kind — every part the agent may use
+├── assets/            icons and pictures
+└── screens/           the screen files; a starter to begin with
+```
+
+Register the server in `.mcp.json` (see "Your first five minutes") and the agent has doan's tools.
+
+### ② Draw — by talking to the agent
+
+```
+you      An order list. Filters, and a detail when you tap a row.
+
+agent    Five things to decide.
+         1 filter fields  2 table columns  3 empty-state copy  4 row tap: push or modal?  5 an export button
+         Starting with 1 — order-detail uses period and branch, so I suggest period, branch, status. OK?
+
+you      ok
+         …(one at a time)…
+
+agent    ┌──────────────────────────────────────┐
+         │ Orders                      [Export] │
+         │ [period ▾] [branch ▾] [status ▾]     │
+         │ ┌──────────────────────────────────┐ │
+         │ │ order_no  branch  amount  status │ │
+         │ │ …                                │ │
+         │ └──────────────────────────────────┘ │
+         │                            ‹ 1 2 3 › │
+         └──────────────────────────────────────┘
+         Empty    table becomes "No orders match.", paging hidden
+         Loading  table becomes a 10-row skeleton
+         Error    table becomes an error notice — copy is the PM's to decide ($tbd)
+         Proposing this.
+
+you      go
+```
+
+This is the file the agent writes (trimmed). A state is not a copy but "what differs from Default", and a value nobody decided is a `$tbd` with an owner.
+
+```yaml
+# screens/order-list.yaml
+screen: order-list
+type: list                                  # a list must have Empty, Loading and Error
+elements:
+  - { id: header, kind: page-header, title: Orders, actions: [{ id: export, kind: button, label: Export }] }
+  - { id: filter, kind: filter-form, fields: [period, branch, status] }
+  - { id: table,  kind: table, columns: [order_no, branch, amount, status, ordered_at] }
+  - { id: paging, kind: pagination }
+states:
+  Empty:   [{ target: table, replace: { kind: empty-notice, text: "No orders match." } }, { target: paging, hide: true }]
+  Loading: [{ target: table, replace: { kind: skeleton, rows: 10 } }]
+  Error:   [{ target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm } } } }]
+flows:
+  - { from: table, via: row, to: order-detail }
+```
+
+### ③ Look — in the viewer
+
+```bash
+npx @junyoung735/doan serve design          # http://127.0.0.1:4870/
+```
+```
+┌ design ─────────────┬─ Orders      [Canvas] Prototype       − 45% + ┬─ Inspect ────────────┐
+│ Overview            │                                               │ order-list-Default   │
+│ Design system       │  order-list-Default ───row───▶ order-detail    │ file order-list.yaml │
+│   Tokens Components │  ┌────────────┐             ┌────────────┐   │ [screen] [▶ Prototype]│
+│ Search ⌘F           │  │ Orders     │             │ #1042      │   │ [developer spec]     │
+│ ▾ Orders            │  │ [▾][▾][▾]  │             │ …          │   │                     │
+│   order-list  ●     │  │ ▤▤▤▤▤▤▤▤   │             └────────────┘   │ Flows                │
+│     Default         │  └────────────┘                              │  table → order-detail│
+│     Empty           │  order-list-Empty                            │                     │
+│     Loading         │  ┌────────────┐                              │                     │
+│   order-detail      │  │ No orders  │                              │                     │
+└─────────────────────┴──────────────────────────────────────────────┴─────────────────────┘
+  left: where to go          middle: a frame per state, flow arrows between       right: what you clicked
+```
+
+**Prototype** at the top is click-through along the arrows; **Design system** on the left is the tokens, components and assets pages. `●` is a pill: a lint finding, an undecided value or an open comment.
+
+### ④ Fix — with comments
+
+```
+click the Export button in the viewer → comment in the panel: "say 'Download'"
+        │
+        ▼
+you → agent      "work through the comments"
+        │
+        ▼
+agent            reads the comments → reads the file → proposes
+        │
+        ├─ wording only, lint clean ──▶ applied at once, undo kept          ← this one
+        └─ structure changes ────────▶ waits on its proposal page ──▶ Apply / Reject
+        │
+        ▼
+comment closed.  to take it back: "undo that"
+```
+
+A proposal page is the decisions table, what changes, and every state AS-IS beside TO-BE:
+
+```
+AS-IS                                        TO-BE
+actions: [{ id: export, label: Export }]     actions: [{ id: export, label: Download }]
+```
+
+A missing state or an undecided value is a lint finding with a file and line, and a pill on the overview. A `$tbd` cannot reach `main`.
+
+```
+$ npx @junyoung735/doan lint design
+warn   L08  screens/order-list.yaml:38  states.Error.0.replace.text  $tbd (pm, due 2026-10-02)
+BLOCK  L11  screens/order-list.yaml:3   screen  on main: 1 $tbd, 0 blocking finding(s)
+```
+
+### ⑤ Hand off — to developers
+
+```
+click a frame on the canvas → panel [developer spec] → the spec page → [Copy as Markdown] → paste into the ticket
+```
+```
+┌ order-list  Spec                                        [Copy as Markdown] [screen] ┐
+│ Acceptance 7                                                                     │
+│ ☐ the screen has every state its type requires (Default, Empty, Loading, Error)  │
+│ ☐ Empty: table becomes empty-notice "No orders match."                           │
+│ ☐ Empty: paging is hidden                                                        │
+│ ☐ table.row → order-detail                                                       │
+│ Elements 5                                                                       │
+│  id      kind     Code                                     props                 │
+│  export  button   <Button kind="secondary">Export</Button>  label Export         │
+│  table   table    antd/Table, mui/Table                    columns order_no …    │
+│ States · Flows · Copy · Tokens used · Components · Open questions 1 (pm) · lint  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+The Code column comes from `maps_to.code` in the kind's contract (Code Connect's counterpart); a kind without one shows its adapter target or the bundled set. Pasted, it is this ticket:
+
+```markdown
+# order-list — developer spec
+## Acceptance
+- [ ] the screen has every state its type requires (Default, Empty, Loading, Error)
+- [ ] Empty: table becomes empty-notice "No orders match."
+- [ ] Empty: paging is hidden
+- [ ] table.row → order-detail
+## Elements
+| id | kind | Code | props | path |
+| export | button | <Button kind="secondary">Export</Button> | label: Export; variant: secondary | elements.0.actions.0:14 |
+```
+
+A developer's agent gets the same through the MCP `handoff` tool. When the screen is settled, one more line:
+
+```
+developer → Claude Code   "get the order-list spec from doan and build it"
+you       → agent         "order-list is ready"   →  status: ready  →  shown on the overview and tree; L27 if a $tbd remains
+```
+
 The agent gets this discipline from the tool itself — the MCP server ships a `draw` prompt: anchor to the nearest screen, list what has to be decided, ask one thing at a time with a recommendation, table the answers, propose with the decisions attached, render, wait. Any agent that connects draws the same way.
 
 ## Your first five minutes
