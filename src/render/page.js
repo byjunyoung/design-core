@@ -6,7 +6,7 @@ export const CSS = `
 :root { --size-sm: 240px; --size-md: 480px; --size-lg: 720px; --size-full: 100%; --side-w: 232px; --drawer-w: 340px; --ref-w: 1280px; }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; font: var(--font-size)/1.45 var(--font-family); color: var(--color-text); background: var(--color-surface); }
+body { margin: 0; font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); background: var(--color-surface); }
 a { color: inherit; text-decoration: none; }
 .shell { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr) 0; min-height: 100vh; transition: grid-template-columns .15s ease; }
 .shell.drawer-open { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--drawer-w); }
@@ -95,7 +95,7 @@ a { color: inherit; text-decoration: none; }
 .search { display: flex; align-items: center; gap: var(--space-xs); margin: 0 var(--space-md); padding: 0 var(--space-sm); background: var(--color-surface); border-radius: var(--radius-md); } .search input { border: 0; background: none; } .search-icon { color: var(--color-muted); }
 .stepper { display: inline-flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin: 0 var(--space-md); } .step-btn { padding: 4px 12px; color: var(--color-primary); } .step-val { padding: 4px 12px; border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); min-width: 32px; text-align: center; }
 .ptr { text-align: center; color: var(--color-muted); font-size: 14px; height: 20px; } .ptr.on { color: var(--color-primary); }
-.el-caption[data-props*='"style":"title"'] .caption { font-size: 20px; font-weight: 600; } .el-caption[data-props*='"style":"strong"'] .caption { font-weight: 600; }
+.el-caption[data-props*='"style":"title"'] .caption { font-size: var(--k-caption-font-size, 20px); font-weight: var(--k-caption-font-weight, 600); } .el-caption[data-props*='"style":"strong"'] .caption { font-weight: var(--k-caption-font-weight, 600); }
 .el-image .img.size-full { height: 240px; width: 100%; }
 .el-button[data-props*='"size":"full"'] .btn, .el-button[data-size="full"] .btn { width: calc(100% - 2 * var(--space-md)); margin: 0 var(--space-md); padding: 12px; }
 .el-button[data-props*='"variant":"icon"'] .btn { border: 0; background: none; color: var(--k-button-text, var(--color-primary)); padding: 4px; }
@@ -217,7 +217,7 @@ body.show-hotspots .hotspot-cond { outline-style: dashed; }
 .dot.cond { background: var(--color-muted); }
 .dot.tbd { background: var(--color-tbd-border); }
 .dot.cm { background: var(--color-primary); }
-.el-card { padding: var(--k-card-padding, var(--space-md)); border: 1px solid var(--k-card-border, var(--color-border)); border-radius: var(--k-card-radius, var(--radius-md)); background: var(--k-card-bg, var(--color-bg)); display: flex; flex-direction: column; gap: var(--k-card-gap, var(--space-md)); }
+.el-card { padding: var(--k-card-padding, var(--space-md)); border: 1px solid var(--k-card-border, var(--color-border)); border-radius: var(--k-card-radius, var(--radius-md)); background: var(--k-card-bg, var(--color-bg)); display: flex; flex-direction: column; gap: var(--k-card-gap, var(--space-md)); box-shadow: var(--k-card-shadow, none); min-height: var(--k-card-min-height, auto); }
 .el-fieldset { padding: var(--k-fieldset-padding, var(--space-md)); border: 1px solid var(--k-fieldset-border, var(--color-border)); border-radius: var(--k-fieldset-radius, var(--radius-md)); background: var(--k-fieldset-bg, var(--color-bg)); display: flex; flex-direction: column; gap: var(--k-fieldset-gap, var(--space-md)); }
 .el-section { display: flex; flex-direction: column; gap: var(--space-md); }
 .card-title, .modal-title { font-weight: 600; }
@@ -237,7 +237,7 @@ input.ro { background: var(--color-surface); color: var(--color-muted); }
 .select { display: inline-block; width: auto; min-width: 120px; }
 .err { color: var(--color-danger); font-size: 12px; }
 /* --k-<kind>-<slot> come from the kind's contract (components/<kind>.yaml); the fallback is what the set drew before contracts existed */
-.btn { padding: 6px 12px; border: 1px solid var(--k-button-border, var(--color-border)); border-radius: var(--k-button-radius, var(--radius-sm)); background: var(--k-button-bg, var(--color-bg)); color: var(--k-button-text, inherit); font: inherit; cursor: default; }
+.btn { padding: 6px 12px; border: 1px solid var(--k-button-border, var(--color-border)); border-radius: var(--k-button-radius, var(--radius-sm)); background: var(--k-button-bg, var(--color-bg)); color: var(--k-button-text, inherit); font: inherit; font-weight: var(--k-button-font-weight, inherit); min-height: var(--k-button-min-height, auto); box-shadow: var(--k-button-shadow, none); cursor: default; }
 .btn-primary { background: var(--k-button-bg, var(--color-primary)); color: var(--k-button-text, var(--color-primary-text)); border-color: var(--k-button-border, var(--color-primary)); }
 .btn-soft-primary { color: var(--k-button-text, var(--color-primary)); border-color: var(--k-button-border, var(--color-primary)); }
 .btn-danger { color: var(--k-button-text, var(--color-danger)); border-color: var(--k-button-border, var(--color-danger)); }
@@ -275,7 +275,7 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .tiles { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: var(--space-xs); }
 .tile { aspect-ratio: 1; border-radius: 2px; background: var(--color-border); } .t1 { background: #9bd1a5; } .t2 { background: #5aa86b; } .t3 { background: #e0b64a; } .t4 { background: #d1434b; }
 .sortable { display: flex; flex-direction: column; gap: var(--space-xs); } .sort-item { padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
-.img { position: relative; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; height: 80px; color: var(--color-muted); }
+.img { position: relative; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; height: 80px; color: var(--color-muted); box-shadow: var(--k-image-shadow, none); }
 .img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .ico-img { width: 1em; height: 1em; vertical-align: -0.15em; }
 /* the tokens page: a variables table per collection; the assets page: a card per file */
@@ -343,7 +343,7 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .el-skeleton .skel { background: linear-gradient(90deg, var(--k-skeleton-bg, var(--color-surface)), var(--k-skeleton-border, var(--color-border)), var(--k-skeleton-bg, var(--color-surface))); }
 .el-overlay .overlay-box { background: var(--k-overlay-bg, rgba(255,255,255,.8)); color: var(--k-overlay-text, inherit); }
 .el-toast .toast { background: var(--k-toast-bg, var(--color-text)); color: var(--k-toast-text, var(--color-bg)); border-radius: var(--k-toast-radius, var(--radius-sm)); } .el-toast .toast.error { background: var(--k-toast-bg, var(--color-danger)); }
-.el-modal { background: var(--k-modal-bg, var(--color-bg)); color: var(--k-modal-text, inherit); border-radius: var(--k-modal-radius, var(--radius-md)); padding: var(--k-modal-padding, 0); }
+.el-modal { background: var(--k-modal-bg, var(--color-bg)); color: var(--k-modal-text, inherit); border-radius: var(--k-modal-radius, var(--radius-md)); padding: var(--k-modal-padding, 0); box-shadow: var(--k-modal-shadow, none); }
 .el-confirm .confirm { background: var(--k-confirm-bg, var(--color-bg)); color: var(--k-confirm-text, inherit); border-radius: var(--k-confirm-radius, var(--radius-md)); }
 .el-field .fld-label { color: var(--k-field-text, inherit); } .el-field .hint { color: var(--k-field-muted, var(--color-muted)); } .el-field .err { color: var(--k-field-accent, var(--color-danger)); }
 .el-input input { background: var(--k-input-bg, var(--color-bg)); color: var(--k-input-text, var(--color-text)); border-color: var(--k-input-border, var(--color-border)); border-radius: var(--k-input-radius, var(--radius-sm)); }

@@ -6,7 +6,7 @@ import createEmotionServer from '@emotion/server/create-instance';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import * as mui from '@mui/material';
 import { h, v, isTbd, sample } from '../kinds.js';
-import { DEFAULT_TOKENS, mergeTokens } from '../tokens.js';
+import { DEFAULT_TOKENS, mergeTokens, baseFontSize } from '../tokens.js';
 
 // The second adapter, and the model for the next one: same contract as antd.js — a map of
 // component names to renderers, a theme built from tokens, styles extracted after the last
@@ -23,7 +23,7 @@ function themeFrom(tokens) {
   return createTheme({
     palette: { primary: { main: t.color.primary, contrastText: t.color['primary-text'] }, error: { main: t.color.danger }, text: { primary: t.color.text, secondary: t.color.muted }, divider: t.color.border, background: { paper: t.color.bg, default: t.color.surface } },
     shape: { borderRadius: parseInt(t.radius.md, 10) || 8 },
-    typography: { fontFamily: t.font.family, fontSize: parseInt(t.font.size, 10) || 14 },
+    typography: { fontFamily: t.font.family, fontSize: parseInt(baseFontSize(t), 10) || 14 },
   });
 }
 

@@ -61,3 +61,34 @@ test("a contract's token bindings reach a piece a library adapter draws: the CSS
   const drawn = renderScreen(project, project.screens.find((s) => s.doc.screen === 'order-list'), { branch: 'x', adapter });
   assert.match(drawn, /<div class="el el-button[^>]*data-id="export"[^>]*data-drawn="antd"/);
 });
+
+test('type, weight, height and shadow are slots too: a binding reaches a bundled piece through its wrapper and the css it reads, and an adapter root from outside', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    const f = join(d, 'components', 'button.yaml');
+    const text = await readFile(f, 'utf8');
+    const next = text.replace('tokens:\n', 'tokens:\n  font-size: font.size.lg\n  font-weight: font.weight.bold\n  min-height: control.lg\n  shadow: shadow.sm\n');
+    assert.notEqual(next, text);
+    await writeFile(f, next);
+  });
+  const html = await screenHtml(dir, 'order-list');
+  assert.match(html, /\.el-button \{[^}]*--k-button-font-size: var\(--font-size-lg\); --k-button-font-weight: var\(--font-weight-bold\); --k-button-min-height: var\(--control-lg\); --k-button-shadow: var\(--shadow-sm\)/);
+  assert.match(html, /\.el-button\[data-drawn\] > \* \{[^}]*font-size: var\(--k-button-font-size\); font-weight: var\(--k-button-font-weight\); min-height: var\(--k-button-min-height\); box-shadow: var\(--k-button-shadow\)/);
+  assert.match(html, /\.el-button:not\(\[data-drawn\]\) \{ font-size: var\(--k-button-font-size\); font-weight: var\(--k-button-font-weight\); \}/);
+  assert.match(html, /\.btn \{[^}]*min-height: var\(--k-button-min-height, auto\); box-shadow: var\(--k-button-shadow, none\)/);
+  assert.match(html, /--control-lg: 40px;/);
+  assert.match(html, /--shadow-sm: 0px 1px 2px 0px #00000014;/);
+  assert.match(html, /--font-weight-bold: 700;/);
+  assert.match(html, /font: var\(--font-size-md, var\(--font-size, 14px\)\)/, 'the body reads the scale, or the one size a flat file still names');
+});
+
+test('L28: a binding to a slot the picture does not read is a warning that names the slots there are', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    const f = join(d, 'components', 'button.yaml');
+    await writeFile(f, (await readFile(f, 'utf8')).replace('tokens:\n', 'tokens:\n  colour: color.bg\n'));
+  });
+  const { lint } = await import('../src/lint.js');
+  const l28 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28');
+  assert.equal(l28.length, 1);
+  assert.deepEqual(l28[0].path, ['tokens', 'colour']);
+  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, min-height, shadow, muted\)/);
+});

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 — 2026-09-25
+
+Four more slots, so a contract can make a kiosk look like a kiosk (DESIGN.md §4.5).
+
+- **`font-size`, `font-weight`, `min-height`, `shadow`** join bg, text, border, radius, padding, gap and accent as slots a contract binds a token to — on the kind, or per variant option (`size: { full: { min-height: control.xl } }`). Type reaches a bundled piece by inheritance from its wrapper; height and shadow the bundled set reads for button, card, image and modal; a root antd or MUI drew gets every bound slot applied from outside. `src/slots.js` is the one list.
+- **Tokens to bind them to** — `font.size` is a scale now (xs · sm · md · lg · xl · 2xl), with `font.weight` (regular · medium · bold), `control` heights (sm · md · lg · xl — antd's small, middle, large and one more) and `shadow` (sm · md · lg, per theme) beside it, in the bundled set and in the files `init` writes. A flat `tokens.json` that still says `font.size: 14px` reads as before. antd takes `control.md` as its control height. `tokens --format tailwind` writes fontWeight, minHeight and boxShadow.
+- **L28 slot-unknown** — a binding to a slot the picture does not read is a warning that lists the slots there are. A typo was silent.
+
 ## 0.11.0 — 2026-09-25
 
 Handoff: what a developer — or a developer's agent — builds from (DESIGN.md §6.10).

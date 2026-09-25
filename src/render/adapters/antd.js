@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { createCache, extractStyle, StyleProvider } from '@ant-design/cssinjs';
 import * as antd from 'antd';
 import { h, v, isTbd, sample } from '../kinds.js';
-import { DEFAULT_TOKENS, mergeTokens } from '../tokens.js';
+import { DEFAULT_TOKENS, mergeTokens, baseFontSize } from '../tokens.js';
 
 // Draws each mapped kind as the antd component its `maps_to.antd` names, server-side, with
 // the styles antd generates extracted into the page. Children that the bundled renderer
@@ -29,7 +29,8 @@ function themeFrom(tokens) {
       colorBgContainer: t.color.bg,
       borderRadius: parseInt(t.radius.md, 10) || 8,
       fontFamily: t.font.family,
-      fontSize: parseInt(t.font.size, 10) || 14,
+      fontSize: parseInt(baseFontSize(t), 10) || 14,
+      controlHeight: parseInt(t.control?.md, 10) || 32,
     },
   };
 }

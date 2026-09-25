@@ -6,6 +6,7 @@ import { elementProps, RESERVED_KEYS } from './components.js';
 import { hasToken } from './tokens.js';
 import { assetRefs } from './assets.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
+import { SLOTS } from './slots.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
 // can edit the exact line. Severity: blocking stops handoff; warning is counted.
@@ -380,6 +381,17 @@ const rules = {
       }
     if (!any) return [];
     return ctx.screens.filter((s) => !touched.has(s.doc.screen)).map((s) => finding('L24', 'warning', s, ['flows'], `no flow reaches or leaves "${s.doc.screen}" — an entry point, or a screen the map forgot`));
+  },
+  // L28 — a binding names a slot the picture reads; a typo would otherwise be ignored without a word
+  L28(ctx) {
+    const out = [];
+    for (const c of Object.values(registryOf(ctx)))
+      if (c.file)
+        for (const { path } of bindingsOf(c)) {
+          const slot = String(path[path.length - 1]);
+          if (!SLOTS.includes(slot)) out.push(fileFinding('L28', 'warning', c.file, path, `"${slot}" is not a slot the picture reads (${SLOTS.join(', ')})`));
+        }
+    return out;
   },
   // L27 — a screen marked ready for developers must be clean: no blocking finding, no $tbd
   L27(ctx) {

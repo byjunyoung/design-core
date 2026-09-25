@@ -206,7 +206,7 @@ test('the tokens page is the variables table: a collection per file, a column pe
   // left: the collections, one per file, the first shown; and the groups of the one shown
   assert.match(html, /<div class="vars-side"><div class="tree-sec">Collections<\/div><a class="side-link vars-coll current" href="#c:primitive\.tokens\.json" data-coll="primitive\.tokens\.json"><span class="name">primitive\.tokens\.json<\/span><span class="hint">\d+<\/span><\/a><a class="side-link vars-coll" href="#c:semantic\.tokens\.json"/);
   // a resolver modifier is a collection whose contexts are its modes, the way a Figma collection carries modes
-  assert.match(html, /<a class="side-link vars-coll" href="#c:theme" data-coll="theme"><span class="name">theme<\/span><span class="hint">12<\/span><\/a>/);
+  assert.match(html, /<a class="side-link vars-coll" href="#c:theme" data-coll="theme"><span class="name">theme<\/span><span class="hint">15<\/span><\/a>/);
   assert.doesNotMatch(html, /data-coll="light\.tokens\.json"/);
   assert.match(html, /<div class="tree-sec">Groups<\/div><div class="vars-groups"><div data-coll="primitive\.tokens\.json"><a class="side-link vars-group current" href="#" data-group=""><span class="name">All tokens<\/span>.*<a class="side-link vars-group sub" href="#" data-group="gray"><span class="name">gray<\/span><span class="hint">\d+<\/span><\/a>/);
   // right: one table per collection (the others hidden); a base set has one value column, a modifier a column
@@ -227,4 +227,16 @@ test('the tokens page is the variables table: a collection per file, a column pe
   assert.match(bare, /<thead><tr><th>name<\/th><th>value<\/th><\/tr><\/thead>/);
   assert.doesNotMatch(bare, /<span class="hint">theme<\/span>/);
   assert.equal((bare.match(/class="side-link vars-coll/g) ?? []).length, 1);
+});
+
+test('font.size is a scale since 0.12 — with weights, control heights and shadows beside it — and a flat tokens.json that still names one size is read as before', async () => {
+  const { DEFAULT_TOKENS, mergeTokens, baseFontSize } = await import('../src/render/tokens.js');
+  assert.equal(DEFAULT_TOKENS.font.size.md, '14px');
+  assert.equal(baseFontSize(DEFAULT_TOKENS), '14px');
+  assert.match(tokensToCss(DEFAULT_TOKENS), /--font-size-md: 14px;[\s\S]*--font-weight-bold: 700;[\s\S]*--control-xl: 48px;[\s\S]*--shadow-md: 0px 4px 12px 0px #0000001f;/);
+  const legacy = mergeTokens(DEFAULT_TOKENS, { font: { size: '15px' } });
+  assert.equal(legacy.font.size, '15px');
+  assert.equal(baseFontSize(legacy), '15px');
+  assert.match(tokensToCss(legacy), /--font-size: 15px;/);
+  assert.doesNotMatch(tokensToCss(legacy), /--font-size-md/);
 });

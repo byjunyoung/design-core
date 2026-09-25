@@ -287,6 +287,10 @@ const srgb = (hex) => ({ colorSpace: 'srgb', components: [1, 3, 5].map((i) => Ma
 const color = (hex) => ({ $value: srgb(hex) });
 const px = (n) => ({ $value: { value: n, unit: 'px' } });
 const alias = (name) => ({ $value: `{${name}}` });
+const dim = (n) => ({ $type: 'dimension', ...px(n) });
+const weight = (n) => ({ $type: 'fontWeight', $value: n });
+// a black shadow of the given offset, blur and opacity — DTCG's composite, which resolves to one css value
+const shadow = (y, blur, alpha) => ({ $value: { color: { colorSpace: 'srgb', components: [0, 0, 0], alpha, hex: '#000000' }, offsetX: { value: 0, unit: 'px' }, offsetY: { value: y, unit: 'px' }, blur: { value: blur, unit: 'px' }, spread: { value: 0, unit: 'px' } } });
 
 export const DEFAULT_TOKEN_FILES = {
   'primitive.tokens.json': {
@@ -295,14 +299,24 @@ export const DEFAULT_TOKEN_FILES = {
     blue: { $type: 'color', 400: color('#5b8dff'), 500: color('#2f6fed') },
     red: { $type: 'color', 400: color('#e0616a'), 500: color('#d1434b') },
     yellow: { $type: 'color', 100: color('#fff4d6'), 500: color('#e0b64a'), 900: color('#4a3d14') },
-    size: { $type: 'dimension', 1: px(4), 2: px(8), 4: px(16), 6: px(24), 8: px(32) },
-    type: { sans: { $type: 'fontFamily', $value: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] }, base: { $type: 'dimension', $value: { value: 14, unit: 'px' } } },
+    size: { $type: 'dimension', 1: px(4), 2: px(8), 4: px(16), 6: px(24), 8: px(32), 10: px(40), 12: px(48) },
+    type: {
+      sans: { $type: 'fontFamily', $value: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] },
+      xs: dim(11), sm: dim(12), base: dim(14), lg: dim(16), xl: dim(20), '2xl': dim(28),
+      regular: weight(400), medium: weight(500), bold: weight(700),
+    },
   },
   'semantic.tokens.json': {
     $description: 'Semantic tokens that do not change with the theme: spacing, radius, type. Screens name these.',
     space: { $type: 'dimension', xs: alias('size.1'), sm: alias('size.2'), md: alias('size.4'), lg: alias('size.6'), xl: alias('size.8') },
     radius: { $type: 'dimension', sm: alias('size.1'), md: alias('size.2') },
-    font: { family: { $type: 'fontFamily', ...alias('type.sans') }, size: { $type: 'dimension', ...alias('type.base') } },
+    font: {
+      family: { $type: 'fontFamily', ...alias('type.sans') },
+      size: { $type: 'dimension', xs: alias('type.xs'), sm: alias('type.sm'), md: alias('type.base'), lg: alias('type.lg'), xl: alias('type.xl'), '2xl': alias('type.2xl') },
+      weight: { $type: 'fontWeight', regular: alias('type.regular'), medium: alias('type.medium'), bold: alias('type.bold') },
+    },
+    // the height of a control: sm · md · lg · xl. Bind `min-height` in a contract to one of these.
+    control: { $type: 'dimension', sm: alias('size.6'), md: alias('size.8'), lg: alias('size.10'), xl: alias('size.12') },
   },
   'light.tokens.json': {
     $description: 'Colour in the light theme.',
@@ -321,6 +335,7 @@ export const DEFAULT_TOKEN_FILES = {
       tbd: alias('yellow.100'),
       'tbd-border': alias('yellow.500'),
     },
+    shadow: { $type: 'shadow', sm: shadow(1, 2, 0.08), md: shadow(4, 12, 0.12), lg: shadow(12, 32, 0.16) },
   },
   'dark.tokens.json': {
     $description: 'Colour in the dark theme. A starting point, not a design decision — tune it.',
@@ -339,6 +354,7 @@ export const DEFAULT_TOKEN_FILES = {
       tbd: alias('yellow.900'),
       'tbd-border': alias('yellow.500'),
     },
+    shadow: { $type: 'shadow', sm: shadow(1, 2, 0.32), md: shadow(4, 12, 0.4), lg: shadow(12, 32, 0.48) },
   },
   'theme.resolver.json': {
     name: 'theme',

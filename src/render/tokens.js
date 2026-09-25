@@ -20,8 +20,19 @@ export const DEFAULT_TOKENS = {
     tbd: '#fff4d6',
     'tbd-border': '#e0b64a',
   },
-  font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: '14px' },
+  font: {
+    family: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+    // a scale since 0.12; a flat tokens.json from before may still say `size: 14px`, and the css reads either
+    size: { xs: '11px', sm: '12px', md: '14px', lg: '16px', xl: '20px', '2xl': '28px' },
+    weight: { regular: '400', medium: '500', bold: '700' },
+  },
+  // the height of a control — antd's small/middle/large plus one; a kiosk raises these
+  control: { sm: '24px', md: '32px', lg: '40px', xl: '48px' },
+  shadow: { sm: '0px 1px 2px 0px #00000014', md: '0px 4px 12px 0px #0000001f', lg: '0px 12px 32px 0px #00000029' },
 };
+
+// the body size, whichever shape `font.size` has
+export const baseFontSize = (tokens) => (tokens?.font?.size && typeof tokens.font.size === 'object' ? tokens.font.size.md : tokens?.font?.size);
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
 

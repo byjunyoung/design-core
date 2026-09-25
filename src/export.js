@@ -26,7 +26,7 @@ export function tokensCss(project) {
   return lines.join('\n') + '\n';
 }
 
-const GROUPS = { color: 'colors', space: 'spacing', radius: 'borderRadius', shadow: 'boxShadow', font: 'font' };
+const GROUPS = { color: 'colors', space: 'spacing', radius: 'borderRadius', shadow: 'boxShadow', control: 'minHeight', font: 'font' };
 
 export function tokensTailwind(project) {
   const merged = mergeTokens(DEFAULT_TOKENS, project.tokens);
@@ -38,6 +38,7 @@ export function tokensTailwind(project) {
     if (group === 'font') {
       if (rest[0] === 'family') (extend.fontFamily ??= {})[rest.slice(1).join('-') || 'sans'] = String(value).split(',').map((s) => s.trim());
       else if (rest[0] === 'size') (extend.fontSize ??= {})[rest.slice(1).join('-') || 'base'] = value;
+      else if (rest[0] === 'weight') (extend.fontWeight ??= {})[rest.slice(1).join('-') || 'DEFAULT'] = value;
       else (extend[`font-${rest[0]}`] ??= {})[rest.slice(1).join('-') || 'DEFAULT'] = value;
       continue;
     }

@@ -245,7 +245,7 @@ Decided 2026-09-24, right after the token stage, one question at a time:
 |---|---|---|
 | Where a kind is declared | one file per kind under `components/`; `conventions.kinds` is gone from `init` and from the examples | the owner chose the full move over keeping two places. A file is a thing a team owns and edits; a row in conventions was the tool's. A `kinds:` block still reads, as legacy — L23 (one line per project) and `doan migrate kinds` move it |
 | What a contract holds | `props` (type, required, default, enum options), `slots`, `anchors`, `maps_to`, `tokens` (slot → semantic token), `variants` (bindings per enum option), `sample`, and for a compound part `elements` + `layout` | the facts a Figma component carries — properties, variants, the tokens it is bound to — as text a diff can read |
-| Bindings reach the picture | `tokens:` becomes `--k-<kind>-<slot>` custom properties on the element's wrapper, a variant's on `[data-<prop>="<option>"]`; the bundled css reads them with fallbacks | the owner chose "in the picture" over "recorded and checked": change `button.yaml` and every button changes, as a library component would. Namespaced by kind so a card's padding never leaks into the button inside it; written as `var(--token)` so a theme switch flows through |
+| Bindings reach the picture | `tokens:` becomes `--k-<kind>-<slot>` custom properties on the element's wrapper, a variant's on `[data-<prop>="<option>"]`; the bundled css reads them with fallbacks. The slots are `bg`, `text`, `border`, `radius`, `padding`, `gap`, `accent`, `muted` and, since 0.12, `font-size`, `font-weight`, `min-height`, `shadow` — one list, `src/slots.js`. Type reaches a bundled piece by inheritance from its wrapper; height and shadow the set reads kind by kind (button, card, image, modal); a root an adapter drew gets every bound slot applied from outside. L28 warns on any other name | the owner chose "in the picture" over "recorded and checked": change `button.yaml` and every button changes, as a library component would. Namespaced by kind so a card's padding never leaks into the button inside it; written as `var(--token)` so a theme switch flows through |
 | What an instance may set | only declared props and slots. L21 warns on anything else; L22 blocks a missing required prop, an option the kind lacks, a slot it does not declare | the owner's rule: the screen holds the instance, the contract holds the part. A patch cannot reach inside — children are `<instance>/<child>`, a shape the screen schema forbids |
 | Composition | `elements:` in the contract; `$name` is a prop's value, `${name}` its text inside a string, `{ slot: name }` a slot; a `show_when` that names a prop is settled; expanded after `mergeState`, before render | a state patch that sets a prop is what the tree sees; the inspector on an expanded child names the component file, not the screen |
 | Required props | rare in the bundled set — a button's label, a caption's text, a field's label; never a list | a Figma import produces kinds without props; blocking every imported table on a missing columns list would fail the on-ramp on day one |
@@ -301,6 +301,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L25 asset-missing | warning | a `src` or `icon` that names a path under `assets/` with no such file | — (new) |
 | L26 breakpoint-known | warning | a screen adapts to a breakpoint `conventions.breakpoints` does not name | — (new) |
 | L27 ready-open | warning | a screen with status ready or done still holds a `$tbd` | — (new) |
+| L28 slot-unknown | warning | a contract binds a token to a slot the picture does not read | — (new) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -533,6 +534,7 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 
 | Item | Owner | Note |
 |---|---|---|
+| Slots | design | 0.12 added type size and weight, control height and shadow, because a kiosk is big type and tall targets. Still no line-height, letter-spacing, width, opacity or transition: each is a line in `src/slots.js` plus a read in the bundled css, added when a project needs it, not before |
 | Handoff: measurements and generation | design | the spec (§6.10, 0.11.0) carries no measured sizes — E2 inspect measurements come next; code generation stays out on purpose, an agent with the spec writes it. An adapter still maps enum options to its own props in code, not from `maps_to.code` |
 | Inline SVG icons | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |
 | Name | user | `doan` undersells a product; GitHub redirects after a rename |

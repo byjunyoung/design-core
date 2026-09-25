@@ -14,6 +14,7 @@ import { expandComponents } from '../expand.js';
 import { layoutFlows, flowGraph } from '../flowmap.js';
 import { canvasPages } from '../canvas.js';
 import { specOf, specMarkdown, codeOf } from '../spec.js';
+import { SLOT_CSS } from '../slots.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -284,7 +285,6 @@ function withContract(contract, el) {
 
 // what a contract's token slots mean in CSS, for a piece a library adapter drew: the bundled
 // set reads --k-<kind>-<slot> itself; an antd or MUI root gets these applied from outside
-const SLOT_CSS = { bg: 'background-color', text: 'color', border: 'border-color', radius: 'border-radius', padding: 'padding', gap: 'gap', accent: 'accent-color' };
 
 function componentCss(project) {
   const rules = [];
@@ -296,6 +296,10 @@ function componentCss(project) {
     // the same bindings reach a piece an adapter drew, so the contract themes antd and MUI too
     const slots = [...new Set([...Object.keys(c.tokens ?? {}), ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => Object.keys(b ?? {})))])].filter((s) => SLOT_CSS[s]);
     if (slots.length) rules.push(`.el-${attrName(c.kind)}[data-drawn] > * { ${slots.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
+    // type reaches a bundled piece by inheritance from its wrapper (the set draws with `font: inherit`);
+    // height and shadow it reads itself, kind by kind, in the bundled css
+    const type = slots.filter((s) => s === 'font-size' || s === 'font-weight');
+    if (type.length) rules.push(`.el-${attrName(c.kind)}:not([data-drawn]) { ${type.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
   }
   return rules.join('\n');
 }

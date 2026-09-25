@@ -87,6 +87,9 @@ test('tokens export: css custom properties with a block per non-default context,
   assert.match(tw, /"spacing": \{\n\s+"xs": "4px"/);
   assert.match(tw, /"colors": \{[^}]*"primary": "#2f6fed"/);
   assert.match(tw, /"fontFamily": \{\n\s+"sans": \[/);
+  assert.match(tw, /"fontWeight": \{\n\s+"regular": "400"/);
+  assert.match(tw, /"minHeight": \{\n\s+"sm": "24px"/);
+  assert.match(tw, /"boxShadow": \{\n\s+"sm": "0px 1px 2px 0px #00000014"/);
   assert.match(await exportTokens(orders, { format: 'css' }), /^:root \{/);
   await assert.rejects(exportTokens(orders, { format: 'scss' }), /unknown token format/);
 });
