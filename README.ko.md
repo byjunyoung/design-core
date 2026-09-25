@@ -117,6 +117,10 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 
 제안은 제 페이지가 있습니다. 쓰기 전에 합의한 결정, 바뀌는 것, 그리고 상태마다 AS-IS 옆에 TO-BE. 이름을 적고 적용하거나 반려합니다. 문구만 바뀌고 lint가 깨끗한 건 바로 적용되고 되돌리기가 남습니다. 구조가 바뀌는 건 여기서 기다립니다.
 
+## 개발자에게 넘기기
+
+피그마를 건너뛰는 도구는 인계가 피그마보다 나아야 합니다. 화면마다 스펙 페이지가 있습니다 — `spec-<screen>.html`, 티켓용은 `doan spec <dir> <screen> --md` — 파일에서 읽어낸 것입니다: 요소와 props·카피, 각 요소가 팀 코드에서 무엇인지(계약의 `maps_to.code`, Code Connect에 해당), 상태·브레이크포인트마다 달라지는 것, 흐름, 쓰인 토큰과 CSS 변수, 에셋, 미결 `$tbd`, 그리고 그 전부에서 뽑은 수용 기준. 코딩 에이전트는 MCP `handoff` 도구로 같은 스펙을 받습니다. 토큰은 `doan tokens --format css`나 `--format tailwind`로 내보냅니다. 화면이 준비되면 `status: ready`로 표시하고, `$tbd`가 남아 있으면 lint가 말해줍니다.
+
 ## lint가 잡는 것
 
 <img src="docs/img/lint-catches.png" alt="차단 3건 경고 2건이 나온 lint 실행과, 규칙 여섯 개 설명" width="100%">

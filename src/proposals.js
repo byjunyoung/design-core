@@ -16,7 +16,7 @@ import { listComments, resolveComment, reopenComment } from './comments.js';
 // <project>/.proposals/ so the CLI, the MCP server and the viewer see the same queue.
 // A proposal names the comments it answers; applying it resolves them, undoing reopens them.
 
-const TEXT_PROPS = new Set(['text', 'label', 'title', 'placeholder', 'caption', 'counter', 'hint', 'note', 'notes', 'when']);
+const TEXT_PROPS = new Set(['text', 'label', 'title', 'placeholder', 'caption', 'counter', 'hint', 'note', 'notes', 'when', 'status']);
 const COMMENT_ID = /\bc_[a-z0-9]{6,}\b/g;
 const dirOf = (dir) => join(dir, '.proposals');
 const sha = (text) => createHash('sha1').update(text).digest('hex');

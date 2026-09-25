@@ -12,8 +12,11 @@ import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec } from './render/index.js';
 import { canvasPages } from './canvas.js';
+import { specOf, specMarkdown } from './spec.js';
+import { tokensCss, tokensTailwind } from './export.js';
+import { languageOf } from './render/i18n.js';
 import { assetsSummary } from './assets.js';
 import { listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
@@ -72,6 +75,7 @@ export async function listScreens(dir) {
       id: s.doc.id,
       section: s.doc.section,
       type: s.doc.type,
+      status: s.doc.status ?? 'draft',
       breakpoints: Object.keys(s.doc.breakpoints ?? {}),
       file: s.file,
       states: Object.keys(s.doc.states ?? {}),
@@ -143,6 +147,9 @@ export async function renderProject(dir, opts = {}) {
     const file = join(out, `${s.doc.screen}.html`);
     await writeFile(file, renderScreen(project, s, { branch, adapter }));
     pages.push(file);
+    const spec = join(out, `spec-${s.doc.screen}.html`);
+    await writeFile(spec, renderSpec(project, s, { branch }));
+    pages.push(spec);
   }
   // Every pending proposal gets its page; `proposal` narrows to one (any status).
   const wanted = opts.proposal ? (await listProposals(dir, { status: 'all' })).filter((p) => p.id === opts.proposal) : pending;
@@ -289,4 +296,23 @@ export async function listAssets(dir) {
     missing: missing.map(rel),
     unused,
   };
+}
+
+// --- handoff ------------------------------------------------------------------------------
+
+// The developer spec of one screen (src/spec.js): JSON for an agent, Markdown for a ticket.
+export async function specScreen(dir, { screen, format = 'json', branch = null }) {
+  const project = await loadProject(dir);
+  const found = project.screens.find((s) => s.doc.screen === screen);
+  if (!found) throw new Error(`no screen named "${screen}" in ${dir}`);
+  const spec = specOf(project, found, { branch });
+  return format === 'md' || format === 'markdown' ? specMarkdown(spec, languageOf(project)) : spec;
+}
+
+// The resolved tokens in a developer's shape: css custom properties or a tailwind theme.
+export async function exportTokens(dir, { format = 'css' }) {
+  const project = await loadProject(dir);
+  if (format === 'css') return tokensCss(project);
+  if (format === 'tailwind') return tokensTailwind(project);
+  throw new Error(`unknown token format "${format}" (css, tailwind)`);
 }

@@ -2,12 +2,12 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens, migrateKinds, listComponents, listAssets } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens, migrateKinds, listComponents, listAssets, specScreen, exportTokens } from './verbs.js';
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 const USAGE = `doan — screens as files; the agent draws, you say what to change.
 
@@ -19,7 +19,10 @@ usage: doan <verb> …
   bases  list the component bases and whether each is ready
   components <project-dir> [--json]
         every kind in the registry (components/<kind>.yaml) — props, slots, token bindings, compound or not.
-  tokens <project-dir> [--json]
+  spec <project-dir> <screen> [--md | --format json|md] [--out <file>]
+        the developer spec of one screen: elements with code mappings, copy, states, flows, tokens, assets,
+        open questions and acceptance criteria — JSON for an agent, Markdown for a ticket.
+  tokens <project-dir> [--json | --format css|tailwind [--out <file>]]
         every token the project resolves — name, value, per-theme values, file, tier (primitive · semantic · bundled).
         tokens/ holds DTCG 2025.10 files and a resolver; a flat tokens.json from before 0.3 still reads.
   assets <project-dir> [--json]
@@ -168,9 +171,30 @@ async function componentsCommand(opts) {
   for (const c of r.components) process.stdout.write(`${c.kind.padEnd(18)} ${Object.keys(c.props).join(', ').padEnd(52)} ${c.compound ? 'compound ' : ''}${c.legacy ? 'legacy ' : ''}${c.file ?? ''}\n`);
   return 0;
 }
+async function specCommand(opts) {
+  const [dir, screen] = opts._;
+  if (!dir || !screen) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const format = opts.md ? 'md' : opts.format ?? 'json';
+  const r = await specScreen(dir, { screen, format, branch: opts.branch ?? null });
+  const text = typeof r === 'string' ? r : JSON.stringify(r, null, 2) + '\n';
+  if (opts.out) {
+    writeFileSync(opts.out, text);
+    process.stdout.write(`${opts.out}\n`);
+  } else process.stdout.write(text);
+  return 0;
+}
 async function tokensCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  // --format css|tailwind writes the resolved set in a developer's shape instead of listing it
+  if (opts.format) {
+    const text = await exportTokens(dir, { format: opts.format });
+    if (opts.out) {
+      writeFileSync(opts.out, text);
+      process.stdout.write(`${opts.out}\n`);
+    } else process.stdout.write(text);
+    return 0;
+  }
   const r = await listTokens(dir);
   if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
   process.stdout.write(`${r.tokens.length} tokens from ${r.source}${r.resolver ? ` (${r.resolver})` : ''}${Object.keys(r.axes).length ? ` — ${Object.entries(r.axes).map(([a, c]) => `${a}: ${c.join(' | ')}`).join(', ')}` : ''}\n`);
@@ -247,7 +271,7 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
+  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

@@ -2,11 +2,11 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadProject } from './project.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec } from './render/index.js';
 import { canvasPages } from './canvas.js';
 import { assetFile, assetType } from './assets.js';
 import { resolveAdapter } from './render/adapters/index.js';
-import { lintProject, currentBranch } from './verbs.js';
+import { lintProject, currentBranch, specScreen } from './verbs.js';
 import { listProposals, applyProposal, rejectProposal } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -78,6 +78,12 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
         const full = JSON.parse(await readFile(join(dir, '.proposals', `${m[1]}.json`), 'utf8'));
         return html(res, renderProposal(project, full, { branch: opts.branch, adapter, api: true }));
       }
+      m = path.match(/^\/spec-(.+)\.html$/);
+      if (m) {
+        const screen = project.screens.find((s) => s.doc.screen === decodeURIComponent(m[1]));
+        if (!screen) return json(res, 404, { error: `no screen "${m[1]}"` });
+        return html(res, renderSpec(project, screen, { branch: opts.branch, api: true }));
+      }
       m = path.match(/^\/(.+)\.html$/);
       if (m) {
         const screen = project.screens.find((s) => s.doc.screen === decodeURIComponent(m[1]));
@@ -98,6 +104,7 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
     try {
       if (method === 'GET' && path === '/api/lint') return json(res, 200, await lintProject(dir, { ...opts, cwd: dir }));
       if (method === 'GET' && path === '/api/proposals') return json(res, 200, { proposals: await listProposals(dir, { status: url.searchParams.get('status') ?? 'pending' }) });
+      if (method === 'GET' && path === '/api/spec') return json(res, 200, await specScreen(dir, { screen: url.searchParams.get('screen'), format: url.searchParams.get('format') ?? 'json', branch: opts.branch }));
       if (method === 'GET' && path === '/api/comments') return json(res, 200, { comments: await listComments(dir, { screen: url.searchParams.get('screen'), status: url.searchParams.get('status') ?? 'open' }) });
       if (method === 'POST' && path === '/api/comments') return json(res, 201, await addComment(dir, await readBody(req)));
       if (method === 'POST' && (m = path.match(/^\/api\/comments\/(c_[a-z0-9]+)\/resolve$/))) return json(res, 200, await resolveComment(dir, { id: m[1], ...(await readBody(req)) }));

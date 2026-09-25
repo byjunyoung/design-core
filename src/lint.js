@@ -381,6 +381,16 @@ const rules = {
     if (!any) return [];
     return ctx.screens.filter((s) => !touched.has(s.doc.screen)).map((s) => finding('L24', 'warning', s, ['flows'], `no flow reaches or leaves "${s.doc.screen}" — an entry point, or a screen the map forgot`));
   },
+  // L27 — a screen marked ready for developers must be clean: no blocking finding, no $tbd
+  L27(ctx) {
+    const out = [];
+    for (const s of ctx.screens) {
+      if (s.doc.status !== 'ready' && s.doc.status !== 'done') continue;
+      const tbd = [...walkTbd(s.doc)].length;
+      if (tbd) out.push(finding('L27', 'warning', s, ['status'], `status "${s.doc.status}" but ${tbd} $tbd remain`));
+    }
+    return out;
+  },
   // L26 — a breakpoint a screen adapts to must be one conventions.breakpoints names
   L26(ctx) {
     const known = ctx.conventions.breakpoints ?? null;

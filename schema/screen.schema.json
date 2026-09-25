@@ -99,6 +99,14 @@
           "$ref": "#/$defs/patch"
         }
       }
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "ready",
+        "done"
+      ],
+      "description": "where the screen is for developers: draft (default), ready — handed off, done — built"
     }
   },
   "$defs": {

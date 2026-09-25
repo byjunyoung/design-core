@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, listFlows } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, specScreen, listFlows } from './verbs.js';
 import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -73,6 +73,16 @@ server.registerTool(
     inputSchema: {},
   },
   guard(() => listTokens(dir)),
+);
+
+server.registerTool(
+  'handoff',
+  {
+    description:
+      'The developer spec of one screen — everything needed to build it, read off the file: elements with props, copy and the component each maps to in code (contracts\' maps_to.code), what every state, variant and breakpoint changes, the flows out, the tokens (with CSS variables) and assets used, the open $tbd questions, and acceptance criteria. JSON by default; format "md" for Markdown. Read this before implementing a screen; never guess a prop or a copy string that is here.',
+    inputSchema: { screen: z.string(), format: z.enum(['json', 'md']).default('json') },
+  },
+  guard((input) => specScreen(dir, { ...input, branch: common.branch })),
 );
 
 server.registerTool(
@@ -242,8 +252,8 @@ server.registerTool(
 server.registerTool(
   'add_comment',
   {
-    description: 'Leave a comment on an element on behalf of the person, anchored to a YAML path — for when they say it in chat and want it on the page.',
-    inputSchema: { screen: z.string(), path: z.string(), text: z.string(), author: z.string().default('agent') },
+    description: 'Leave a comment on an element on behalf of the person — for when they say it in chat and want it on the page. Anchor it by the element id (preferred; a path moves when elements are inserted) or by a YAML path; a path that names an element is turned into its id.',
+    inputSchema: { screen: z.string(), element: z.string().optional().describe('the element id the comment is about'), path: z.string().optional().describe('a YAML path, e.g. elements.1 or states.Empty.0'), text: z.string(), author: z.string().default('agent') },
   },
   guard((input) => addComment(dir, input)),
 );
@@ -265,7 +275,7 @@ server.registerPrompt(
           type: 'text',
           text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
 
-1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary, and breakpoints — a screen that must work at several widths gets a breakpoints block (patches per name, applied last) and layout that adapts on its own (columns: auto with min, wrap, scroll: horizontal). New work inherits the shell every screen in the section shares.
+1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element; maps_to.code is what a kind is in the team's code, which the handoff spec will quote — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary, and breakpoints — a screen that must work at several widths gets a breakpoints block (patches per name, applied last) and layout that adapts on its own (columns: auto with min, wrap, scroll: horizontal). New work inherits the shell every screen in the section shares.
 
 2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
 
@@ -278,6 +288,8 @@ server.registerPrompt(
 6. Only then write the whole screen file and call propose with the complete YAML, a one-line summary in the person's words, the decisions table from step 4 as the decisions argument, and the ids of the comments this version answers as comments — applying it resolves them. Then call render with that proposal id and give the person the page path: it shows the agreed decisions, what changes, and every state AS-IS beside TO-BE.
 
 7. Wait. The person applies or rejects; you do not call apply yourself. If they ask for changes, go back to the sketch and propose again — the earlier proposal stays pending until it is rejected.
+
+8. When the person says the screen is done for developers, propose status: ready (a text change) and point them at the spec: the handoff tool, or spec-<screen>.html in the viewer. A ready screen with a $tbd left is L27.
 
 Copy comes from the spec the screen references, from sibling screens, or from the person; where none of those gives a value, write { $tbd: { owner: ... } } instead of something plausible. A value nobody decided is not a design decision.`,
         },

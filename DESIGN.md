@@ -266,6 +266,8 @@ A screen that must work at several widths keeps one file. Two things make it res
 
 **Layout that adapts without a breakpoint.** Three words joined the layout vocabulary for the cases the field test hit (§12, row 6): `columns: auto` with `min: <size class>` — as many columns as fit, each at least that wide (`repeat(auto-fill, minmax(var(--size-sm), 1fr))`); `wrap: true` on a stack or row; `scroll: horizontal` — the children keep their width and the container scrolls sideways. The last two apply to a leaf kind that draws its own row (a stat strip) as much as to a container. For a developer these are CSS one to one; for a designer they are what auto layout's wrap and min width mean. One thing to know when writing a breakpoint patch: a leaf kind that draws its own inside — a tile grid, a table — takes its columns from its own props, so the patch is `set: { columns: 10 }`, not `layout: { columns: 10 }`; `layout` speaks to containers and to the wrap and scroll words.
 
+A contract is the one truth about a kind (0.10.1, after the owner's review found three): every element is drawn with its contract applied first — a default for each prop it left out, an enum value the contract does not list replaced by the declared default — whether the bundled set or a library adapter draws it, and the contract's token bindings reach an adapter-drawn root as CSS (`.el-<kind>[data-drawn] > *` reads the same `--k-<kind>-<slot>` variables). The bundled drawings keep fallbacks of their own only for a project with no contract at all.
+
 ## 5. Lint catalogue
 
 Blocking stops handoff; warning is reported and counted. Each rule names the `fig` rule it descends from.
@@ -298,6 +300,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L24 flow-orphan | warning | a screen no flow reaches or leaves, once the project has flows and more than one screen | coverage orphans |
 | L25 asset-missing | warning | a `src` or `icon` that names a path under `assets/` with no such file | — (new) |
 | L26 breakpoint-known | warning | a screen adapts to a breakpoint `conventions.breakpoints` does not name | — (new) |
+| L27 ready-open | warning | a screen with status ready or done still holds a `$tbd` | — (new) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -415,6 +418,14 @@ The sidebar's design system has three pages, above the tree because the screens 
 
 Both pages fold the tree from the hash like every hash-placed page, and their deep links are prefixed (`t:`, `a:`) so the tree's screen lookup never mistakes one for a screen.
 
+### 6.10 Handoff: the spec a developer — or a developer's agent — builds from
+
+Decided 2026-09-25, when the owner said that a tool which skips Figma has to be more developer-friendly than Figma, not less. The baseline is Figma's Dev Mode with Code Connect — design components mapped to code components — and its Dev Mode MCP server, through which Claude Code and Cursor read a component tree, variables and mappings as structured context ([Figma](https://www.figma.com/blog/introducing-figma-mcp-server/), [Code Connect](https://help.figma.com/hc/en-us/articles/23920389749655-Code-Connect)). The 2026 default flow is Figma → Code Connect → MCP → an AI editor → a person polishing ([sanjaytarani](https://sanjaytarani.com/blog/top-design-handoff-tools-in-2026-bridging-the-gap-between-design-and-development)), and what developers say they need beyond measurements is the states a static frame cannot show ([Storyflow](https://storyflow.so/blog/design-handoff-checklist)).
+
+doan's answer is a spec, not a picture: `spec-<screen>.html` for a person, `doan spec` and the MCP `handoff` tool for an agent — one structure (src/spec.js) read off the file each time. Elements with props and copy and the component each maps to in the team's code; what every state, variant and breakpoint changes; the flows out; the tokens used, with the CSS variable each becomes; the assets; the open `$tbd` questions; and acceptance criteria written from all of that, one line per promise the file makes. The Markdown form is a ticket, the JSON form is what a coding agent reads before it writes. Code Connect's counterpart is `maps_to.code` in a contract — `import`, `name`, and how this kind's props and values become the component's — from which every element gets a framework-neutral snippet, shown in the spec and in the inspector. Tokens leave as `doan tokens --format css` (the viewer's own custom properties, a block per theme) or `--format tailwind`. A screen says where it is for developers with `status: draft | ready | done`, shown in the overview and the tree; L27 warns when a ready screen still holds a `$tbd`.
+
+Not built, on purpose: code generation. An agent that has the spec writes better code than a generator that has the picture, and Figma's own generated code is labelled "not production-ready". Measurements (E2) come next; the HTML being real makes them less urgent here than in Figma.
+
 ## 7. The edit loop — "by conversation only"
 
 A change enters as a comment or a chat message, anchored to what the person is looking at.
@@ -522,18 +533,19 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 
 | Item | Owner | Note |
 |---|---|---|
+| Handoff: measurements and generation | design | the spec (§6.10, 0.11.0) carries no measured sizes — E2 inspect measurements come next; code generation stays out on purpose, an agent with the spec writes it. An adapter still maps enum options to its own props in code, not from `maps_to.code` |
 | Inline SVG icons | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |
 | Name | user | `doan` undersells a product; GitHub redirects after a rename |
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |
 | Layout vocabulary depth | design | stack/grid/columns + tokens, then `columns: auto`·`min`·`wrap`·`scroll` and breakpoints (§4.7, 2026-09-25). Responsive typography and per-breakpoint tokens are the next axis |
 | Adapter theme per mode | design | antd and MUI pieces are themed once, from the default context (§4.4). Render per context when a team asks; it is one SSR pass per theme |
-| Adapter reads the contract | design | antd and MUI pieces draw from the props their own code reads; a contract's enum options and bindings do not reach them (§4.5). An adapter could take `sample`, options and bindings from the registry |
+| Adapter reads the contract | decided | since 0.10.1 every element is drawn with its contract applied (defaults, enum fallback) and a contract's bindings theme an adapter root through `--k-` variables (§4.5). Still open: an adapter mapping enum options to its own props (variant → antd `type`) from the contract rather than code |
 | Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
 | Canvas arrow avoidance | design | the corridor keeps a back-flow off the frames above its target; a forward flow to a farther column can still cross a frame between. `fig:arrows`' detour rule is the model |
 | Canvas layout tokens | design | column gap 160, frame gap 96, section padding 96, section gap 240 are fixed in css; fig measures them per team (`layout.column_grid` …). A `canvas:` block in conventions when a team asks |
 | Flow map label placement | design | ELK places a label anywhere along its edge; a long self-loop label can sit far from the node. `elk.edgeLabels.placement` and inline labels are the knobs to try |
 | Platform / breakpoint variants | decided | a `breakpoints:` block of patches, one file per screen (§4.7, 2026-09-25); one file per platform rejected — the copies drift |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
-| Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer |
+| Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer; anchored by element id since 0.10.1 — a YAML path moves when something is inserted above it, an id does not |
 | Agent runtime for the hosted loop | later | bring-your-own (Claude Code, Codex via MCP) first; a hosted agent is a pricing decision, not a design one |

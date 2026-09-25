@@ -1,6 +1,9 @@
 kind: button
 description: One action. The label says what happens; the variant says how much it matters.
-maps_to: { antd: Button, mui: Button }
+maps_to:
+  antd: Button
+  mui: Button
+  code: { import: '@acme/ui', name: Button, props: { label: children, variant: kind }, values: { variant: { primary: primary, danger: destructive, soft-primary: ghost } } }
 
 props:
   label: { type: string, required: true }

@@ -13,6 +13,7 @@ import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
 import { layoutFlows, flowGraph } from '../flowmap.js';
 import { canvasPages } from '../canvas.js';
+import { specOf, specMarkdown, codeOf } from '../spec.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -68,16 +69,23 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
     element(el, path = null) {
       // an expanded compound (src/expand.js) draws as a container of the tree its contract declared;
       // its children point the inspector at the component file, not the screen
+      const contract = components[el.kind];
+      // the contract is the one truth about a kind: its defaults fill what the element left out
+      // and an enum value it does not declare falls back to the declared default, for the bundled
+      // set and a library adapter alike — nothing draws from a default of its own
+      const drawn = contract && !el.$expanded ? withContract(contract, el) : el;
+      const byAdapter = !el.$expanded && !!adapter?.kinds?.[el.kind];
       const fn = el.$expanded ? kinds.group : (adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic);
       const known = lines.get(el.id) ?? (el.$from ? { path: `${el.$from.file} › ${el.$from.path}`, line: null } : undefined);
       const style = layoutStyle(layout[el.id], { container: !!el.children?.length });
       const propsJson = h(JSON.stringify(Object.fromEntries(Object.entries(el).filter(([k]) => k !== 'children' && !k.startsWith('$')))));
       const cls = ['el', `el-${el.kind}`, kinds[el.kind] || el.$expanded ? '' : 'el-unknown', el.disabled_when ? 'is-disabled' : ''].filter(Boolean).join(' ');
       // `repeat: N` (what an import writes for a run of identical instances) draws the element N times in a row.
-      const once = fn(el, r);
+      const once = fn(drawn, r);
       const inner = el.repeat > 1 ? `<div class="repeat">${Array.from({ length: Math.min(Number(el.repeat), 200) }, () => `<div class="rep">${once}</div>`).join('')}</div>` : once;
       // each enum prop the contract declares becomes data-<prop>, which is what a variant's css binds to
-      const attrs = Object.entries(enumAttrs(components[el.kind], el)).map(([k, val]) => ` data-${attrName(k)}="${h(val)}"`).join('');
+      const code = contract && !el.$expanded ? codeOf(contract, el) : null;
+      const attrs = Object.entries(enumAttrs(contract, drawn)).map(([k, val]) => ` data-${attrName(k)}="${h(val)}"`).join('') + (byAdapter ? ` data-drawn="${h(adapter.name)}"` : '') + (code ? ` data-code="${h(code.snippet)}"` : '');
       return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${attrs}${style ? ` style="${style}"` : ''}>${dots(el)}${inner}</div>`;
     },
     children(el) {
@@ -170,7 +178,8 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
     const block = mine.filter((f) => f.severity === 'blocking').length;
     const tbd = mine.filter((f) => f.id === 'L08').length;
     const open = comments.filter((c) => c.screen === screen).length;
-    return [block ? `<span class="pill block">${block}</span>` : '', tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
+    const st = s?.doc.status;
+    return [st === 'ready' || st === 'done' ? `<span class="pill ok">${st}</span>` : '', block ? `<span class="pill block">${block}</span>` : '', tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
   };
   const tree = canvasPages(project)
     .map((p) => {
@@ -254,6 +263,29 @@ function modeControls(project) {
 // wrapper — `--k-button-bg: var(--color-primary)` — and a variant's overrides sit on the
 // wrapper's data attribute for that prop. Namespaced by kind, so a card's padding never leaks
 // into the button inside it; written as var(--token), so a theme switch flows through.
+// The element with its contract applied: a default for every prop it left out, and an enum
+// value the contract does not list replaced by the declared default (lint L22 reports it; the
+// picture must still be the contract's). A `$tbd` value is left as it is.
+const contractDefaults = new WeakMap();
+function withContract(contract, el) {
+  let defaults = contractDefaults.get(contract);
+  if (!defaults) {
+    defaults = Object.fromEntries(Object.entries(contract.props ?? {}).filter(([, d]) => d && d.default !== undefined).map(([k, d]) => [k, d.default]));
+    contractDefaults.set(contract, defaults);
+  }
+  const out = { ...defaults, ...el };
+  for (const [name, def] of Object.entries(contract.props ?? {})) {
+    if (def?.type !== 'enum' || !Array.isArray(def.options)) continue;
+    const v = out[name];
+    if (typeof v === 'string' && !def.options.includes(v)) out[name] = def.default ?? def.options[0];
+  }
+  return out;
+}
+
+// what a contract's token slots mean in CSS, for a piece a library adapter drew: the bundled
+// set reads --k-<kind>-<slot> itself; an antd or MUI root gets these applied from outside
+const SLOT_CSS = { bg: 'background-color', text: 'color', border: 'border-color', radius: 'border-radius', padding: 'padding', gap: 'gap', accent: 'accent-color' };
+
 function componentCss(project) {
   const rules = [];
   for (const c of Object.values(project.components ?? {})) {
@@ -261,6 +293,9 @@ function componentCss(project) {
     if (c.tokens && Object.keys(c.tokens).length) rules.push(`.el-${attrName(c.kind)} { ${decl(c.tokens)}; }`);
     for (const [prop, options] of Object.entries(c.variants ?? {}))
       for (const [opt, b] of Object.entries(options ?? {})) if (b && Object.keys(b).length) rules.push(`.el-${attrName(c.kind)}[data-${attrName(prop)}="${h(opt)}"] { ${decl(b)}; }`);
+    // the same bindings reach a piece an adapter drew, so the contract themes antd and MUI too
+    const slots = [...new Set([...Object.keys(c.tokens ?? {}), ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => Object.keys(b ?? {})))])].filter((s) => SLOT_CSS[s]);
+    if (slots.length) rules.push(`.el-${attrName(c.kind)}[data-drawn] > * { ${slots.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
   }
   return rules.join('\n');
 }
@@ -271,7 +306,7 @@ function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', f
 <style>${tokensToCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
-<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
+<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, element: c.element ?? null, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
@@ -317,7 +352,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
     title: h(doc.screen),
     meta: `${h(doc.section)} · ${h(doc.type)} · ${h(platformOf(project, screen).name)}${adapter ? ` · ${h(adapter.name)} ${D.components}` : ''}${branch ? ` · ${h(branch)}` : ''}`,
     place: placeOf(project, doc.screen, 'Default'),
-    tools: `<label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
+    tools: `<a class="btn" href="spec-${h(doc.screen)}.html">${D.specFor}</a><label class="toggle"><input type="checkbox" id="compare"> ${D.compare}</label><label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
     findings,
     comments: api ? comments : [],
     content: `<div class="tabs-row">${stateTabs}${variantTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.variants}</span>${variantTabs}` : ''}${bpTabs ? `<span class="axis" style="margin-left:var(--space-md)">${D.breakpointsLabel}</span>${bpTabs}` : ''}</div>
@@ -349,6 +384,7 @@ export async function renderIndex(project, { branch = null, today, proposals = [
           const tbd = mine.filter((f) => f.id === 'L08').length;
           const open = comments.filter((c) => c.screen === s.doc.screen).length;
           const pills = [
+            s.doc.status === 'ready' ? `<span class="pill ok">${D.statusReady}</span>` : s.doc.status === 'done' ? `<span class="pill ok">${D.statusDone}</span>` : '',
             sum.blocking ? `<span class="pill block">${sum.blocking} ${D.blocking}</span>` : `<span class="pill ok">${D.clean}</span>`,
             sum.warning ? `<span class="pill ok">${sum.warning} ${D.warning}</span>` : '',
             tbd ? `<span class="pill tbd">${tbd} ${D.tbd}</span>` : '',
@@ -428,7 +464,8 @@ export function renderLibrary(project, { branch = null, adapter = null, api = fa
         .flatMap(([prop, options]) => Object.keys(options ?? {}).map((opt) => `<div class="lib-variant"><div class="hint">${h(prop)} = ${h(opt)}</div>${picture(c, { ...sample, id: `${sample.id}-${prop}-${opt}`, [prop]: c.props?.[prop]?.type === 'boolean' ? opt === 'true' : opt })}</div>`))
         .join('');
       const compound = Array.isArray(c.elements) && c.elements.length;
-      const meta = [c.file ? `components/${h(basenameOf(c.file))}` : `<span class="bad">${D.legacyKind}</span>`, maps[c.kind] ? `${h(maps[c.kind])}` : '', compound ? D.compound : ''].filter(Boolean).join(' · ');
+      const codeMap = c.maps_to?.code && typeof c.maps_to.code === 'object' ? `${D.codeLabel}: ${h([c.maps_to.code.import, c.maps_to.code.name ?? c.kind].filter(Boolean).join(' '))}` : '';
+      const meta = [c.file ? `components/${h(basenameOf(c.file))}` : `<span class="bad">${D.legacyKind}</span>`, maps[c.kind] ? `${h(maps[c.kind])}` : '', codeMap, compound ? D.compound : ''].filter(Boolean).join(' · ');
       const props = Object.entries(c.props ?? {});
       return `<section class="lib" id="k-${h(c.kind)}">
 <h3>${h(c.kind)}</h3><div class="hint">${h(c.description ?? '')}</div><div class="hint lib-meta">${meta}</div>
@@ -899,3 +936,62 @@ const PICK_SCRIPT = `
     if (img.complete) fill(); else img.addEventListener('load', fill);
   });
 })();</script>`;
+
+// The developer spec page: one screen, everything a person building it needs, read off the
+// file by src/spec.js — acceptance criteria first, then elements with their code, states,
+// flows, copy, tokens, components, assets, open questions. The same spec is embedded as JSON
+// and as Markdown (the copy button), and the MCP `handoff` tool serves it to an agent.
+export function renderSpec(project, screen, { branch = null, api = false } = {}) {
+  const doc = screen.doc;
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const spec = specOf(project, screen, { branch });
+  const md = specMarkdown(spec, lang);
+  const place = placeOf(project, doc.screen, 'Default');
+  const at = (path) => (place.domain ? `canvas-${h(place.domain)}.html#${h(doc.screen)}.Default/${h(path)}` : `${h(doc.screen)}.html`);
+  const table = (head, rows) =>
+    rows.length
+      ? `<table class="index"><thead><tr>${head.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+      : `<div class="hint">${D.noneYet}</div>`;
+  const kv = (o) => Object.entries(o).map(([k, val]) => `<code>${h(k)}</code> ${h(typeof val === 'string' ? val : JSON.stringify(val))}`).join('<br>');
+  const changes = (list) => list.map((c) => `<li><code>${h(c.target)}</code> ${h(c.change)}</li>`).join('');
+  const statusLabel = { draft: D.statusDraft, ready: D.statusReady, done: D.statusDone }[spec.status] ?? h(spec.status);
+  const swatch = (t) => (/^(#|rgba?\(|hsla?\()/.test(String(t.value)) ? `<span class="swatch" style="background:${h(t.value)}"></span>` : '');
+  const content = `
+<div class="section-title">${D.acceptance} <span class="hint">${spec.acceptance.length}</span></div>
+${spec.acceptance.length ? `<ul class="list acceptance">${spec.acceptance.map((a) => `<li><label><input type="checkbox"> ${h(a.text)}</label> <span class="hint">${h(a.source)}</span></li>`).join('')}</ul>` : `<div class="hint">${D.noneYet}</div>`}
+<div class="section-title">${D.elementsLabel} <span class="hint">${spec.elements.length}</span></div>
+${table(['id', 'kind', D.codeLabel, 'props', D.path], spec.elements.map((e) => [`<a href="${at(e.path)}"><code>${h(e.id)}</code></a>${e.parent ? `<div class="hint">↳ ${h(e.parent)}</div>` : ''}`, h(e.kind), e.code ? `<code>${h(e.code.snippet)}</code>${e.code.import ? `<div class="hint">${h(e.code.import)}</div>` : ''}` : `<span class="hint">${h(Object.entries(e.component?.maps_to ?? {}).filter(([k]) => k !== 'code').map(([k, v]) => `${k}/${v}`).join(', ') || D.bundled)}</span>`, kv(e.props) + (Object.keys(e.conditions).length ? `<div class="hint">${kv(e.conditions)}</div>` : ''), `<code>${h(e.path)}${e.line ? `:${e.line}` : ''}</code>`]))}
+<div class="section-title">${D.states}</div>
+${spec.states.length ? `<ul class="list">${spec.states.map((s) => `<li><b>${h(s.name)}</b>${s.required ? ` <span class="pill tbd">${D.requiredMark}</span>` : ''}<ul>${changes(s.changes) || `<li class="hint">${D.noneYet}</li>`}</ul></li>`).join('')}</ul>` : `<div class="hint">${D.noneYet}</div>`}
+${spec.variants.length ? `<div class="section-title">${D.variants}</div><ul class="list">${spec.variants.flatMap((v) => v.options.map((o) => `<li><b>${h(v.axis)} = ${h(o.name)}</b><ul>${changes(o.changes) || `<li class="hint">${D.noneYet}</li>`}</ul></li>`)).join('')}</ul>` : ''}
+${spec.breakpoints.length ? `<div class="section-title">${D.breakpointsLabel}</div><ul class="list">${spec.breakpoints.map((b) => `<li><b>${h(b.name)}</b> <span class="hint">${b.width ?? '?'}px</span><ul>${changes(b.changes) || `<li class="hint">${D.noneYet}</li>`}</ul></li>`).join('')}</ul>` : ''}
+<div class="section-title">${D.flows}</div>
+${table(['from', 'gesture', 'nav', 'to', 'when'], spec.flows.map((f) => [`<code>${h(f.via ? `${f.from}.${f.via}` : f.from)}</code>`, h(f.gesture ?? ''), h(f.nav ?? ''), `<code>${h(f.to)}</code>`, h(f.when ?? '')]))}
+<div class="section-title">${D.copyLabel} <span class="hint">${spec.copy.length}</span></div>
+${table(['element', 'prop', 'text'], spec.copy.map((c) => [`<code>${h(c.element)}</code>`, `<code>${h(c.prop)}</code>`, h(c.text)]))}
+<div class="section-title">${D.tokensUsed} <span class="hint">${spec.tokens.length}</span></div>
+${table(['token', 'CSS', D.valueLabel, D.usedAt], spec.tokens.map((t) => [`<a href="tokens.html#t:${h(t.name)}"><code>${h(t.name)}</code></a>`, `<code>var(${h(t.css)})</code>`, `${swatch(t)}<code>${h(t.value)}</code>`, `<span class="hint">${h(t.usedAt.join(', '))}</span>`]))}
+<div class="section-title">${D.components}</div>
+${table(['kind', 'n', 'maps_to', D.file], spec.components.map((c) => [`<a href="components.html#k-${h(c.kind)}"><code>${h(c.kind)}</code></a>`, c.count, h(Object.entries(c.maps_to).map(([k, v]) => `${k}: ${typeof v === 'object' ? `${v.import ?? ''} ${v.name ?? ''}`.trim() : v}`).join(', ')), `<span class="hint">${h(c.file ? basenameOf(c.file) : D.bundled)}</span>`]))}
+${spec.assets.length ? `<div class="section-title">${D.assets}</div><ul class="list">${spec.assets.map((a) => `<li><a href="assets.html#a:${h(a.path)}"><code>${h(a.path)}</code></a> <span class="hint">${h(a.at)}</span></li>`).join('')}</ul>` : ''}
+<div class="section-title">${D.openQuestions} <span class="hint">${spec.tbd.length}</span></div>
+${spec.tbd.length ? `<ul class="list">${spec.tbd.map((t) => `<li><code>${h(t.path)}</code>${t.owner ? ` <span class="pill tbd">${h(t.owner)}${t.due ? ` · ${h(t.due)}` : ''}</span>` : ''}${t.note ? ` ${h(t.note)}` : ''}</li>`).join('')}</ul>` : `<div class="hint">${D.noneYet}</div>`}
+${spec.notes.length ? `<div class="section-title">${D.notes}</div><ul class="list">${spec.notes.map((n) => `<li>${v(n)}</li>`).join('')}</ul>` : ''}
+<div class="section-title">lint</div><div class="hint">${spec.lint.blocking} ${D.blocking}, ${spec.lint.warning} ${D.warning}</div>
+<template id="spec-md">${h(md)}</template>
+<script type="application/json" id="spec-json">${JSON.stringify(spec).replace(/</g, '\\u003c')}</script>`;
+  const body =
+    shellOf(project, D, {
+      title: `${h(doc.screen)} <span class="hint">${D.spec}</span>`,
+      meta: `${h(doc.section)} · ${h(doc.type)} · ${h(spec.platform)} · ${statusLabel}${branch ? ` · ${h(branch)}` : ''}`,
+      place,
+      tools: `<button class="btn" id="spec-copy-md" type="button">${D.copyMarkdown}</button><a class="btn" href="${h(doc.screen)}.html">${D.screen}</a>`,
+      content,
+    }) +
+    `
+<script>(function () { var b = document.getElementById('spec-copy-md'), t = document.getElementById('spec-md'); if (!b || !t) return; b.addEventListener('click', function () { var text = t.content ? t.content.textContent : t.textContent; navigator.clipboard.writeText(text).then(function () { var was = b.textContent; b.textContent = '✓'; setTimeout(function () { b.textContent = was; }, 1200); }); }); })();</script>`;
+  return page({ title: `${doc.screen} · ${D.spec}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: doc.screen, comments: [], lang });
+}

@@ -117,6 +117,10 @@ Click any element and the drawer says what it is, which design-system component 
 
 A proposal is its own page: the decisions agreed before it was written, what changes, and every state AS-IS beside TO-BE. Apply with your name, or Reject. Text-only changes that keep lint clean apply at once, with undo; anything structural waits here.
 
+## Handing off to developers
+
+A tool that skips Figma has to hand off better than Figma. Every screen has a spec page — `spec-<screen>.html`, or `doan spec <dir> <screen> --md` for a ticket — read off the file: the elements with their props and copy and the component each maps to in the team's code (`maps_to.code` in a contract, Code Connect's counterpart), what every state and breakpoint changes, the flows, the tokens with their CSS variables, the assets, the open `$tbd` questions, and acceptance criteria written from all of that. A coding agent gets the same spec through the MCP `handoff` tool. Tokens leave as `doan tokens --format css` or `--format tailwind`. Mark a screen `status: ready` when it is; lint says if a `$tbd` is still open.
+
 ## What lint catches
 
 <img src="docs/img/lint-catches.png" alt="A lint run with three blocking and two warning findings, and six of the rules explained" width="100%">

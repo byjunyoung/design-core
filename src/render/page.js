@@ -58,6 +58,9 @@ a { color: inherit; text-decoration: none; }
 .list { margin: 0; padding-left: var(--space-lg); font-size: 13px; }
 .list li { margin: 2px 0; }
 .list code { background: var(--color-bg); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.acceptance { list-style: none; padding-left: 0; } .acceptance li { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: baseline; margin: 4px 0; }
+.acceptance label { display: inline-flex; gap: var(--space-sm); align-items: baseline; cursor: pointer; } .acceptance input { width: auto; margin: 0; padding: 0; }
+.index td:last-child { overflow-wrap: anywhere; }
 .dead { color: var(--color-danger); text-decoration: line-through; }
 .backdrop { background: rgba(31,35,40,.45); padding: var(--space-xl); display: flex; justify-content: center; min-height: 480px; }
 .backdrop .modal-box { width: var(--size-md); }
@@ -457,7 +460,8 @@ export const INSPECTOR_JS = `
   // a comment belongs to one screen; on a canvas that holds several, it lands only in that screen's frames
   function sameScreen(c, node) { if (!c.screen) return true; var f = node.closest('[data-screen]'); return !f || f.getAttribute('data-screen') === c.screen; }
   comments.forEach(function (c) {
-    document.querySelectorAll('.el[data-path="' + c.path + '"]').forEach(function (el) {
+    // by the element's id when the comment has one — a path moves, an id does not
+    document.querySelectorAll(c.element ? '.el[data-id="' + c.element + '"]' : '.el[data-path="' + c.path + '"]').forEach(function (el) {
       if (!sameScreen(c, el)) return;
       var dots = el.querySelector(':scope > .dots'); if (!dots) { dots = document.createElement('span'); dots.className = 'dots'; el.appendChild(dots); }
       if (!dots.querySelector('.cm')) { var d = document.createElement('i'); d.className = 'dot cm'; d.title = c.author + ': ' + c.text; dots.appendChild(d); }
@@ -479,10 +483,12 @@ export const INSPECTOR_JS = `
     if (props.show_when) conds.push('shown when: ' + props.show_when);
     if (props.disabled_when) conds.push('disabled when: ' + props.disabled_when);
     if (props.reveals) conds.push('reveals: ' + Object.keys(props.reveals).join(', '));
-    var mine = comments.filter(function (c) { return c.path === path && sameScreen(c, el); });
+    var id = el.getAttribute('data-id');
+    var mine = comments.filter(function (c) { return (c.element ? c.element === id : c.path === path) && sameScreen(c, el); });
     panel.innerHTML =
       '<h4>' + esc(el.getAttribute('data-id')) + ' <span class="hint">' + esc(el.getAttribute('data-kind')) + '</span><span class="close" id="close">×</span></h4>' +
       '<div class="hint">' + t('component', 'component') + ': ' + (maps ? esc(maps) : t('bundled', 'bundled default')) + '</div>' +
+      (el.getAttribute('data-code') ? '<p><span class="k">' + t('codeLabel', 'code') + '</span> <code>' + esc(el.getAttribute('data-code')) + '</code></p>' : '') +
       (conds.length ? '<ul>' + conds.map(function (c) { return '<li class="cond-line">' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
       '<table>' + rows + '</table>' +
       '<p class="hint">' + t('samplesNote', 'values shown in the picture are samples unless the file sets them') + '</p>' +
@@ -858,8 +864,9 @@ export const CANVAS_JS = `
     });
   }
   // --- the workspace: tree, selection, shortcuts, deep links
-  var panel = document.getElementById('inspector'), T = window.DOAN_I18N || {};
-  function t(k, d) { return T[k] || d; }
+  var panel = document.getElementById('inspector');
+  // the strings are set by an inline script that comes after this one on the canvas page, so read them when needed
+  function t(k, d) { return (window.DOAN_I18N || {})[k] || d; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function frameOf(screen, state) { return document.querySelector('.cv-frame[data-screen="' + screen + '"][data-state="' + state + '"]'); }
   function zoomTo(node, pad) {
@@ -893,7 +900,7 @@ export const CANVAS_JS = `
     panel.innerHTML =
       '<h4>' + esc(screen) + '-' + esc(state) + ' <span class="hint">' + esc(frame.getAttribute('data-type') || '') + ' \\u00b7 ' + esc(frame.getAttribute('data-platform') || '') + '</span><span class="close" id="close">\\u00d7</span></h4>' +
       '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(frame.getAttribute('data-file') || '') + '</code></p>' +
-      '<p><a class="btn" href="' + esc(screen) + '.html#state-' + esc(state) + '">' + t('screen', 'screen') + '</a> <a class="btn" href="proto.html#' + esc(screen) + (state !== 'Default' ? '.' + esc(state) : '') + '">\\u25b6 ' + t('proto', 'Prototype') + '</a></p>' +
+      '<p><a class="btn" href="' + esc(screen) + '.html#state-' + esc(state) + '">' + t('screen', 'screen') + '</a> <a class="btn" href="proto.html#' + esc(screen) + (state !== 'Default' ? '.' + esc(state) : '') + '">\\u25b6 ' + t('proto', 'Prototype') + '</a> <a class="btn" href="spec-' + esc(screen) + '.html">' + t('specFor', 'developer spec') + '</a></p>' +
       '<h4>' + t('flows', 'Flows') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (f) { return '<li><code>' + esc(f.from) + '</code> \\u2192 ' + esc(f.to) + (f.state !== 'Default' ? '.' + esc(f.state) : '') + (f.label ? ' <span class="hint">' + esc(f.label) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('none', 'none') + '</div>');
     var close = document.getElementById('close'); if (close) close.addEventListener('click', clearAll);
   }

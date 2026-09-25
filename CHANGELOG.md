@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.11.0 — 2026-09-25
+
+Handoff: what a developer — or a developer's agent — builds from (DESIGN.md §6.10).
+
+- **`spec-<screen>.html`, `doan spec`, MCP `handoff`** — one spec read off the file: elements with props and copy and the component each maps to in code, what every state, variant and breakpoint changes, the flows out, the tokens with their CSS variables, the assets, the open `$tbd` questions, and acceptance criteria — a checklist line per promise the file makes. JSON for an agent, Markdown for a ticket (a copy button on the page). The screen page and the canvas frame panel link to it; the inspector shows an element's code snippet. The canvas panel's labels now read the page language (they were English regardless).
+- **`maps_to.code` in a contract** — Code Connect's counterpart: import, name, prop and value mapping, from which every element's snippet is written. Shown on the component library page.
+- **`doan tokens --format css | tailwind`** — the resolved set as custom properties, a block per theme, or a `theme.extend`.
+- **`status: draft | ready | done`** on a screen, in the overview and the tree; **L27** warns when a ready screen still holds a `$tbd`; `list_screens` carries it; the draw prompt proposes `ready` when the person says so.
+
+## 0.10.1 — 2026-09-25
+
+Two things the owner's review called out as against the tool's own principles.
+
+- **The contract is the one truth about a kind.** Until now a kind had three: its `components/<kind>.yaml`, the bundled drawing with defaults of its own (`el.size ?? 'md'`), and a library adapter that read whatever props its code knew. Now every element is drawn with its contract applied first — a default for each prop it left out, an enum value the contract does not list replaced by the declared default (L22 still reports it) — for the bundled set and adapters alike; and a contract's token bindings reach a piece an adapter drew: the page themes the antd or MUI root from the same `--k-<kind>-<slot>` variables (`.el-<kind>[data-drawn] > *`). Change a default or a binding in the contract and every picture follows.
+- **Comments are anchored by element id.** A comment used to point at a YAML path (`elements.1`), which moves the moment something is inserted above it. It now carries the element's id; the path and line are derived from where the element is on every read, a comment whose element is gone says `orphan`, and one from before ids gets its id on read. `add_comment` takes `element` (preferred) or a path; the viewer's dots and drawer match by id.
+
 ## 0.10.0 — 2026-09-25
 
 Responsive, both ways: product screens that adapt to width, and a viewer that does (DESIGN.md §4.7, §6.8).

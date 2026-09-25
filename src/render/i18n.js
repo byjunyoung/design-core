@@ -17,6 +17,7 @@ const EN = {
   newScreen: 'A new screen — there is no AS-IS to compare.',
   breakpointsLabel: 'Breakpoints', baseWidth: 'base',
   menuLabel: 'Menu', panelLabel: 'Panel',
+  spec: 'Spec', specFor: 'developer spec', acceptance: 'Acceptance', copyLabel: 'Copy', codeLabel: 'Code', elementsLabel: 'Elements', changesIn: 'changes in', statusLabel: 'status', statusDraft: 'draft', statusReady: 'ready for dev', statusDone: 'built', copyMarkdown: 'Copy as Markdown', accState: '{state}: {target} {change}', accFlow: '{from} {gesture} → {to}{when}', accCond: '{id} {cond}', accBp: 'at {bp} ({width}px): {target} {change}', accRequired: 'the screen has every state its type requires ({states})', chReplace: 'becomes {kind}', chSet: 'sets {what}', chHide: 'is hidden', chLayout: 'lays out {what}', condShow: 'is shown when {v}', condDisabled: 'is disabled when {v}', condReveals: 'reveals {v}', tokensUsed: 'Tokens used', usedAt: 'used at', openQuestions: 'Open questions', noneYet: 'none',
   library: 'Components', propsLabel: 'props', slotsLabel: 'slots', bindingsLabel: 'token bindings', compound: 'compound — drawn from its own elements', legacyKind: 'still in conventions.kinds', noneOfKind: 'no components yet — doan migrate kinds, or add components/<kind>.yaml', requiredMark: 'required',
   // drawer (sent to the page as JSON)
   clickToInspect: 'Click an element to inspect it.', component: 'component', bundled: 'bundled default', samplesNote: 'values shown in the picture are samples unless the file sets them',
@@ -44,6 +45,7 @@ const KO = {
   newScreen: '새 화면 — 비교할 AS-IS가 없습니다.',
   breakpointsLabel: '브레이크포인트', baseWidth: '기본',
   menuLabel: '메뉴', panelLabel: '패널',
+  spec: '스펙', specFor: '개발 스펙', acceptance: '수용 기준', copyLabel: '카피', codeLabel: '코드', elementsLabel: '요소', changesIn: '변경', statusLabel: '상태', statusDraft: '초안', statusReady: '개발 준비됨', statusDone: '구현됨', copyMarkdown: '마크다운으로 복사', accState: '{state}: {target}이(가) {change}', accFlow: '{from} {gesture} → {to}{when}', accCond: '{id} {cond}', accBp: '{bp}({width}px)에서 {target}이(가) {change}', accRequired: '타입이 요구하는 상태가 모두 있다 ({states})', chReplace: '{kind}로 바뀜', chSet: '{what}로 설정', chHide: '숨겨짐', chLayout: '배치 {what}', condShow: '{v}일 때 보임', condDisabled: '{v}일 때 비활성', condReveals: '{v}을(를) 드러냄', tokensUsed: '쓰인 토큰', usedAt: '쓰인 곳', openQuestions: '미결', noneYet: '없음',
   library: '컴포넌트', propsLabel: '속성', slotsLabel: '슬롯', bindingsLabel: '토큰 바인딩', compound: '복합 — 자기 elements로 그림', legacyKind: '아직 conventions.kinds에 있음', noneOfKind: '컴포넌트 없음 — doan migrate kinds 또는 components/<kind>.yaml 추가', requiredMark: '필수',
   clickToInspect: '요소를 누르면 여기에 나옵니다.', component: '컴포넌트', bundled: '기본 세트', samplesNote: '그림의 값은 파일에 없으면 샘플입니다',
   file: '파일', path: '경로', line: '줄', copy: '경로:줄 복사', copied: '복사됨', noneOnElement: '이 요소에는 없음',
@@ -65,6 +67,6 @@ export function languageOf(project) {
 // The subset the page's own JavaScript needs, as plain strings.
 export function pageStrings(lang) {
   const d = dictionary(lang);
-  const keys = ['clickToInspect', 'protoHelp', 'flowsFrom', 'chooseFlow', 'noFlowsFrom', 'screen', 'states', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
+  const keys = ['clickToInspect', 'codeLabel', 'specFor', 'protoHelp', 'flowsFrom', 'chooseFlow', 'noFlowsFrom', 'screen', 'states', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
   return Object.fromEntries(keys.map((k) => [k, d[k]]));
 }

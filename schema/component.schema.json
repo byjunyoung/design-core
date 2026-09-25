@@ -3,70 +3,231 @@
   "$id": "https://github.com/byjunyoung/doan/schema/component.schema.json",
   "title": "Component file — components/<kind>.yaml",
   "type": "object",
-  "required": ["kind"],
+  "required": [
+    "kind"
+  ],
   "additionalProperties": false,
   "properties": {
-    "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-    "description": { "type": "string" },
-    "anchors": { "type": "array", "items": { "type": "string" } },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "anchors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "maps_to": {
       "type": "object",
-      "additionalProperties": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] }
+      "description": "what this kind is in each library: a component name (antd, mui, figma), or under `code` the team's own component — import path, name, and how this kind's props become its props",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "import": {
+                "type": "string",
+                "description": "the module the component is imported from, e.g. @acme/ui"
+              },
+              "name": {
+                "type": "string",
+                "description": "the exported component name"
+              },
+              "props": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "doan prop → code prop, e.g. { label: children, variant: kind }"
+              },
+              "values": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "description": "per doan prop, doan value → code value, e.g. { variant: { primary: primary, danger: destructive } }"
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
     },
     "props": {
       "type": "object",
-      "propertyNames": { "pattern": "^[a-z][a-z0-9_-]*$" },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "type": { "enum": ["string", "text", "number", "boolean", "enum", "list", "element", "any"] },
-          "required": { "type": "boolean" },
+          "type": {
+            "enum": [
+              "string",
+              "text",
+              "number",
+              "boolean",
+              "enum",
+              "list",
+              "element",
+              "any"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
           "default": {},
-          "options": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-          "description": { "type": "string" }
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "description": {
+            "type": "string"
+          }
         }
       }
     },
-    "slots": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" } },
-    "tokens": { "$ref": "#/$defs/bindings" },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      }
+    },
+    "tokens": {
+      "$ref": "#/$defs/bindings"
+    },
     "variants": {
       "type": "object",
-      "additionalProperties": { "type": "object", "additionalProperties": { "$ref": "#/$defs/bindings" } }
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/bindings"
+        }
+      }
     },
-    "sample": { "type": "object" },
-    "elements": { "type": "array", "items": { "$ref": "#/$defs/element" } },
-    "layout": { "type": "object", "additionalProperties": { "$ref": "#/$defs/layoutRule" } },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "sample": {
+      "type": "object"
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/element"
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/layoutRule"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   },
   "$defs": {
     "bindings": {
       "type": "object",
-      "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
-      "additionalProperties": { "type": "string", "pattern": "^[\\p{L}\\p{N}_-]+(\\.[\\p{L}\\p{N}_-]+)+$" }
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[\\p{L}\\p{N}_-]+(\\.[\\p{L}\\p{N}_-]+)+$"
+      }
     },
     "element": {
       "type": "object",
-      "anyOf": [{ "required": ["id", "kind"] }, { "required": ["slot"] }],
+      "anyOf": [
+        {
+          "required": [
+            "id",
+            "kind"
+          ]
+        },
+        {
+          "required": [
+            "slot"
+          ]
+        }
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
-        "kind": { "type": "string", "minLength": 1 },
-        "slot": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
-        "children": { "type": "array", "items": { "$ref": "#/$defs/element" } }
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "slot": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/element"
+          }
+        }
       },
       "additionalProperties": true
     },
     "layoutRule": {
       "type": "object",
       "properties": {
-        "kind": { "type": "string" },
-        "direction": { "enum": ["row", "column"] },
-        "columns": { "type": "integer", "minimum": 1 },
-        "gap": { "type": "string" },
-        "padding": { "type": "string" },
-        "align": { "type": "string" },
-        "grow": { "type": "boolean" },
-        "size": { "type": "string" }
+        "kind": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "row",
+            "column"
+          ]
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gap": {
+          "type": "string"
+        },
+        "padding": {
+          "type": "string"
+        },
+        "align": {
+          "type": "string"
+        },
+        "grow": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     }
