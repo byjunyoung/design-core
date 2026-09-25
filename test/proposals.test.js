@@ -165,3 +165,19 @@ test('a comment id mentioned in a decision counts, a text change that applies at
   assert.equal((await listComments(dir, { screen: 'order-list', status: 'resolved' }))[0].resolved_by, 'auto');
   await assert.rejects(propose(dir, { screen: 'order-list', after, comments: ['c_nope00'] }, opts), /no open comment "c_nope00"/);
 });
+
+test('a proposal applied in a copy of the project lands in the copy — never back where it was proposed', async () => {
+  const a = mkdtempSync(join(tmpdir(), 'doan-copy-a-'));
+  cpSync(examples, a, { recursive: true });
+  // a structural change, so it waits as pending instead of applying at once
+  const after = readFileSync(join(a, 'screens', 'order-list.yaml'), 'utf8').replace('  - id: paging\n', '  - { id: extra, kind: hint, text: All orders }\n  - id: paging\n');
+  const p = await propose(a, { screen: 'order-list', after }, { branch: 'feature/x' });
+  assert.equal(p.file, join('screens', 'order-list.yaml'), 'the record names the file relative to the project');
+  const b = mkdtempSync(join(tmpdir(), 'doan-copy-b-'));
+  cpSync(a, b, { recursive: true });
+  const applied = await applyProposal(b, { id: p.id, approved_by: 'copy' });
+  assert.equal(applied.status, 'applied');
+  assert.match(readFileSync(join(b, 'screens', 'order-list.yaml'), 'utf8'), /id: extra, kind: hint/);
+  assert.doesNotMatch(readFileSync(join(a, 'screens', 'order-list.yaml'), 'utf8'), /id: extra/, 'the original project is untouched');
+  assert.equal((await listProposals(a)).find((x) => x.id === p.id).status, 'pending');
+});

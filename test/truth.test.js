@@ -92,3 +92,36 @@ test('L28: a binding to a slot the picture does not read is a warning that names
   assert.deepEqual(l28[0].path, ['tokens', 'colour']);
   assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, min-height, shadow, muted\)/);
 });
+
+test('the bundled set reads type from the contract where it used to fix a size: the page-header title, a field label, a hint; a segment and a stepper take a control height', async () => {
+  const html = await screenHtml(orders, 'order-list');
+  assert.match(html, /\.el-page-header h2 \{ font-size: var\(--k-page-header-font-size, 16px\); font-weight: var\(--k-page-header-font-weight, inherit\)/);
+  assert.match(html, /\.fld \{[^}]*font-size: var\(--k-field-font-size, 12px\)/);
+  assert.match(html, /\.el-hint \.hint \{ font-size: var\(--k-hint-font-size, 12px\); \}/);
+  assert.match(html, /\.seg span \{[^}]*min-height: var\(--k-segment-min-height, auto\)/);
+  assert.match(html, /\.stepper \{[^}]*min-height: var\(--k-stepper-min-height, auto\)/);
+});
+
+test('antd draws size: full as a block button and sm/md as small/middle, as the bundled set does', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    const f = join(d, 'screens', 'order-list.yaml');
+    await writeFile(f, (await readFile(f, 'utf8')).replace('label: Export, variant: secondary', 'label: Export, variant: secondary, size: full').replace('  - id: paging\n', '  - { id: dine, kind: segment, options: [A, B], selected: B }\n  - id: paging\n'));
+  });
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const project = await loadProject(dir);
+  const adapter = await createAdapter('antd', project);
+  const drawn = renderScreen(project, project.screens.find((s) => s.doc.screen === 'order-list'), { branch: 'x', adapter });
+  assert.match(drawn, /data-id="export"[^>]*data-size="full"[^>]*data-drawn="antd"[^>]*><button[^>]*class="[^"]*ant-btn-block/);
+  assert.match(drawn, /<span class="on">B<\/span>/, 'a segment draws its selected option, not always the first');
+  assert.match(drawn, /\.el-card:not\(\[data-drawn\]\) \{ padding:/, 'the bundled card box does not wrap a card an adapter drew');
+});
+
+test('a list cell draws its value and hides the chevron when told — every prop of the contract reaches the picture', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    const f = join(d, 'screens', 'order-list.yaml');
+    await writeFile(f, (await readFile(f, 'utf8')).replace('  - id: paging\n', '  - { id: row, kind: list-cell, title: Americano, value: "4,500", chevron: false }\n  - { id: row2, kind: list-cell, title: Latte }\n  - id: paging\n'));
+  });
+  const html = await screenHtml(dir, 'order-list');
+  assert.match(html, /data-id="row"[^>]*>[\s\S]*?<div class="cell-value">4,500<\/div><\/div><\/div>/);
+  assert.match(html, /data-id="row2"[^>]*>[\s\S]*?<span class="cell-chevron">›<\/span>/);
+});

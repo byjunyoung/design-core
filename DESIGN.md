@@ -534,6 +534,7 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 
 | Item | Owner | Note |
 |---|---|---|
+| Proposal records | decided | a proposal names its file relative to the project (0.12.1). With an absolute path, applying a proposal inside a copy of the project wrote into the original — found while previewing the kiosk screens in a scratch copy |
 | Slots | design | 0.12 added type size and weight, control height and shadow, because a kiosk is big type and tall targets. Still no line-height, letter-spacing, width, opacity or transition: each is a line in `src/slots.js` plus a read in the bundled css, added when a project needs it, not before |
 | Handoff: measurements and generation | design | the spec (§6.10, 0.11.0) carries no measured sizes — E2 inspect measurements come next; code generation stays out on purpose, an agent with the spec writes it. An adapter still maps enum options to its own props in code, not from `maps_to.code` |
 | Inline SVG icons | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |

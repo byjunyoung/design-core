@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
-import { join, relative } from 'node:path';
+import { join, relative, isAbsolute, basename } from 'node:path';
 import { loadProject, parseScreenText } from './project.js';
 import { validateScreen } from './validate.js';
 import { lint, summarize } from './lint.js';
@@ -80,9 +80,15 @@ async function load(dir, id) {
   return JSON.parse(await readFile(file, 'utf8'));
 }
 
+// The screen's file, under the project the call names. A proposal records its file relative
+// to the project (`screens/<name>.yaml`) so that a copy of the project — a scratch copy, a
+// checkout elsewhere — applies into itself, never back into the directory it was proposed in.
+// A record from before 0.12.1 holds an absolute path; its basename still names the file.
+const fileOf = (dir, p) => join(dir, isAbsolute(p.file) ? join('screens', basename(p.file)) : p.file);
+
 async function write(dir, proposal, text) {
   await mkdir(join(dir, 'screens'), { recursive: true });
-  await writeFile(join(dir, relative(dir, proposal.file)), text);
+  await writeFile(fileOf(dir, proposal), text);
 }
 
 export async function propose(dir, { screen, after, summary = '', decisions = [], comments = [] }, opts = {}) {
@@ -118,7 +124,7 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
   const proposal = {
     id: newId(),
     screen,
-    file,
+    file: relative(dir, file),
     creates, // true when applying writes a file the project did not have; undo removes it
     summary,
     decisions, // what was agreed before this version was written: [{ item, decision, why? }]
@@ -148,7 +154,7 @@ export async function applyProposal(dir, { id, approved_by }) {
   const p = await load(dir, id);
   if (p.status !== 'pending') throw new Error(`proposal "${id}" is ${p.status}, not pending`);
   // a file the proposal creates must still be absent; an existing one must be as it was
-  const current = existsSync(p.file) ? await readFile(p.file, 'utf8') : '';
+  const current = existsSync(fileOf(dir, p)) ? await readFile(fileOf(dir, p), 'utf8') : '';
   if (sha(current) !== p.base_hash) throw new Error(`"${p.screen}" changed since the proposal was made; propose again`);
   await write(dir, p, p.after);
   Object.assign(p, { status: 'applied', approved_by, applied_at: new Date().toISOString() });
@@ -166,10 +172,10 @@ export async function rejectProposal(dir, { id, reason = '' }) {
 export async function undoProposal(dir, { id }) {
   const p = await load(dir, id);
   if (p.status !== 'applied') throw new Error(`proposal "${id}" is ${p.status}, not applied`);
-  const current = await readFile(p.file, 'utf8');
+  const current = await readFile(fileOf(dir, p), 'utf8');
   if (sha(current) !== sha(p.after)) throw new Error(`"${p.screen}" changed after the proposal was applied; undo by hand`);
   // undoing a proposal that created the file removes the file, not writes an empty one
-  if (p.creates) await unlink(p.file);
+  if (p.creates) await unlink(fileOf(dir, p));
   else await write(dir, p, p.before);
   // the comments it had resolved are open again
   for (const cid of p.comments_resolved ?? []) {

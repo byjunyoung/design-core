@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.1 — 2026-09-26
+
+What filling in a real project showed — the kiosk sample drawn with tokens, contracts and assets of its own (DESIGN.md §13).
+
+- **The bundled set reads type from the contract** where it used to fix a size: the page-header title, a field label, a hint; a segment and a stepper take a control height; the box of card, fieldset and modal no longer wraps a root an adapter drew (a double frame). A list cell draws its `value` and hides its chevron when told.
+- **antd** — `size: full` is a block button and sm/md are small/middle; an `icon` that names an asset is drawn; a card's and a modal's body add no padding of their own, the contract's padding slot is the padding; a segment draws its `selected` option; the modal shadow is css, so the `shadow` slot replaces it.
+- **A proposal records its file relative to the project.** Applying one in a copy of the project — a scratch copy, a checkout elsewhere — wrote back into the directory it was proposed in. It lands in the copy now; a record from before still applies, by its file name.
+
 ## 0.12.0 — 2026-09-25
 
 Four more slots, so a contract can make a kiosk look like a kiosk (DESIGN.md §4.5).

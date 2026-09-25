@@ -4,6 +4,7 @@ import { createCache, extractStyle, StyleProvider } from '@ant-design/cssinjs';
 import * as antd from 'antd';
 import { h, v, isTbd, sample } from '../kinds.js';
 import { DEFAULT_TOKENS, mergeTokens, baseFontSize } from '../tokens.js';
+import { isAssetRef } from '../../assets.js';
 
 // Draws each mapped kind as the antd component its `maps_to.antd` names, server-side, with
 // the styles antd generates extracted into the page. Children that the bundled renderer
@@ -38,7 +39,8 @@ function themeFrom(tokens) {
 // One renderer per antd component name. `el` is the screen element, `r` the bundled renderer
 // (for children), and each returns a React element.
 const components = {
-  Button: (el) => e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when }, text(el.label ?? el.title ?? el.id)),
+  // size: sm · md · full → antd small · middle · large, and full is a block button, as the bundled set draws it
+  Button: (el) => e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : undefined }, text(el.label ?? el.title ?? el.id)),
   Table: (el) => {
     const columns = list(el.columns).map((c, i) => ({ title: text(label(c)), dataIndex: `c${i}`, sorter: typeof c === 'object' && !!c?.sortable }));
     return e(antd.Table, { size: 'small', columns, dataSource: dummyRows(columns), pagination: false, rowSelection: el.selectable ? {} : undefined });
@@ -51,7 +53,7 @@ const components = {
     const rows = Array.isArray(el.rows) ? el.rows.flat() : list(el.fields);
     return e(antd.Descriptions, { size: 'small', bordered: true, column: Number(el.columns) || 2, title: el.title ? text(el.title) : undefined }, ...rows.map((k, i) => e(antd.Descriptions.Item, { key: i, label: text(k) }, sample(k, i))));
   },
-  Segmented: (el) => e(antd.Segmented, { options: list(el.options).map(text), value: text(list(el.options)[0]) }),
+  Segmented: (el) => e(antd.Segmented, { options: list(el.options).map(text), value: text(el.selected ?? list(el.options)[0]) }),
   Statistic: (el) => e(antd.Space, { size: 'large', wrap: true }, ...list(el.stats).map((s, i) => e(antd.Statistic, { key: i, title: text(s), value: sample(s, i) }))),
   Form: (el) => e(antd.Form, { layout: 'inline', size: 'small' }, ...list(el.fields).map((f, i) => e(antd.Form.Item, { key: i, label: text(label(f)) }, e(antd.Input, { placeholder: text(label(f)), readOnly: true })))),
   Input: (el) => e(antd.Input, { readOnly: true, value: text(el.text ?? el.value ?? ''), placeholder: text(el.placeholder), disabled: !!el.readonly }),
@@ -69,8 +71,10 @@ const components = {
   Tag: (el) => e(antd.Tag, {}, text(el.text ?? el.label)),
   Checkbox: (el) => e(antd.Checkbox, { checked: !!el.checked }, text(el.label ?? el.text ?? el.id)),
   Switch: (el) => e(antd.Switch, { checked: !!el.on }),
-  Card: (el, r) => e(antd.Card, { size: 'small', title: el.title ? text(el.title) : undefined }, raw(r.children(el))),
-  Modal: (el, r) => e(antd.Card, { title: text(el.title), style: { boxShadow: '0 8px 32px rgba(0,0,0,.25)' } }, raw(r.children(el))),
+  // the contract's padding slot lands on the card root, so the body adds none of its own
+  Card: (el, r) => e(antd.Card, { size: 'small', title: el.title ? text(el.title) : undefined, styles: { body: { padding: 0 } } }, raw(r.children(el))),
+  // the shadow is css (page.js .el-modal[data-drawn] > *), so a contract's shadow slot can replace it
+  Modal: (el, r) => e(antd.Card, { title: text(el.title), styles: { body: { padding: 0 } } }, raw(r.children(el))),
   'Modal.confirm': (el) => e(antd.Card, { size: 'small', title: text(el.title) }, e('p', null, text(el.text)), e(antd.Space, null, ...list(el.buttons).map((b, i) => e(antd.Button, { key: i, type: i === list(el.buttons).length - 1 ? 'primary' : 'default' }, text(b))))),
   Tooltip: (el) => e(antd.Tag, { color: 'default' }, `ⓘ ${text(el.trigger ?? 'tooltip')}`),
 };

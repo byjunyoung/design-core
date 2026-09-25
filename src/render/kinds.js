@@ -221,7 +221,7 @@ export const kinds = {
     return `<div class="tb">${list(el.tabs).map((t) => `<div class="tb-item${String(label(t)) === String(el.active ?? list(el.tabs)[0]) ? ' on' : ''}"><span class="tb-icon"></span>${v(label(t))}</div>`).join('')}</div>`;
   },
   'list-cell'(el) {
-    return `<div class="cell">${el.thumbnail ? '<span class="cell-thumb"></span>' : ''}<div class="cell-body"><div class="cell-title">${v(el.title ?? el.label ?? el.id)}</div>${el.subtitle ? `<div class="cell-sub">${v(el.subtitle)}</div>` : ''}</div>${el.trailing !== undefined ? `<div class="cell-trail">${v(el.trailing)}</div>` : ''}<span class="cell-chevron">›</span></div>`;
+    return `<div class="cell">${el.thumbnail ? '<span class="cell-thumb"></span>' : ''}<div class="cell-body"><div class="cell-title">${v(el.title ?? el.label ?? el.id)}</div>${el.subtitle ? `<div class="cell-sub">${v(el.subtitle)}</div>` : ''}</div>${el.value !== undefined ? `<div class="cell-value">${v(el.value)}</div>` : ''}${el.trailing !== undefined ? `<div class="cell-trail">${v(el.trailing)}</div>` : ''}${el.chevron === false ? '' : '<span class="cell-chevron">›</span>'}</div>`;
   },
   'bottom-sheet'(el, r) {
     return `<div class="sheet"><div class="sheet-handle"></div>${el.title ? `<div class="sheet-title">${v(el.title)}</div>` : ''}<div class="sheet-body">${r.children(el)}</div></div>`;
